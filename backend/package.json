@@ -1,0 +1,17 @@
+{
+  "name": "@stockless/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-compatible StockLess domain engine. This is not an HTTP backend.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.ts",
+    "test:epic1": "node --test tests/epic1.test.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
