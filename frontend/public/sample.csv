@@ -1,0 +1,7 @@
+sale_date,sku,product_name,pack_variant,qty_sold,stock_on_hand,stock_date
+2026-06-01,000123,Sambal Ikan Bilis,200 g jar,12,30,2026-08-20
+2026-06-08,000123,Sambal Ikan Bilis,200 g jar,10,30,2026-08-20
+2026-06-15,000123,Sambal Ikan Bilis,200 g jar,-2,30,2026-08-20
+2026-06-22,000123,Sambal Ikan Bilis,200 g jar,0,30,2026-08-20
+2026-06-01,000124,Sambal Ikan Bilis,500 g jar,5,14,2026-08-12
+2026-06-15,000124,Sambal Ikan Bilis,500 g jar,7,14,2026-08-12
