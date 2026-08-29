@@ -2,7 +2,9 @@ import { useCallback, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
-import { NotYetAvailable } from "./screens/NotYetAvailable.tsx";
+import { ReadinessScreen } from "./screens/ReadinessScreen.tsx";
+import { DemandScreen } from "./screens/DemandScreen.tsx";
+import type { IssueKind } from "./mock-analysis.ts";
 import {
   MappingConflictError,
   confirmIdentityMode,
@@ -47,6 +49,8 @@ export default function App() {
   const [step, setStep] = useState<StepId>(1);
   const [reached, setReached] = useState<StepId>(1);
   const [mappingError, setMappingError] = useState<string | null>(null);
+  const [issueFilter, setIssueFilter] = useState<IssueKind | null>(null);
+  const [productKey, setProductKey] = useState<string | null>(null);
 
   const dataset = envelope.session.dataset;
 
@@ -158,33 +162,27 @@ export default function App() {
         />
       )}
 
-      {step === 3 && (
-        <NotYetAvailable
-          eyebrow="Data readiness"
-          title="Readiness needs the validation contract."
-          needs={[
-            "row-level validation results (invalid date / quantity / duplicate / missing)",
-            "usable-row and total-row counts",
-            "timeline warnings (missing weeks, stock-snapshot age)",
-            "correction-report rows",
-          ]}
+      {step === 3 && dataset && (
+        <ReadinessScreen
+          dataset={dataset}
+          mapping={envelope.session.mapping}
+          filter={issueFilter}
+          onFilter={setIssueFilter}
           onBack={() => setStep(2)}
+          onContinue={() => goTo(4)}
         />
       )}
 
-      {step === 4 && (
-        <NotYetAvailable
-          eyebrow="Where each product currently stands"
-          title="Demand review needs the aggregation contract."
-          needs={[
-            "weekly series per product key (units, and null for observed gaps)",
-            "recent weekly average with its CapabilityState",
-            "current stock and stock-as-of date per product",
-            "descriptive weeks of cover",
-          ]}
+      {step === 4 && dataset && (
+        <DemandScreen
+          dataset={dataset}
+          mapping={envelope.session.mapping}
+          selectedKey={productKey}
+          onSelect={setProductKey}
           onBack={() => setStep(3)}
         />
       )}
+
     </AppShell>
   );
 }
