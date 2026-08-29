@@ -81,7 +81,11 @@ export interface NormalizationEvent {
   readonly sourceColumn: string;
   readonly originalValue: string;
   readonly resultingValue: string;
-  readonly normalizationType: "trim_whitespace" | "normalize_line_endings";
+  readonly normalizationType:
+    | "trim_whitespace"
+    | "normalize_line_endings"
+    | "confirmed_date_format";
+  readonly confirmationId?: string;
 }
 
 export interface ParsedRow {
@@ -222,4 +226,198 @@ export interface SessionPreferences {
 export interface SessionEnvelope {
   readonly session: StocklessSession;
   readonly preferences: SessionPreferences;
+}
+
+export type ConfirmedDateFormat =
+  | "DD/MM/YYYY"
+  | "MM/DD/YYYY"
+  | "DD.MM.YYYY"
+  | "MM.DD.YYYY"
+  | "DD-MM-YYYY"
+  | "MM-DD-YYYY";
+
+export interface DateFormatConfirmation {
+  readonly sourceColumnId: string;
+  readonly format: ConfirmedDateFormat;
+  readonly confirmationId: string;
+}
+
+export interface DateFormatDetection {
+  readonly sourceColumnId: string;
+  readonly state: "empty" | "iso" | "candidate" | "ambiguous" | "unsupported";
+  readonly candidates: readonly ConfirmedDateFormat[];
+}
+
+export type RowUseState = "used" | "excluded";
+
+export type DataIssueCode =
+  | "INVALID_DATE"
+  | "DATE_FORMAT_CONFIRMATION_REQUIRED"
+  | "INVALID_QUANTITY"
+  | "MISSING_IDENTITY"
+  | "INVALID_CURRENT_STOCK"
+  | "MISSING_CURRENT_STOCK"
+  | "INVALID_STOCK_DATE"
+  | "MISSING_STOCK_DATE"
+  | "FUTURE_STOCK_DATE"
+  | "CONFLICTING_CURRENT_STOCK"
+  | "CONFLICTING_STOCK_DATE"
+  | "DUPLICATE_CANDIDATE"
+  | "DUPLICATE_CONFIRMED";
+
+export interface DataIssue {
+  readonly id: string;
+  readonly sourceRow: number;
+  readonly productKey?: string;
+  readonly originalProductHint?: string;
+  readonly issueCode: DataIssueCode;
+  readonly field?: CanonicalField;
+  readonly sourceColumn?: string;
+  readonly observedValue: string;
+  readonly reason: string;
+  readonly correctiveAction: string;
+  readonly resolutionState: "unresolved" | "resolved" | "not_applicable";
+}
+
+export interface InterpretedRowValues {
+  readonly transactionDate?: string;
+  readonly quantitySold?: number;
+  readonly productCode?: string;
+  readonly productName?: string;
+  readonly packVariant?: string;
+  readonly currentStock?: number;
+  readonly stockAsOfDate?: string;
+}
+
+export interface ValidatedRow {
+  readonly sourceRow: number;
+  readonly productKey?: string;
+  readonly originalProductHint?: string;
+  readonly originalValues: readonly string[];
+  readonly normalizedValues: readonly string[];
+  readonly interpretedValues: InterpretedRowValues;
+  readonly duplicateFingerprint: string;
+  readonly useState: RowUseState;
+  readonly issueIds: readonly string[];
+}
+
+export type DuplicateDecision = "keep_both" | "treat_as_duplicate";
+
+export interface DuplicateGroup {
+  readonly fingerprint: string;
+  readonly sourceRows: readonly number[];
+  readonly productKeys: readonly string[];
+  readonly decision: DuplicateDecision | "unresolved";
+}
+
+export interface ReconciliationSummary {
+  readonly rowsIn: number;
+  readonly rowsUsed: number;
+  readonly rowsExcluded: number;
+  readonly rowsSafelyNormalized: number;
+}
+
+export type StockFreshnessState = "current" | "limited" | "unusable";
+
+export interface StockFreshness {
+  readonly snapshotDate?: string;
+  readonly analysisDate: string;
+  readonly ageDays?: number;
+  readonly state: StockFreshnessState;
+  readonly reasonCode?: "MISSING_STOCK_DATE" | "INVALID_STOCK_DATE" | "FUTURE_STOCK_DATE" | "STALE_STOCK";
+}
+
+export interface ProductStockEvidence {
+  readonly productKey: string;
+  readonly currentStock?: number;
+  readonly stockAsOfDate?: string;
+  readonly freshness: StockFreshness;
+  readonly usableForCover: boolean;
+  readonly reasonCodes: readonly string[];
+}
+
+export interface ProductLimitation {
+  readonly productKey: string;
+  readonly code: "DUPLICATE_UNRESOLVED";
+  readonly message: string;
+}
+
+export interface ReadinessOptions {
+  readonly analysisDate: string;
+  readonly dateConfirmations?: readonly DateFormatConfirmation[];
+  readonly duplicateDecisions?: Readonly<Record<string, DuplicateDecision>>;
+}
+
+export interface ReadinessSnapshot {
+  readonly id: string;
+  readonly sourceName: string;
+  readonly sourceSha256: string;
+  readonly analysisDate: string;
+  readonly rows: readonly ValidatedRow[];
+  readonly issues: readonly DataIssue[];
+  readonly normalizations: readonly NormalizationEvent[];
+  readonly duplicateGroups: readonly DuplicateGroup[];
+  readonly reconciliation: ReconciliationSummary;
+  readonly productStock: readonly ProductStockEvidence[];
+  readonly productLimitations: readonly ProductLimitation[];
+}
+
+export type WeekState =
+  | "missing"
+  | "confirmed_zero_sales"
+  | "net_zero_with_activity"
+  | "observed_demand";
+
+export interface WeeklyEvidence {
+  readonly productKey: string;
+  readonly weekStart: string;
+  readonly weekEnd: string;
+  readonly positiveQuantity: number | null;
+  readonly negativeQuantity: number | null;
+  readonly netQuantity: number | null;
+  readonly recordCount: number;
+  readonly state: WeekState;
+  readonly sourceRows: readonly number[];
+}
+
+export interface RecentWindowEvidence {
+  readonly selectedWeekStarts: readonly string[];
+  readonly windowStart?: string;
+  readonly windowEnd?: string;
+  readonly observedWeekCount: number;
+  readonly state: "standard" | "limited" | "unavailable";
+  readonly reasonCodes: readonly ("FEWER_THAN_8_COMPLETED_WEEKS" | "MISSING_WEEK_IN_RECENT_SPAN" | "NO_COMPLETED_OBSERVED_WEEK")[];
+}
+
+export interface ProductTimelineSummary {
+  readonly productKey: string;
+  readonly firstWeek: string;
+  readonly lastWeek: string;
+  readonly dateRangeStart: string;
+  readonly dateRangeEnd: string;
+  readonly observedWeekCount: number;
+  readonly weeksInSpan: number;
+  readonly missingWeekCount: number;
+}
+
+export interface ProductTimeline {
+  readonly productKey: string;
+  readonly weeks: readonly WeeklyEvidence[];
+  readonly summary: ProductTimelineSummary;
+  readonly recentWindow: RecentWindowEvidence;
+}
+
+export interface CorrectionReportMetadata {
+  readonly snapshotId: string;
+  readonly issueTotal: number;
+  readonly rowsIn: number;
+  readonly rowsUsed: number;
+  readonly rowsExcluded: number;
+  readonly rowsSafelyNormalized: number;
+}
+
+export interface CorrectionReport {
+  readonly metadata: CorrectionReportMetadata;
+  readonly csvText: string;
+  readonly utf8Bytes: Uint8Array;
 }
