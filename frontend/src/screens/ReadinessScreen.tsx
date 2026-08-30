@@ -488,7 +488,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         <p className="validity">
           <i aria-hidden="true">✓</i>
           {unresolvedDuplicates > 0
-            ? `${unresolvedDuplicates} duplicate decision${unresolvedDuplicates === 1 ? "" : "s"} remain; affected products are Limited.`
+            ? `${unresolvedDuplicates} duplicate decision${unresolvedDuplicates === 1 ? "" : "s"} remain; affected products have Limited data.`
             : `Calculations use ${props.snapshot.reconciliation.rowsUsed.toLocaleString("en")} valid rows only.`}
         </p>
         <div className="footer-row__right">

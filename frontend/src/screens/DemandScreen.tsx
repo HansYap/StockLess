@@ -60,7 +60,7 @@ function exactNumber(value: number | undefined): string {
 
 /** Uses the acceptance-criteria wording and the figures from this exact week. */
 function weekActivityLabel(week: WeeklyEvidence): string {
-  if (week.state === "missing") return "No records";
+  if (week.state === "missing") return "Missing";
   if (week.state === "confirmed_zero_sales") return "Sold nothing";
   if (week.state === "net_zero_with_activity") {
     return `Sold ${week.positiveQuantity ?? 0}, returned ${Math.abs(week.negativeQuantity ?? 0)}`;
@@ -76,7 +76,7 @@ function coverReason(product: DemandProductEvidence): string {
 function coverStatusLabel(product: DemandProductEvidence): string {
   if (product.cover.state === "standard") return "Standard";
   if (product.cover.reasonCodes.includes("AGED_STOCK")) return "Getting old";
-  return "Based on limited data";
+  return "Limited data";
 }
 
 /** Screen 04. Describes readiness-approved evidence; it never forecasts or recommends. */
@@ -103,6 +103,7 @@ export function DemandScreen(props: DemandScreenProps) {
 
   const timeline = selected.timeline;
   const firstCoverReason = selected.cover.reasonCodes[0];
+  const oneWeekAverage = selected.recentAverage.observedWeekCount === 1;
 
   return (
     <>
@@ -134,7 +135,7 @@ export function DemandScreen(props: DemandScreenProps) {
           </select>
         </div>
         <span className={`pill ${selected.state === "standard" ? "pill--teal" : "pill--amber"}`}>
-          {selected.state === "standard" ? "Standard demand history" : "Limited demand history"}
+          {selected.state === "standard" ? "Standard demand history" : "Demand history: Limited data"}
         </span>
       </div>
 
@@ -144,7 +145,7 @@ export function DemandScreen(props: DemandScreenProps) {
             <div>
               <h2 className="card-title">{CAPABILITY_LABELS.weekly_history}</h2>
               <p className="card-sub">
-                <b>{CAPABILITY_LABELS.timeline_gap_evidence}</b> · ISO Monday–Sunday · {timeline.summary.dateRangeStart} to {timeline.summary.dateRangeEnd}
+                <b>{CAPABILITY_LABELS.timeline_gap_evidence}</b> · Weeks run Monday to Sunday · {timeline.summary.dateRangeStart} to {timeline.summary.dateRangeEnd}
               </p>
             </div>
             <div className="legend" aria-label="Chart legend">
@@ -152,7 +153,7 @@ export function DemandScreen(props: DemandScreenProps) {
               <div><span className="swatch-negative" />Negative net</div>
               <div><span className="swatch-zero" />Sold nothing</div>
               <div><span className="swatch-netzero" />Sales and returns cancelled out</div>
-              <div><span className="swatch-missing" />No records</div>
+              <div><span className="swatch-missing" />Missing</div>
             </div>
           </div>
           <WeeklyChart weeks={timeline.weeks} />
@@ -175,7 +176,7 @@ export function DemandScreen(props: DemandScreenProps) {
           ) : (
             <>
               <p className="cover__lede">Stock on hand divided by the selected completed-week mean.</p>
-              <div className="cover__value">{selected.cover.value!.toFixed(2)}</div>
+              <div className="cover__value">{selected.cover.value!.toFixed(1)}</div>
               <div className="cover__unit">weeks · {coverStatusLabel(selected)}</div>
               {selected.cover.reasonCodes.length > 0 && (
                 <div className="cover__reason">{coverReason(selected)}</div>
@@ -197,7 +198,7 @@ export function DemandScreen(props: DemandScreenProps) {
             {selected.recentAverage.value === undefined ? "Cannot calculate" : `${exactNumber(selected.recentAverage.value)} units`}
           </div>
           <div className="metric__meta">
-            {selected.recentAverage.state === "standard" ? "Standard" : selected.recentAverage.state === "limited" ? "Limited" : "Unavailable"}
+            {selected.recentAverage.state === "standard" ? "Standard" : selected.recentAverage.state === "limited" ? "Limited data" : "Unavailable"}
           </div>
         </div>
         <div className="metric">
@@ -227,9 +228,15 @@ export function DemandScreen(props: DemandScreenProps) {
         </div>
       </div>
 
-      {selected.recentAverage.reasonCodes.length > 0 && (
+      {oneWeekAverage && (
         <p className="evidence-note">
-          {CAPABILITY_LABELS.recent_weekly_average} is limited because {selected.recentAverage.reasonCodes.map((reason) => RECENT_REASON_LABEL[reason]).join(" and ")}.
+          {CAPABILITY_LABELS.recent_weekly_average} uses Limited data. It is built on one week; more history would make it steadier.
+        </p>
+      )}
+
+      {!oneWeekAverage && selected.recentAverage.reasonCodes.length > 0 && (
+        <p className="evidence-note">
+          {CAPABILITY_LABELS.recent_weekly_average} uses Limited data because {selected.recentAverage.reasonCodes.map((reason) => RECENT_REASON_LABEL[reason]).join(" and ")}.
         </p>
       )}
 
@@ -305,11 +312,11 @@ export function DemandScreen(props: DemandScreenProps) {
                   <td>
                     {product.cover.value === undefined
                       ? `Cannot calculate · ${product.cover.reasonCodes[0] ? REASON_TEXT[product.cover.reasonCodes[0]] : "evidence unavailable"}`
-                      : `${product.cover.value.toFixed(2)} weeks · ${coverStatusLabel(product)}`}
+                      : `${product.cover.value.toFixed(1)} weeks · ${coverStatusLabel(product)}`}
                   </td>
                   <td>
                     <span className={`pill ${product.state === "standard" ? "pill--teal" : "pill--amber"}`}>
-                      {product.state === "standard" ? "Standard" : "Limited"}
+                      {product.state === "standard" ? "Standard" : "Limited data"}
                     </span>
                   </td>
                 </tr>
@@ -352,7 +359,7 @@ function WeeklyChart({ weeks }: { readonly weeks: readonly WeeklyEvidence[] }) {
   const gridValues = [...new Set([highest, 0, lowest])];
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img" aria-label="Weekly net quantity bars with No records, Sold nothing, and cancelled-out weeks labelled separately">
+    <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img" aria-label="Weekly net quantity bars with Missing, Sold nothing, and cancelled-out weeks labelled separately">
       {gridValues.map((value) => {
         const y = yFor(value);
         return (

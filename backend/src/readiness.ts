@@ -637,7 +637,7 @@ export async function runReadinessCheck(
         productLimitations.push(Object.freeze({
           productKey,
           code: "DUPLICATE_UNRESOLVED",
-          message: "An exact duplicate group is awaiting a retailer decision, so this product remains Limited.",
+          message: "An exact duplicate group is awaiting a retailer decision, so this product has Limited data.",
         }));
       }
     }

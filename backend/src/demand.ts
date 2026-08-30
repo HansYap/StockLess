@@ -159,7 +159,8 @@ export function buildDemandReview(snapshot: ReadinessSnapshot): DemandReview {
       forecastReady: false as const,
     });
   });
-  products.sort((left, right) => left.displayName.localeCompare(right.displayName));
+  products.sort((left, right) =>
+    left.displayName < right.displayName ? -1 : left.displayName > right.displayName ? 1 : 0);
   return Object.freeze({
     snapshotId: snapshot.id,
     analysisDate: snapshot.analysisDate,

@@ -293,7 +293,7 @@ function CapabilityGroup({
           </span>
           <span>
             {item.label}
-            {item.state === "limited" && <em className="unlock__state"> · limited</em>}
+            {item.state === "limited" && <em className="unlock__state"> · Limited data</em>}
             {item.reasons.length > 0 && tone !== "on" && (
               <span className="unlock__reason">{item.reasons[0]?.message}</span>
             )}

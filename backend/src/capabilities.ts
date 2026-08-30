@@ -253,7 +253,7 @@ export function evaluateCapabilities(
           capability: definition.id,
           label: definition.label,
           state: "limited",
-          reasons: Object.freeze([{ code: "LIMITED_RECENT_EVIDENCE", message: `${CAPABILITY_LABELS.recent_weekly_average} is available with limited evidence.` }]),
+          reasons: Object.freeze([{ code: "LIMITED_RECENT_EVIDENCE", message: `${CAPABILITY_LABELS.recent_weekly_average} is available with Limited data.` }]),
           iterationEnabled: true,
         });
       }
@@ -296,7 +296,7 @@ export function evaluateCapabilities(
       label: definition.label,
       state: limited ? "limited" : "available",
       reasons: Object.freeze(limited
-        ? [{ code: "LIMITED_INPUT", message: `${CAPABILITY_LABELS.weeks_of_cover} is available but one or more inputs are Limited.` }]
+        ? [{ code: "LIMITED_INPUT", message: `${CAPABILITY_LABELS.weeks_of_cover} is available but one or more inputs provide Limited data.` }]
         : []),
       iterationEnabled: true,
     });

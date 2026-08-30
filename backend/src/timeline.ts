@@ -18,6 +18,27 @@ interface WeekAccumulator {
   readonly sourceRows: number[];
 }
 
+/** Compares text by code point order so the active browser locale cannot change processing order. */
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** Establishes a content-based addition order that does not depend on CSV row order. */
+function compareRowsForAggregation(left: ValidatedRow, right: ValidatedRow): number {
+  const productComparison = compareText(left.productKey ?? "", right.productKey ?? "");
+  if (productComparison !== 0) return productComparison;
+  const dateComparison = compareText(
+    left.interpretedValues.transactionDate ?? "",
+    right.interpretedValues.transactionDate ?? "",
+  );
+  if (dateComparison !== 0) return dateComparison;
+  const leftQuantity = left.interpretedValues.quantitySold;
+  const rightQuantity = right.interpretedValues.quantitySold;
+  if (leftQuantity === undefined) return rightQuantity === undefined ? 0 : -1;
+  if (rightQuantity === undefined) return 1;
+  return leftQuantity < rightQuantity ? -1 : leftQuantity > rightQuantity ? 1 : 0;
+}
+
 /** Classifies an observed week without confusing zero activity with net zero. */
 function classifyObservedWeek(week: WeekAccumulator): Exclude<WeekState, "missing"> {
   if (week.netQuantity !== 0) return "observed_demand";
@@ -98,7 +119,7 @@ function accumulateRow(
 /** Aggregates used demand rows and inserts explicit missing-week evidence. */
 export function buildProductTimelines(snapshot: ReadinessSnapshot): readonly ProductTimeline[] {
   const grouped = new Map<string, WeekAccumulator>();
-  for (const row of snapshot.rows) accumulateRow(grouped, row);
+  for (const row of [...snapshot.rows].sort(compareRowsForAggregation)) accumulateRow(grouped, row);
 
   const observedByProduct = new Map<string, Map<string, WeekAccumulator>>();
   for (const week of grouped.values()) {
@@ -108,7 +129,7 @@ export function buildProductTimelines(snapshot: ReadinessSnapshot): readonly Pro
   }
 
   const timelines: ProductTimeline[] = [];
-  for (const [productKey, observed] of [...observedByProduct.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [productKey, observed] of [...observedByProduct.entries()].sort(([left], [right]) => compareText(left, right))) {
     const observedStarts = [...observed.keys()].sort();
     const firstWeek = observedStarts[0];
     const lastWeek = observedStarts[observedStarts.length - 1];
