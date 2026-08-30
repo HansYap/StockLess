@@ -15,7 +15,6 @@ import {
   proposeMappings,
   recordConfirmedIdentity,
   removeMapping,
-  runReadinessCheck,
   setMapping,
   updateSessionMapping,
   type CanonicalField,
@@ -30,6 +29,7 @@ import {
   type SourceMode,
 } from "./engine.ts";
 import { replaceSessionSourceInWorker } from "./workers/import-session-client.ts";
+import { runReadinessCheckInWorker } from "./workers/readiness-client.ts";
 import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
 
@@ -69,6 +69,7 @@ export default function App() {
   const [duplicateDecisions, setDuplicateDecisions] = useState<Readonly<Record<string, DuplicateDecision>>>({});
   const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
   const readinessRun = useRef(0);
+  const readinessAbort = useRef<AbortController | null>(null);
 
   const dataset = envelope.session.dataset;
 
@@ -78,6 +79,8 @@ export default function App() {
   }, []);
 
   const resetReadinessEvidence = useCallback(() => {
+    readinessAbort.current?.abort();
+    readinessAbort.current = null;
     readinessRun.current += 1;
     setReadiness(null);
     setReadinessLoading(false);
@@ -94,16 +97,19 @@ export default function App() {
     navigate = false,
   ) => {
     if (!dataset) return;
+    readinessAbort.current?.abort();
+    const controller = new AbortController();
+    readinessAbort.current = controller;
     const runId = readinessRun.current + 1;
     readinessRun.current = runId;
     setReadinessLoading(true);
     setReadinessError(null);
     try {
-      const snapshot = await runReadinessCheck(dataset, envelope.session.mapping, {
+      const snapshot = await runReadinessCheckInWorker(dataset, envelope.session.mapping, {
         analysisDate,
         dateConfirmations: confirmations,
         duplicateDecisions: decisions,
-      });
+      }, controller.signal);
       if (readinessRun.current !== runId) return;
       setReadiness(snapshot);
       if (navigate) goTo(3);
@@ -111,6 +117,7 @@ export default function App() {
       if (readinessRun.current !== runId) return;
       setReadinessError(error instanceof Error ? error.message : "The readiness check could not be completed.");
     } finally {
+      if (readinessAbort.current === controller) readinessAbort.current = null;
       if (readinessRun.current === runId) setReadinessLoading(false);
     }
   }, [analysisDate, dataset, dateConfirmations, duplicateDecisions, envelope.session.mapping, goTo]);
@@ -293,8 +300,10 @@ export default function App() {
             className="btn btn--primary"
             disabled={readinessLoading}
             onClick={() => void executeReadiness(dateConfirmations, duplicateDecisions)}
+            aria-busy={readinessLoading}
           >
-            {readinessLoading ? "Checking…" : "Run readiness check"}
+            {readinessLoading && <span className="btn__spinner" aria-hidden="true" />}
+            {readinessLoading ? "Checking locally…" : "Run readiness check"}
           </button>
         </section>
       )}

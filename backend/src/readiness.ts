@@ -581,9 +581,14 @@ export async function runReadinessCheck(
     });
   }
 
-  await Promise.all(drafts.map(async (row) => {
-    row.duplicateFingerprint = await duplicateFingerprint(row.fingerprintValues);
-  }));
+  // Bound concurrent Web Crypto work so a near-limit file cannot create
+  // tens of thousands of digest promises at once.
+  const fingerprintBatchSize = 256;
+  for (let start = 0; start < drafts.length; start += fingerprintBatchSize) {
+    await Promise.all(drafts.slice(start, start + fingerprintBatchSize).map(async (row) => {
+      row.duplicateFingerprint = await duplicateFingerprint(row.fingerprintValues);
+    }));
+  }
 
   const byFingerprint = new Map<string, RowDraft[]>();
   for (const row of drafts) {

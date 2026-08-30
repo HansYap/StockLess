@@ -263,7 +263,9 @@ export function MappingScreen(props: MappingScreenProps) {
             className="btn btn--primary"
             disabled={blockers.length > 0 || props.checking}
             onClick={props.onContinue}
+            aria-busy={props.checking}
           >
+            {props.checking && <span className="btn__spinner" aria-hidden="true" />}
             {props.checking ? "Checking locally…" : "Run readiness check →"}
           </button>
         </div>

@@ -71,6 +71,9 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .btn--ghost{background:#fff;color:var(--ink);border:1px solid var(--border-strong)}
 .btn--ghost:hover:not(:disabled){border-color:#93A8A3}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+.btn__spinner{width:15px;height:15px;margin-right:8px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:button-spin .7s linear infinite;flex:none}
+@keyframes button-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.btn__spinner{animation-duration:1.4s}}
 .btn--link{background:none;border:0;padding:1px 6px;color:var(--muted);font-family:var(--body);
   font-size:16px;font-weight:700;cursor:pointer}
 .btn--link:hover{color:var(--ink)}
