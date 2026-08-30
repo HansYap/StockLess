@@ -264,7 +264,7 @@ export function evaluateCapabilities(
         capability: definition.id,
         label: definition.label,
         state: "limited",
-        reasons: Object.freeze([{ code: "AGED_STOCK", message: "The stock snapshot is available but aged." }]),
+        reasons: Object.freeze([{ code: "AGED_STOCK", message: "The stock count is getting old because it is 8–14 days old." }]),
         iterationEnabled: true,
       });
     }
@@ -274,7 +274,7 @@ export function evaluateCapabilities(
         capability: definition.id,
         label: definition.label,
         state: "needs_information",
-        reasons: Object.freeze([{ code: "UNUSABLE_STOCK_SNAPSHOT", message: "The stock snapshot is missing, invalid, future-dated, or too old." }]),
+        reasons: Object.freeze([{ code: "UNUSABLE_STOCK_SNAPSHOT", message: "The stock count date is missing, invalid, in the future, or too old to rely on." }]),
         iterationEnabled: true,
       });
     }

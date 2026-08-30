@@ -13,7 +13,7 @@ import {
   type NormalizationEvent,
   type ParsedDataset,
   type ReadinessSnapshot,
-  type StockFreshnessState,
+  type StockFreshness,
   type WeekState,
 } from "../engine.ts";
 
@@ -70,12 +70,6 @@ const WEEK_LABEL: Readonly<Record<WeekState, string>> = Object.freeze({
   observed_demand: "Observed demand",
 });
 
-const FRESHNESS_LABEL: Readonly<Record<StockFreshnessState, string>> = Object.freeze({
-  current: "Current · 0–7 days",
-  limited: "Limited · 8–14 days",
-  unusable: "Unusable · over 14 days or invalid",
-});
-
 const TIDY_UP_LABEL: Readonly<Record<NormalizationEvent["normalizationType"], string>> = Object.freeze({
   trim_whitespace: "Trim leading and trailing whitespace",
   normalize_line_endings: "Normalise line endings",
@@ -90,6 +84,17 @@ function issueMatches(issue: DataIssue, filter: ReadinessIssueFilter): boolean {
 
 function humanize(value: string): string {
   return value.toLowerCase().replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+/** Uses the retailer-facing stock-age bands without mislabelling invalid dates as old stock. */
+function stockFreshnessLabel(freshness: StockFreshness): string {
+  if (freshness.state === "current") return "Current · 0–7 days old";
+  if (freshness.state === "limited") return "Getting old · 8–14 days old";
+  if (freshness.reasonCode === "STALE_STOCK") return "Too old to rely on · more than 14 days old";
+  if (freshness.reasonCode === "MISSING_STOCK_DATE") return "Stock count date missing";
+  if (freshness.reasonCode === "INVALID_STOCK_DATE") return "Stock count date invalid";
+  if (freshness.reasonCode === "FUTURE_STOCK_DATE") return "Stock count date is in the future";
+  return "Stock count cannot be relied on";
 }
 
 /** Screen 03. Renders the domain engine's immutable Epic 2 evidence snapshot. */
@@ -431,7 +436,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                 <b className="num">{stock.productKey}</b>
                 <span>Snapshot: {stock.stockAsOfDate ?? "missing"}</span>
                 <span>Age: {stock.freshness.ageDays === undefined ? "not available" : `${stock.freshness.ageDays} days`}</span>
-                <strong>{FRESHNESS_LABEL[stock.freshness.state]}</strong>
+                <strong>{stockFreshnessLabel(stock.freshness)}</strong>
                 {!stock.usableForCover && <small>Cover unavailable: {stock.reasonCodes.map(humanize).join(" · ") || "stock evidence incomplete"}</small>}
               </article>
             ))}

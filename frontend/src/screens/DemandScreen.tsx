@@ -7,7 +7,6 @@ import {
   type ReadinessSnapshot,
   type RecentAverageReasonCode,
   type WeeklyEvidence,
-  type WeekState,
 } from "../engine.ts";
 
 interface DemandScreenProps {
@@ -25,13 +24,13 @@ const REASON_TEXT: Record<CoverReasonCode, string> = {
   INVALID_STOCK_DATE: "The stock snapshot date is invalid.",
   CONFLICTING_STOCK_DATE: "This product has conflicting stock snapshot dates.",
   FUTURE_STOCK_DATE: "The stock snapshot date is after the analysis date.",
-  STALE_STOCK: "The stock snapshot is more than 14 days old.",
+  STALE_STOCK: "The stock snapshot is too old to rely on because it is more than 14 days old.",
   NO_COMPLETED_OBSERVED_WEEK: "There is no completed observed week before the analysis date.",
   ZERO_AVERAGE: "The selected weekly mean is zero.",
   NEGATIVE_AVERAGE: "The selected weekly mean is negative after returns.",
   FEWER_THAN_8_COMPLETED_WEEKS: "Fewer than 8 completed observed weeks are available.",
   MISSING_WEEK_IN_RECENT_SPAN: "A week is missing inside the recent evidence span.",
-  AGED_STOCK: "The stock snapshot is 8–14 days old.",
+  AGED_STOCK: "The stock snapshot is getting old because it is 8–14 days old.",
   DUPLICATE_UNRESOLVED: "Possible duplicate rows are still being counted separately.",
 };
 
@@ -49,13 +48,6 @@ const RECOVERY_TEXT: Partial<Record<CoverReasonCode, string>> = {
   NEGATIVE_AVERAGE: "Review returns and sales; the selected weekly mean must be positive.",
 };
 
-const WEEK_STATE_LABEL: Record<WeekState, string> = {
-  missing: "Missing",
-  confirmed_zero_sales: "Confirmed zero sales",
-  net_zero_with_activity: "Net zero with activity",
-  observed_demand: "Observed demand",
-};
-
 const RECENT_REASON_LABEL: Record<RecentAverageReasonCode, string> = {
   FEWER_THAN_8_COMPLETED_WEEKS: "fewer than 8 completed weeks",
   MISSING_WEEK_IN_RECENT_SPAN: "a missing week in the selected span",
@@ -66,8 +58,25 @@ function exactNumber(value: number | undefined): string {
   return value === undefined ? "Not available" : String(value);
 }
 
+/** Uses the acceptance-criteria wording and the figures from this exact week. */
+function weekActivityLabel(week: WeeklyEvidence): string {
+  if (week.state === "missing") return "No records";
+  if (week.state === "confirmed_zero_sales") return "Sold nothing";
+  if (week.state === "net_zero_with_activity") {
+    return `Sold ${week.positiveQuantity ?? 0}, returned ${Math.abs(week.negativeQuantity ?? 0)}`;
+  }
+  return "Activity recorded";
+}
+
 function coverReason(product: DemandProductEvidence): string {
   return product.cover.reasonCodes.map((reason) => REASON_TEXT[reason]).join(" ");
+}
+
+/** Separates an ageing stock count from other reasons a cover result may be limited. */
+function coverStatusLabel(product: DemandProductEvidence): string {
+  if (product.cover.state === "standard") return "Standard";
+  if (product.cover.reasonCodes.includes("AGED_STOCK")) return "Getting old";
+  return "Based on limited data";
 }
 
 /** Screen 04. Describes readiness-approved evidence; it never forecasts or recommends. */
@@ -141,9 +150,9 @@ export function DemandScreen(props: DemandScreenProps) {
             <div className="legend" aria-label="Chart legend">
               <div><span className="swatch-bar" />Positive net</div>
               <div><span className="swatch-negative" />Negative net</div>
-              <div><span className="swatch-zero" />Zero sales</div>
-              <div><span className="swatch-netzero" />Net zero</div>
-              <div><span className="swatch-missing" />Missing</div>
+              <div><span className="swatch-zero" />Sold nothing</div>
+              <div><span className="swatch-netzero" />Sales and returns cancelled out</div>
+              <div><span className="swatch-missing" />No records</div>
             </div>
           </div>
           <WeeklyChart weeks={timeline.weeks} />
@@ -167,7 +176,7 @@ export function DemandScreen(props: DemandScreenProps) {
             <>
               <p className="cover__lede">Stock on hand divided by the selected completed-week mean.</p>
               <div className="cover__value">{selected.cover.value!.toFixed(2)}</div>
-              <div className="cover__unit">weeks · {selected.cover.state}</div>
+              <div className="cover__unit">weeks · {coverStatusLabel(selected)}</div>
               {selected.cover.reasonCodes.length > 0 && (
                 <div className="cover__reason">{coverReason(selected)}</div>
               )}
@@ -253,7 +262,7 @@ export function DemandScreen(props: DemandScreenProps) {
                   <td className="num">{week.negativeQuantity === null ? "Not observed" : exactNumber(week.negativeQuantity)}</td>
                   <td className="num">{week.netQuantity === null ? "Not observed" : exactNumber(week.netQuantity)}</td>
                   <td className="num">{week.recordCount}</td>
-                  <td><WeekStatePill state={week.state} /></td>
+                  <td><WeekStatePill week={week} /></td>
                   <td className="num">{week.sourceRows.length > 0 ? week.sourceRows.join(", ") : "None (missing)"}</td>
                 </tr>
               ))}
@@ -296,7 +305,7 @@ export function DemandScreen(props: DemandScreenProps) {
                   <td>
                     {product.cover.value === undefined
                       ? `Cannot calculate · ${product.cover.reasonCodes[0] ? REASON_TEXT[product.cover.reasonCodes[0]] : "evidence unavailable"}`
-                      : `${product.cover.value.toFixed(2)} weeks · ${product.cover.state}`}
+                      : `${product.cover.value.toFixed(2)} weeks · ${coverStatusLabel(product)}`}
                   </td>
                   <td>
                     <span className={`pill ${product.state === "standard" ? "pill--teal" : "pill--amber"}`}>
@@ -317,12 +326,12 @@ export function DemandScreen(props: DemandScreenProps) {
   );
 }
 
-function WeekStatePill({ state }: { readonly state: WeekState }) {
-  const tone = state === "observed_demand" ? "teal" : state === "missing" ? "grey" : "amber";
-  return <span className={`pill pill--${tone}`}>{WEEK_STATE_LABEL[state]}</span>;
+function WeekStatePill({ week }: { readonly week: WeeklyEvidence }) {
+  const tone = week.state === "observed_demand" ? "teal" : week.state === "missing" ? "grey" : "amber";
+  return <span className={`pill pill--${tone}`}>{weekActivityLabel(week)}</span>;
 }
 
-/** Bar chart of the exact net-quantity values held by the weekly evidence array. */
+/** Bar chart of the exact net quantities, with distinct quiet-week evidence. */
 function WeeklyChart({ weeks }: { readonly weeks: readonly WeeklyEvidence[] }) {
   const width = 760;
   const height = 224;
@@ -343,7 +352,7 @@ function WeeklyChart({ weeks }: { readonly weeks: readonly WeeklyEvidence[] }) {
   const gridValues = [...new Set([highest, 0, lowest])];
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img" aria-label="Weekly net quantity with missing and zero-week states">
+    <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img" aria-label="Weekly net quantity bars with No records, Sold nothing, and cancelled-out weeks labelled separately">
       {gridValues.map((value) => {
         const y = yFor(value);
         return (
@@ -356,28 +365,38 @@ function WeeklyChart({ weeks }: { readonly weeks: readonly WeeklyEvidence[] }) {
 
       {weeks.map((week, index) => {
         const x = left + slot * index + (slot - barWidth) / 2;
+        const center = x + barWidth / 2;
+        const quietLabel = weekActivityLabel(week);
         if (week.state === "missing") {
           return (
             <g key={week.weekStart}>
-              <title>{week.weekStart} to {week.weekEnd}: missing</title>
+              <title>{week.weekStart} to {week.weekEnd}: Missing</title>
               <rect x={x} y={top} width={barWidth} height={plotHeight} fill="none" stroke="#93A4A8" strokeWidth="1.4" strokeDasharray="4 3" />
+              <text x={center} y={top + 10} fontSize="8.8" fill="#66767D" textAnchor="middle" fontFamily="Inter, sans-serif">
+                Missing
+              </text>
             </g>
           );
         }
         if (week.state === "confirmed_zero_sales") {
           return (
             <g key={week.weekStart}>
-              <title>{week.weekStart} to {week.weekEnd}: confirmed zero sales</title>
-              <circle cx={x + barWidth / 2} cy={zeroY} r="4.5" fill="#3F7E98" />
+              <title>{week.weekStart} to {week.weekEnd}: Sold nothing</title>
+              <circle cx={center} cy={zeroY} r="4.8" fill="#3F7E98" stroke="#FFFFFF" strokeWidth="1.5" />
+              <text x={center} y={Math.max(top + 10, zeroY - 10)} fontSize="8.8" fill="#315F73" textAnchor="middle" fontFamily="Inter, sans-serif">
+                Sold nothing
+              </text>
             </g>
           );
         }
         if (week.state === "net_zero_with_activity") {
-          const center = x + barWidth / 2;
           return (
             <g key={week.weekStart}>
-              <title>{week.weekStart} to {week.weekEnd}: net zero with sales and returns</title>
-              <rect x={center - 4} y={zeroY - 4} width="8" height="8" fill="#C4872B" transform={`rotate(45 ${center} ${zeroY})`} />
+              <title>{week.weekStart} to {week.weekEnd}: {quietLabel}</title>
+              <rect x={center - 4} y={zeroY - 4} width="8" height="8" fill="#C4872B" stroke="#FFFFFF" strokeWidth="1" transform={`rotate(45 ${center} ${zeroY})`} />
+              <text x={center} y={Math.max(top + 10, zeroY - 10)} fontSize="8.8" fill="#765A2D" textAnchor="middle" fontFamily="Inter, sans-serif">
+                {quietLabel}
+              </text>
             </g>
           );
         }
