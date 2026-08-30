@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CAPABILITY_LABELS,
   buildProductTimelines,
@@ -10,6 +10,7 @@ import {
   type DateFormatConfirmation,
   type DuplicateDecision,
   type MappingState,
+  type NormalizationEvent,
   type ParsedDataset,
   type ReadinessSnapshot,
   type StockFreshnessState,
@@ -75,6 +76,14 @@ const FRESHNESS_LABEL: Readonly<Record<StockFreshnessState, string>> = Object.fr
   unusable: "Unusable · over 14 days or invalid",
 });
 
+const TIDY_UP_LABEL: Readonly<Record<NormalizationEvent["normalizationType"], string>> = Object.freeze({
+  trim_whitespace: "Trim leading and trailing whitespace",
+  normalize_line_endings: "Normalise line endings",
+  confirmed_date_format: "Use the retailer-confirmed date format",
+});
+
+const TIDY_UPS_PER_PAGE = 25;
+
 function issueMatches(issue: DataIssue, filter: ReadinessIssueFilter): boolean {
   return FILTER_CODES[filter].includes(issue.issueCode);
 }
@@ -85,8 +94,11 @@ function humanize(value: string): string {
 
 /** Screen 03. Renders the domain engine's immutable Epic 2 evidence snapshot. */
 export function ReadinessScreen(props: ReadinessScreenProps) {
+  const [tidyUpPage, setTidyUpPage] = useState(0);
   const timelines = useMemo(() => buildProductTimelines(props.snapshot), [props.snapshot]);
   const report = useMemo(() => createCorrectionReport(props.snapshot), [props.snapshot]);
+
+  useEffect(() => setTidyUpPage(0), [props.snapshot.id]);
 
   const dateEvidence = useMemo(() => {
     const fields = ["transaction_date", "stock_as_of_date"] as const;
@@ -111,6 +123,10 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   const unresolvedDuplicates = props.snapshot.duplicateGroups.filter((group) => group.decision === "unresolved").length;
   const excluded = props.snapshot.reconciliation.rowsExcluded;
   const clean = props.snapshot.issues.length === 0;
+  const tidyUpPageCount = Math.max(1, Math.ceil(props.snapshot.normalizations.length / TIDY_UPS_PER_PAGE));
+  const currentTidyUpPage = Math.min(tidyUpPage, tidyUpPageCount - 1);
+  const tidyUpStart = currentTidyUpPage * TIDY_UPS_PER_PAGE;
+  const visibleTidyUps = props.snapshot.normalizations.slice(tidyUpStart, tidyUpStart + TIDY_UPS_PER_PAGE);
 
   function download() {
     const blob = new Blob([report.csvText], { type: "text/csv;charset=utf-8" });
@@ -220,9 +236,17 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
               </span>
               <h2>Rows {group.sourceRows.join(", ")}</h2>
               <p>
-                Every source cell matches after permitted normalization. Both remain used until you decide;
-                unresolved products are Limited.
+                {group.decision === "unresolved"
+                  ? "These rows are identical. Your row count is unchanged and every row remains in use until you decide."
+                  : group.decision === "keep_both"
+                    ? "You chose “keep both”. Every row remains in use and your row count is unchanged."
+                    : `You chose “these are duplicates”. Row ${group.sourceRows[0]} remains in use; rows ${group.sourceRows.slice(1).join(", ")} are left out and marked as duplicates you confirmed.`}
               </p>
+              {group.decision === "unresolved" && group.productKeys.length > 0 && (
+                <p className="notice notice--info" role="status">
+                  Warning for {group.productKeys.join(", ")}: these products cannot pass the order check until you decide.
+                </p>
+              )}
               <div className="decision-card__actions">
                 <button
                   type="button"
@@ -230,7 +254,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                   disabled={props.checking || group.decision === "keep_both"}
                   onClick={() => props.onDuplicateDecision(group.fingerprint, "keep_both")}
                 >
-                  Keep both
+                  keep both
                 </button>
                 <button
                   type="button"
@@ -238,7 +262,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                   disabled={props.checking || group.decision === "treat_as_duplicate"}
                   onClick={() => props.onDuplicateDecision(group.fingerprint, "treat_as_duplicate")}
                 >
-                  Treat as duplicate
+                  these are duplicates
                 </button>
               </div>
             </article>
@@ -249,9 +273,9 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       <section className="card evidence-section">
         <div className="card__head">
           <div>
-            <h2 className="card-title">Rows and values needing attention</h2>
+            <h2 className="card-title">Problems and tidy-ups</h2>
             <p className="card-sub">
-              {props.filter ? "Filtered by the selected card." : "The first 12 issue records from this same export snapshot."}
+              {props.filter ? "Problems are filtered by the selected card." : "Problems and permitted tidy-ups from this same local snapshot."}
             </p>
           </div>
           <span className="pill pill--grey">Showing {preview.length} of {shown.length}</span>
@@ -288,6 +312,68 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {props.snapshot.normalizations.length > 0 && (
+          <div className="tidy-up-list">
+            <div className="card__head">
+              <div>
+                <h3 className="card-title">Every tidy-up</h3>
+                <p className="card-sub">
+                  Each event shows its source row, exact before-and-after value, and the tidy-up permitted by AC2.
+                </p>
+              </div>
+              <span className="pill pill--grey">{props.snapshot.normalizations.length} events</span>
+            </div>
+            <div className="table-scroll">
+              <table className="dtable dtable--tidy-ups">
+                <thead>
+                  <tr>
+                    <th>Row number</th>
+                    <th>Column</th>
+                    <th>What was there before</th>
+                    <th>What it is now</th>
+                    <th>Tidy-up applied</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleTidyUps.map((event, index) => (
+                    <tr key={`${event.sourceRow}-${event.sourceColumn}-${tidyUpStart + index}`}>
+                      <td><b>#{event.sourceRow.toLocaleString("en")}</b></td>
+                      <td>{props.dataset.columns.find((column) => column.id === event.sourceColumn)?.header ?? event.sourceColumn}</td>
+                      <td><code className="trace-value">{JSON.stringify(event.originalValue)}</code></td>
+                      <td><code className="trace-value">{JSON.stringify(event.resultingValue)}</code></td>
+                      <td>{TIDY_UP_LABEL[event.normalizationType]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-pager" aria-label="Tidy-up pages">
+              <span>
+                Showing {tidyUpStart + 1}–{tidyUpStart + visibleTidyUps.length} of {props.snapshot.normalizations.length}
+              </span>
+              <div className="table-pager__actions">
+                <button
+                  type="button"
+                  className="btn btn--small btn--ghost"
+                  disabled={currentTidyUpPage === 0}
+                  onClick={() => setTidyUpPage((page) => Math.max(0, page - 1))}
+                >
+                  ← Previous
+                </button>
+                <span>Page {currentTidyUpPage + 1} of {tidyUpPageCount}</span>
+                <button
+                  type="button"
+                  className="btn btn--small btn--ghost"
+                  disabled={currentTidyUpPage >= tidyUpPageCount - 1}
+                  onClick={() => setTidyUpPage((page) => Math.min(tidyUpPageCount - 1, page + 1))}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </section>
@@ -349,31 +435,6 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                 {!stock.usableForCover && <small>Cover unavailable: {stock.reasonCodes.map(humanize).join(" · ") || "stock evidence incomplete"}</small>}
               </article>
             ))}
-          </div>
-        </section>
-      )}
-
-      {props.snapshot.normalizations.length > 0 && (
-        <section className="card evidence-section">
-          <div className="card__head">
-            <div>
-              <h2 className="card-title">Safe normalizations</h2>
-              <p className="card-sub">Whitespace, line endings, and retailer-confirmed date representations only.</p>
-            </div>
-            <span className="pill pill--grey">{props.snapshot.normalizations.length} events</span>
-          </div>
-          <div className="table-scroll">
-            <table className="dtable">
-              <thead><tr><th>Row</th><th>Column</th><th>Original</th><th>Result</th><th>Type</th></tr></thead>
-              <tbody>
-                {props.snapshot.normalizations.slice(0, 12).map((event, index) => (
-                  <tr key={`${event.sourceRow}-${event.sourceColumn}-${index}`}>
-                    <td>#{event.sourceRow}</td><td>{event.sourceColumn}</td><td className="num">{event.originalValue}</td>
-                    <td className="num">{event.resultingValue}</td><td>{humanize(event.normalizationType)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </section>
       )}

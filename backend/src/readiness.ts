@@ -610,7 +610,7 @@ export async function runReadinessCheck(
         observedValue: fingerprint,
         reason: "Every source cell matches another record after permitted representation normalization.",
         correctiveAction: decision === "unresolved"
-          ? "Choose Keep both or Treat as duplicate for this exact-match group."
+          ? "Choose “keep both” or “these are duplicates” for this exact-match group."
           : "The retailer has reviewed this exact-match group.",
         resolutionState: decision === "unresolved" ? "unresolved" : "resolved",
       });
