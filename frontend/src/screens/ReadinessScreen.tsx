@@ -77,6 +77,7 @@ const TIDY_UP_LABEL: Readonly<Record<NormalizationEvent["normalizationType"], st
 });
 
 const TIDY_UPS_PER_PAGE = 25;
+const PROBLEMS_PER_PAGE = 25;
 
 function issueMatches(issue: DataIssue, filter: ReadinessIssueFilter): boolean {
   return FILTER_CODES[filter].includes(issue.issueCode);
@@ -99,11 +100,16 @@ function stockFreshnessLabel(freshness: StockFreshness): string {
 
 /** Screen 03. Renders the domain engine's immutable Epic 2 evidence snapshot. */
 export function ReadinessScreen(props: ReadinessScreenProps) {
+  const [problemPage, setProblemPage] = useState(0);
   const [tidyUpPage, setTidyUpPage] = useState(0);
   const timelines = useMemo(() => buildProductTimelines(props.snapshot), [props.snapshot]);
   const report = useMemo(() => createCorrectionReport(props.snapshot), [props.snapshot]);
 
-  useEffect(() => setTidyUpPage(0), [props.snapshot.id]);
+  useEffect(() => {
+    setProblemPage(0);
+    setTidyUpPage(0);
+  }, [props.snapshot.id]);
+  useEffect(() => setProblemPage(0), [props.filter]);
 
   const dateEvidence = useMemo(() => {
     const fields = ["transaction_date", "stock_as_of_date"] as const;
@@ -124,9 +130,12 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   const shown = props.filter
     ? props.snapshot.issues.filter((issue) => issueMatches(issue, props.filter!))
     : props.snapshot.issues;
-  const preview = shown.slice(0, 12);
+  const problemPageCount = Math.max(1, Math.ceil(shown.length / PROBLEMS_PER_PAGE));
+  const currentProblemPage = Math.min(problemPage, problemPageCount - 1);
+  const problemStart = currentProblemPage * PROBLEMS_PER_PAGE;
+  const visibleProblems = shown.slice(problemStart, problemStart + PROBLEMS_PER_PAGE);
   const unresolvedDuplicates = props.snapshot.duplicateGroups.filter((group) => group.decision === "unresolved").length;
-  const excluded = props.snapshot.reconciliation.rowsExcluded;
+  const leftOut = props.snapshot.reconciliation.rowsExcluded;
   const clean = props.snapshot.issues.length === 0;
   const tidyUpPageCount = Math.max(1, Math.ceil(props.snapshot.normalizations.length / TIDY_UPS_PER_PAGE));
   const currentTidyUpPage = Math.min(tidyUpPage, tidyUpPageCount - 1);
@@ -151,7 +160,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       </h1>
       <p className="lede">
         Every result below comes from one local readiness snapshot. Original cells remain unchanged,
-        missing weeks stay distinct from zero sales, and excluded rows remain traceable.
+        missing weeks stay distinct from zero sales, and rows left out remain traceable.
       </p>
 
       {props.checking && <p className="notice notice--info" role="status">Refreshing the readiness evidence locally…</p>}
@@ -165,7 +174,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
             <p>
               {props.snapshot.reconciliation.rowsIn.toLocaleString("en")} rows in ={" "}
               {props.snapshot.reconciliation.rowsUsed.toLocaleString("en")} used +{" "}
-              {excluded.toLocaleString("en")} excluded. {props.snapshot.reconciliation.rowsSafelyNormalized.toLocaleString("en")}{" "}
+              {leftOut.toLocaleString("en")} left out. {props.snapshot.reconciliation.rowsSafelyNormalized.toLocaleString("en")}{" "}
               used rows had safe representation-only normalization.
             </p>
           </div>
@@ -179,9 +188,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       <div className="issues issues--five">
         {(Object.keys(FILTER_META) as ReadinessIssueFilter[]).map((kind) => {
           const meta = FILTER_META[kind];
-          const count = new Set(
-            props.snapshot.issues.filter((issue) => issueMatches(issue, kind)).map((issue) => issue.sourceRow),
-          ).size;
+          const count = props.snapshot.issues.filter((issue) => issueMatches(issue, kind)).length;
           const active = props.filter === kind;
           return (
             <button
@@ -283,10 +290,12 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
               {props.filter ? "Problems are filtered by the selected card." : "Problems and permitted tidy-ups from this same local snapshot."}
             </p>
           </div>
-          <span className="pill pill--grey">Showing {preview.length} of {shown.length}</span>
+          <span className="pill pill--grey">
+            {shown.length === 0 ? "0 problems" : `Showing ${problemStart + 1}–${problemStart + visibleProblems.length} of ${shown.length}`}
+          </span>
         </div>
 
-        {preview.length === 0 ? (
+        {visibleProblems.length === 0 ? (
           <p className="empty">Nothing to correct in this selection.</p>
         ) : (
           <div className="table-scroll">
@@ -302,21 +311,52 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                 </tr>
               </thead>
               <tbody>
-                {preview.map((issue) => {
-                  const useState = props.snapshot.rows.find((row) => row.sourceRow === issue.sourceRow)?.useState;
+                {visibleProblems.map((issue) => {
+                  const sourceRow = props.snapshot.rows.find((row) => row.sourceRow === issue.sourceRow);
+                  const useState = sourceRow?.useState;
+                  const product = issue.productKey
+                    ?? issue.originalProductHint
+                    ?? sourceRow?.productKey
+                    ?? sourceRow?.originalProductHint
+                    ?? "Unknown";
                   return (
                     <tr key={issue.id}>
                       <td><b>#{issue.sourceRow.toLocaleString("en")}</b></td>
-                      <td className="num">{issue.productKey ?? issue.originalProductHint ?? "Unknown"}</td>
+                      <td className="num">{product}</td>
                       <td><span className={`tag ${useState === "excluded" ? "tag--red" : "tag--amber"}`}>{humanize(issue.issueCode)}</span></td>
                       <td className="num">{issue.observedValue || "blank"}</td>
                       <td><b>{issue.reason}</b><span className="cell-detail">{issue.correctiveAction}</span></td>
-                      <td><span className={`pill ${useState === "excluded" ? "pill--red" : "pill--amber"}`}>{useState ?? "used"}</span></td>
+                      <td><span className={`pill ${useState === "excluded" ? "pill--red" : "pill--amber"}`}>{useState === "excluded" ? "Left out" : "Used"}</span></td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {shown.length > 0 && (
+          <div className="table-pager" aria-label="Problem pages">
+            <span>Every problem is included in the download.</span>
+            <div className="table-pager__actions">
+              <button
+                type="button"
+                className="btn btn--small btn--ghost"
+                disabled={currentProblemPage === 0}
+                onClick={() => setProblemPage((page) => Math.max(0, page - 1))}
+              >
+                ← Previous
+              </button>
+              <span>Page {currentProblemPage + 1} of {problemPageCount}</span>
+              <button
+                type="button"
+                className="btn btn--small btn--ghost"
+                disabled={currentProblemPage >= problemPageCount - 1}
+                onClick={() => setProblemPage((page) => Math.min(problemPageCount - 1, page + 1))}
+              >
+                Next →
+              </button>
+            </div>
           </div>
         )}
 
@@ -452,7 +492,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
             : `Calculations use ${props.snapshot.reconciliation.rowsUsed.toLocaleString("en")} valid rows only.`}
         </p>
         <div className="footer-row__right">
-          <button type="button" className="btn btn--ghost" onClick={download}>↓ Download correction report</button>
+          <button type="button" className="btn btn--ghost" onClick={download}>↓ Download problems</button>
           <button type="button" className="btn btn--primary" onClick={props.onContinue}>Review demand →</button>
         </div>
       </div>
