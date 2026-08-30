@@ -4,10 +4,12 @@ import type {
   ReadinessSnapshot,
   RowUseState,
 } from "./contracts.ts";
+import { buildProductTimelines } from "./timeline.ts";
 
 const REPORT_COLUMNS = Object.freeze([
   "record_type",
   "snapshot_id",
+  "source_mode",
   "source_file",
   "source_row",
   "product",
@@ -25,6 +27,16 @@ const REPORT_COLUMNS = Object.freeze([
   "rows_excluded",
   "rows_safely_normalized",
   "issue_total",
+  "first_week",
+  "last_week",
+  "observed_weeks",
+  "weeks_in_span",
+  "missing_weeks",
+  "recent_window_start",
+  "recent_window_end",
+  "recent_observed_weeks",
+  "recent_window_state",
+  "recent_window_reasons",
 ] as const);
 
 type ReportColumn = typeof REPORT_COLUMNS[number];
@@ -82,6 +94,7 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
   Object.assign(summary, {
     record_type: "summary",
     snapshot_id: metadata.snapshotId,
+    source_mode: snapshot.sourceMode === "sample" ? "Sample data" : "Retailer file",
     source_file: snapshot.sourceName,
     rows_in: String(metadata.rowsIn),
     rows_used: String(metadata.rowsUsed),
@@ -95,6 +108,7 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
     Object.assign(record, {
       record_type: "issue",
       snapshot_id: metadata.snapshotId,
+      source_mode: snapshot.sourceMode === "sample" ? "Sample data" : "Retailer file",
       source_file: snapshot.sourceName,
       source_row: String(issue.sourceRow),
       product: issue.productKey ?? issue.originalProductHint ?? sourceRowProduct(snapshot, issue.sourceRow),
@@ -118,6 +132,7 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
     Object.assign(record, {
       record_type: "normalization",
       snapshot_id: metadata.snapshotId,
+      source_mode: snapshot.sourceMode === "sample" ? "Sample data" : "Retailer file",
       source_file: snapshot.sourceName,
       source_row: String(event.sourceRow),
       product: sourceRowProduct(snapshot, event.sourceRow),
@@ -138,10 +153,38 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
     return Object.freeze(record);
   });
 
+  const productSummaryRecords = buildProductTimelines(snapshot).map((timeline): ReportRecord => {
+    const record = emptyRecord();
+    Object.assign(record, {
+      record_type: "product_summary",
+      snapshot_id: metadata.snapshotId,
+      source_mode: snapshot.sourceMode === "sample" ? "Sample data" : "Retailer file",
+      source_file: snapshot.sourceName,
+      product: timeline.productKey,
+      rows_in: String(metadata.rowsIn),
+      rows_used: String(metadata.rowsUsed),
+      rows_excluded: String(metadata.rowsExcluded),
+      rows_safely_normalized: String(metadata.rowsSafelyNormalized),
+      issue_total: String(metadata.issueTotal),
+      first_week: timeline.summary.firstWeek,
+      last_week: timeline.summary.lastWeek,
+      observed_weeks: String(timeline.summary.observedWeekCount),
+      weeks_in_span: String(timeline.summary.weeksInSpan),
+      missing_weeks: String(timeline.summary.missingWeekCount),
+      recent_window_start: timeline.recentWindow.windowStart ?? "",
+      recent_window_end: timeline.recentWindow.windowEnd ?? "",
+      recent_observed_weeks: String(timeline.recentWindow.observedWeekCount),
+      recent_window_state: timeline.recentWindow.state,
+      recent_window_reasons: timeline.recentWindow.reasonCodes.join("|"),
+    });
+    return Object.freeze(record);
+  });
+
   const csvText = recordsToCsv([
     Object.freeze(summary),
     ...issueRecords,
     ...normalizationRecords,
+    ...productSummaryRecords,
   ]);
   return Object.freeze({
     metadata,

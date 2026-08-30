@@ -236,6 +236,7 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .ready__unit{font-size:12px;color:var(--muted);text-align:right;margin-top:4px}
 
 .issues{align-self:stretch;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.issues--five{grid-template-columns:repeat(5,1fr)}
 .issue{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;
   padding:16px;background:#fff;border:1px solid var(--line);border-radius:14px;
   font-family:var(--body);cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
@@ -270,6 +271,42 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .validity i{width:18px;height:18px;border-radius:9px;background:var(--teal);color:#fff;font-style:normal;
   display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
 .back-link{align-self:flex-start;margin-top:18px}
+
+.decision-grid{align-self:stretch;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.decision-card{padding:18px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card)}
+.decision-card h2{font-family:var(--display);font-size:17px;margin:12px 0 0}
+.decision-card p{font-size:12px;line-height:1.55;color:var(--muted);margin:6px 0 0}
+.decision-card__actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+.evidence-section{align-self:stretch;margin-top:18px;padding:22px}
+.dtable--readiness{min-width:1040px}
+.dtable--readiness th:nth-child(1){width:7%}
+.dtable--readiness th:nth-child(2){width:15%}
+.dtable--readiness th:nth-child(3){width:17%}
+.dtable--readiness th:nth-child(4){width:14%}
+.dtable--readiness th:nth-child(5){width:37%}
+.dtable--readiness th:nth-child(6){width:10%}
+.cell-detail{display:block;margin-top:5px;color:var(--muted);line-height:1.45}
+
+.timeline-list{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+.timeline-row{padding:14px;border:1px solid var(--line-soft);border-radius:14px;background:#FCFDFD}
+.timeline-row__summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.timeline-row__summary>b{color:var(--ink);margin-right:auto}
+.week-strip{display:flex;gap:7px;overflow-x:auto;margin-top:12px;padding-bottom:3px}
+.week-chip{min-width:94px;padding:8px;border-radius:9px;border:1px solid var(--line);font-size:10px;line-height:1.35;color:var(--muted);background:#fff}
+.week-chip b{display:block;font-family:var(--data);font-size:10px;color:var(--ink);margin-bottom:3px}
+.week-chip--missing{border-style:dashed;background:#F2F5F4;color:#6E7B80}
+.week-chip--confirmed_zero_sales{background:#EDF4F8;border-color:#C7DCE7;color:#416879}
+.week-chip--net_zero_with_activity{background:var(--amber-tint);border-color:#EBCF9F;color:#765A2D}
+.week-chip--observed_demand{background:var(--teal-tint);border-color:#B9DBD5;color:var(--teal-deep)}
+
+.freshness-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.freshness-card{display:flex;flex-direction:column;gap:5px;padding:14px;border:1px solid var(--line);border-radius:13px;background:#fff;font-size:12px;color:var(--muted)}
+.freshness-card strong{font-size:12px;color:var(--ink)}
+.freshness-card small{line-height:1.4}
+.freshness-card--current{border-left:4px solid var(--teal)}
+.freshness-card--limited{border-left:4px solid var(--amber-strong)}
+.freshness-card--unusable{border-left:4px solid var(--red)}
 
 /* ── screen 04 ──────────────────────────────────────────────────────────── */
 .notice--warn{background:var(--amber-tint);border-left:4px solid var(--amber-strong);color:#765A2D;
@@ -311,11 +348,13 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 
 @media (max-width:1240px){
   .issues{grid-template-columns:repeat(2,1fr)}
+  .freshness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .s4-grid{flex-direction:column}
   .cover,.panel-warn{width:100%}
 }
 @media (max-width:760px){
   .issues,.metrics{grid-template-columns:1fr}
+  .decision-grid,.freshness-grid{grid-template-columns:1fr}
   .ready{flex-direction:column;align-items:flex-start}
   .picker .select{min-width:0;width:100%}
 }

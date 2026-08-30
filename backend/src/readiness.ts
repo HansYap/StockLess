@@ -665,6 +665,7 @@ export async function runReadinessCheck(
 
   return Object.freeze({
     id: globalThis.crypto.randomUUID(),
+    sourceMode: dataset.sourceMode,
     sourceName: dataset.sourceName,
     sourceSha256: dataset.sourceSha256,
     analysisDate: options.analysisDate,

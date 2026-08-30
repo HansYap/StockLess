@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "node --test tests/*.test.ts",
     "test:epic1": "node --test tests/epic1-integration.test.ts",
+    "test:epic2": "node --test tests/epic2-integration.test.ts",
     "verify:model": "node scripts/verify-model-assets.mjs",
     "benchmark:mapping": "node scripts/mapping-benchmark.mjs"
   },

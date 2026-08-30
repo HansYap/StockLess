@@ -25,6 +25,7 @@ interface MappingScreenProps {
   readonly onBack: () => void;
   readonly onContinue: () => void;
   readonly error: string | null;
+  readonly checking?: boolean;
 }
 
 const BAND_LABEL: Readonly<Record<MappingProposal["scoreBand"], string>> = {
@@ -274,10 +275,10 @@ export function MappingScreen(props: MappingScreenProps) {
           <button
             type="button"
             className="btn btn--primary"
-            disabled={blockers.length > 0}
+            disabled={blockers.length > 0 || props.checking}
             onClick={props.onContinue}
           >
-            Run readiness check →
+            {props.checking ? "Checking locally…" : "Run readiness check →"}
           </button>
         </div>
       </div>

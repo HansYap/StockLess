@@ -350,6 +350,7 @@ export interface ReadinessOptions {
 
 export interface ReadinessSnapshot {
   readonly id: string;
+  readonly sourceMode: SourceMode;
   readonly sourceName: string;
   readonly sourceSha256: string;
   readonly analysisDate: string;
