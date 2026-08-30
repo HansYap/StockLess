@@ -6,9 +6,10 @@ import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessS
 import { DemandScreen } from "./screens/DemandScreen.tsx";
 import {
   MappingConflictError,
+  FIELD_REGISTRY,
   clearActiveSession,
   confirmIdentityMode,
-  confirmMapping,
+  confirmMappingWithRelease,
   createEmptySession,
   correctionReportMetadata,
   proposeMappings,
@@ -57,6 +58,7 @@ export default function App() {
   const [step, setStep] = useState<StepId>(1);
   const [reached, setReached] = useState<StepId>(1);
   const [mappingError, setMappingError] = useState<string | null>(null);
+  const [mappingNotice, setMappingNotice] = useState<string | null>(null);
   const [issueFilter, setIssueFilter] = useState<ReadinessIssueFilter | null>(null);
   const [productKey, setProductKey] = useState<string | null>(null);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
@@ -137,6 +139,7 @@ export default function App() {
     setProposals(proposed);
     setEnvelope(updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed)));
     setMappingError(null);
+    setMappingNotice(null);
     setProductKey(null);
     setAnalysisDate(malaysiaDate());
     setSessionNotice(previousMode && previousMode !== sourceMode
@@ -147,6 +150,7 @@ export default function App() {
 
   const handleSelectColumn = useCallback((field: CanonicalField, sourceColumnId: string | null) => {
     setMappingError(null);
+    setMappingNotice(null);
     resetReadinessEvidence();
     setEnvelope((current) => {
       try {
@@ -167,10 +171,18 @@ export default function App() {
 
   const handleConfirmField = useCallback((field: CanonicalField) => {
     setMappingError(null);
+    setMappingNotice(null);
     resetReadinessEvidence();
     setEnvelope((current) => {
       try {
-        return updateSessionMapping(current, confirmMapping(current.session.mapping, field));
+        const result = confirmMappingWithRelease(current.session.mapping, field);
+        if (result.releasedFields.length > 0) {
+          const released = result.releasedFields.map((releasedField) => FIELD_REGISTRY[releasedField].label);
+          setMappingNotice(
+            `${released.join(" and ")} ${released.length === 1 ? "was" : "were"} released and ${released.length === 1 ? "is" : "are"} now Not matched yet.`,
+          );
+        }
+        return updateSessionMapping(current, result.state);
       } catch (error) {
         setMappingError(error instanceof Error ? error.message : "The field could not be confirmed.");
         return current;
@@ -180,6 +192,7 @@ export default function App() {
 
   const handleConfirmIdentity = useCallback((mode: "stable" | "composite") => {
     setMappingError(null);
+    setMappingNotice(null);
     resetReadinessEvidence();
     setEnvelope((current) => {
       try {
@@ -215,6 +228,7 @@ export default function App() {
     setEnvelope(cleared.envelope);
     setProposals(null);
     setMappingError(null);
+    setMappingNotice(null);
     setProductKey(null);
     setReached(1);
     setStep(1);
@@ -233,7 +247,7 @@ export default function App() {
       notice={sessionNotice}
       onClear={dataset ? handleClearSession : undefined}
     >
-      {step === 1 && <UploadScreen onSource={handleSource} />}
+      {step === 1 && <UploadScreen onSource={handleSource} onCancel={handleClearSession} />}
 
       {step === 2 && dataset && (
         <MappingScreen
@@ -241,6 +255,7 @@ export default function App() {
           mapping={envelope.session.mapping}
           proposals={proposals}
           error={mappingError}
+          notice={mappingNotice}
           onSelectColumn={handleSelectColumn}
           onConfirmField={handleConfirmField}
           onConfirmIdentity={handleConfirmIdentity}

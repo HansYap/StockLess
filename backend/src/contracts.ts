@@ -110,10 +110,7 @@ export type CsvErrorCode =
   | "FILE_TOO_LARGE"
   | "INVALID_UTF8"
   | "UNSUPPORTED_DELIMITER"
-  | "MALFORMED_CSV"
-  | "MISSING_HEADER"
-  | "ROW_LIMIT_EXCEEDED"
-  | "EMPTY_FILE";
+  | "ROW_LIMIT_EXCEEDED";
 
 export interface CsvParseOptions {
   readonly sourceMode: SourceMode;

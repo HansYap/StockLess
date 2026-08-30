@@ -22,16 +22,34 @@ export class CsvImportError extends Error {
   }
 }
 
-const RECOVERY: Readonly<Record<CsvErrorCode, string>> = Object.freeze({
-  UNSUPPORTED_FILE_TYPE: "Export the source as a .csv file and try again.",
-  FILE_TOO_LARGE: "Reduce the CSV below the displayed size limit or split it into separate files.",
-  INVALID_UTF8: "Export the CSV using UTF-8 encoding and try again.",
-  UNSUPPORTED_DELIMITER: "Export the CSV using a comma, semicolon, or tab delimiter.",
-  MALFORMED_CSV: "Repair inconsistent columns or unmatched quotes in the CSV and try again.",
-  MISSING_HEADER: "Add a non-empty header row to the CSV and try again.",
-  ROW_LIMIT_EXCEEDED: "Reduce the CSV below the displayed row limit or split it into separate files.",
-  EMPTY_FILE: "Choose a CSV containing a header row and at least one data row.",
+const REJECTION: Readonly<Record<CsvErrorCode, Readonly<{ check: string; action: string }>>> = Object.freeze({
+  UNSUPPORTED_FILE_TYPE: Object.freeze({
+    check: "Not a CSV file",
+    action: "Choose a file whose name ends in .csv.",
+  }),
+  INVALID_UTF8: Object.freeze({
+    check: "The text cannot be read",
+    action: "Export the file again as a standard UTF-8 CSV.",
+  }),
+  UNSUPPORTED_DELIMITER: Object.freeze({
+    check: "No consistent separator found",
+    action: "Export the file with one consistent comma, semicolon or tab separator.",
+  }),
+  FILE_TOO_LARGE: Object.freeze({
+    check: "Larger than 10 MiB",
+    action: "Reduce the file to 10 MiB or less.",
+  }),
+  ROW_LIMIT_EXCEEDED: Object.freeze({
+    check: "More than 100,000 rows",
+    action: "Reduce the file to 100,000 data rows or fewer.",
+  }),
 });
+
+/** Creates one of the five permitted rejections with its filename and one action. */
+export function createCsvImportError(code: CsvErrorCode, sourceName: string): CsvImportError {
+  const rejection = REJECTION[code];
+  return new CsvImportError(code, `${rejection.check}: “${sourceName}”`, rejection.action);
+}
 
 type SupportedDelimiter = "," | ";" | "\t";
 
@@ -39,6 +57,7 @@ interface ParseRecordsOptions {
   readonly maxRecords?: number;
   readonly signal?: AbortSignal;
   readonly onCharacterProgress?: (processed: number) => void;
+  readonly sourceName?: string;
 }
 
 /** Stops parsing promptly when the caller cancels the active operation. */
@@ -98,11 +117,7 @@ function parseRecords(
 
     if (character === '"') {
       if (fieldStarted || field.length > 0) {
-        throw new CsvImportError(
-          "MALFORMED_CSV",
-          "A quoted field starts after unquoted text.",
-          RECOVERY.MALFORMED_CSV,
-        );
+        throw createCsvImportError("INVALID_UTF8", options.sourceName ?? "selected file");
       }
       inQuotes = true;
       fieldStarted = true;
@@ -132,11 +147,7 @@ function parseRecords(
   options.onCharacterProgress?.(text.length);
 
   if (inQuotes) {
-    throw new CsvImportError(
-      "MALFORMED_CSV",
-      "The CSV contains an unmatched double quote.",
-      RECOVERY.MALFORMED_CSV,
-    );
+    throw createCsvImportError("INVALID_UTF8", options.sourceName ?? "selected file");
   }
 
   if (field.length > 0 || fieldStarted || record.length > 0) {
@@ -184,11 +195,7 @@ function detectDelimiter(text: string, signal?: AbortSignal): SupportedDelimiter
     .sort((a, b) => b.score - a.score);
 
   if (ranked[0].score < 0 || (ranked[1] && ranked[0].score === ranked[1].score)) {
-    throw new CsvImportError(
-      "UNSUPPORTED_DELIMITER",
-      "StockLess could not confidently identify a supported CSV delimiter.",
-      RECOVERY.UNSUPPORTED_DELIMITER,
-    );
+    throw createCsvImportError("UNSUPPORTED_DELIMITER", "selected file");
   }
 
   return ranked[0].delimiter;
@@ -235,23 +242,10 @@ async function sha256(bytes: Uint8Array): Promise<string> {
   return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
 }
 
-/** Validates the CSV extension and any MIME type supplied by the browser. */
-function assertSupportedFile(sourceName: string, mimeType?: string): void {
+/** Validates the filename without rejecting browser-specific MIME guesses. */
+function assertSupportedFile(sourceName: string): void {
   if (!sourceName.toLocaleLowerCase("en").endsWith(".csv")) {
-    throw new CsvImportError(
-      "UNSUPPORTED_FILE_TYPE",
-      `Unsupported file type for ${sourceName}.`,
-      RECOVERY.UNSUPPORTED_FILE_TYPE,
-    );
-  }
-
-  const supportedMimeTypes = new Set(["", "text/csv", "application/csv", "application/vnd.ms-excel", "text/plain"]);
-  if (mimeType !== undefined && !supportedMimeTypes.has(mimeType.toLocaleLowerCase("en"))) {
-    throw new CsvImportError(
-      "UNSUPPORTED_FILE_TYPE",
-      `Unsupported MIME type: ${mimeType}.`,
-      RECOVERY.UNSUPPORTED_FILE_TYPE,
-    );
+    throw createCsvImportError("UNSUPPORTED_FILE_TYPE", sourceName);
   }
 }
 
@@ -264,17 +258,13 @@ export async function parseCsvBytes(
   const maxRows = options.maxRows ?? UPLOAD_REQUIREMENTS.maxRows;
 
   assertNotAborted(options.signal);
-  assertSupportedFile(options.sourceName, options.mimeType);
+  assertSupportedFile(options.sourceName);
 
   if (sourceBytes.byteLength === 0) {
-    throw new CsvImportError("EMPTY_FILE", "The selected CSV is empty.", RECOVERY.EMPTY_FILE);
+    throw createCsvImportError("INVALID_UTF8", options.sourceName);
   }
   if (sourceBytes.byteLength > maxBytes) {
-    throw new CsvImportError(
-      "FILE_TOO_LARGE",
-      `The CSV is ${sourceBytes.byteLength} bytes; the limit is ${maxBytes} bytes.`,
-      RECOVERY.FILE_TOO_LARGE,
-    );
+    throw createCsvImportError("FILE_TOO_LARGE", options.sourceName);
   }
 
   options.onProgress?.({ phase: "decode", processed: 0, total: sourceBytes.byteLength });
@@ -282,50 +272,51 @@ export async function parseCsvBytes(
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(sourceBytes);
   } catch {
-    throw new CsvImportError("INVALID_UTF8", "The CSV is not valid UTF-8.", RECOVERY.INVALID_UTF8);
+    throw createCsvImportError("INVALID_UTF8", options.sourceName);
   }
   options.onProgress?.({ phase: "decode", processed: sourceBytes.byteLength, total: sourceBytes.byteLength });
 
   if (text.trim() === "") {
-    throw new CsvImportError("EMPTY_FILE", "The selected CSV is empty.", RECOVERY.EMPTY_FILE);
+    throw createCsvImportError("INVALID_UTF8", options.sourceName);
   }
 
   options.onProgress?.({ phase: "detect_delimiter", processed: 0, total: text.length });
-  const delimiter = detectDelimiter(text, options.signal);
+  let delimiter: SupportedDelimiter;
+  try {
+    delimiter = detectDelimiter(text, options.signal);
+  } catch (error) {
+    if (error instanceof CsvImportError && error.code === "UNSUPPORTED_DELIMITER") {
+      throw createCsvImportError("UNSUPPORTED_DELIMITER", options.sourceName);
+    }
+    throw error;
+  }
   options.onProgress?.({ phase: "detect_delimiter", processed: text.length, total: text.length });
 
   const records = parseRecords(text, delimiter, {
     maxRecords: maxRows + 2,
     signal: options.signal,
+    sourceName: options.sourceName,
     onCharacterProgress: (processed) =>
       options.onProgress?.({ phase: "parse", processed, total: text.length }),
   }).filter((record, index, allRecords) => !(index === allRecords.length - 1 && isBlankRecord(record)));
 
   if (records.length === 0) {
-    throw new CsvImportError("EMPTY_FILE", "The selected CSV is empty.", RECOVERY.EMPTY_FILE);
+    throw createCsvImportError("INVALID_UTF8", options.sourceName);
   }
 
   const header = records[0];
   if (header.length === 0 || isBlankRecord(header)) {
-    throw new CsvImportError("MISSING_HEADER", "The CSV has no usable header row.", RECOVERY.MISSING_HEADER);
+    throw createCsvImportError("INVALID_UTF8", options.sourceName);
   }
 
   const dataRecords = records.slice(1);
   if (dataRecords.length > maxRows) {
-    throw new CsvImportError(
-      "ROW_LIMIT_EXCEEDED",
-      `The CSV contains more than ${maxRows} data rows.`,
-      RECOVERY.ROW_LIMIT_EXCEEDED,
-    );
+    throw createCsvImportError("ROW_LIMIT_EXCEEDED", options.sourceName);
   }
 
   const mismatchedRowIndex = dataRecords.findIndex((record) => record.length !== header.length);
   if (mismatchedRowIndex >= 0) {
-    throw new CsvImportError(
-      "MALFORMED_CSV",
-      `CSV record ${mismatchedRowIndex + 2} has ${dataRecords[mismatchedRowIndex].length} columns; expected ${header.length}.`,
-      RECOVERY.MALFORMED_CSV,
-    );
+    throw createCsvImportError("INVALID_UTF8", options.sourceName);
   }
 
   const normalizations: NormalizationEvent[] = [];
@@ -343,7 +334,10 @@ export async function parseCsvBytes(
   });
 
   const columns: SourceColumn[] = normalizedHeaders.map((headerValue, columnIndex) => {
-    const previewValues = [...new Set(rows.map((row) => row.normalizedValues[columnIndex]).filter(Boolean))].slice(0, 5);
+    const previewValues = rows
+      .map((row) => row.normalizedValues[columnIndex])
+      .filter((value) => value.trim() !== "")
+      .slice(0, 5);
     return Object.freeze({
       id: `column-${columnIndex}`,
       index: columnIndex,

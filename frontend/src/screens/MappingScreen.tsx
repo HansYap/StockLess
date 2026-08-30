@@ -8,7 +8,6 @@ import {
   getReadinessBlockers,
   partitionCapabilities,
   type CanonicalField,
-  type MappingProposal,
   type MappingProposalResult,
   type MappingState,
   type ParsedDataset,
@@ -25,14 +24,9 @@ interface MappingScreenProps {
   readonly onBack: () => void;
   readonly onContinue: () => void;
   readonly error: string | null;
+  readonly notice: string | null;
   readonly checking?: boolean;
 }
-
-const BAND_LABEL: Readonly<Record<MappingProposal["scoreBand"], string>> = {
-  exact_alias: "Exact alias",
-  high: "Likely match",
-  unconfirmed: "Needs a choice",
-};
 
 /** Screen 02. Every mapping starts unconfirmed; the retailer confirms each one. */
 export function MappingScreen(props: MappingScreenProps) {
@@ -163,6 +157,7 @@ export function MappingScreen(props: MappingScreenProps) {
                           <span className="pill pill--teal">Confirmed</span>
                         ) : current ? (
                           <div className="mapping-status">
+                            <span className="pill pill--amber">Suggested — please check</span>
                             <button
                               type="button"
                               className="btn btn--small btn--ghost"
@@ -170,19 +165,9 @@ export function MappingScreen(props: MappingScreenProps) {
                             >
                               Confirm
                             </button>
-                            {proposal && (
-                              <small>
-                                {BAND_LABEL[proposal.scoreBand]}
-                                {proposal.score === undefined ? "" : ` · ${Math.round(proposal.score * 100)}%`}
-                              </small>
-                            )}
                           </div>
                         ) : (
-                          <span className="pill pill--grey">
-                            {proposal
-                              ? `${BAND_LABEL[proposal.scoreBand]}${proposal.score === undefined ? "" : ` · ${Math.round(proposal.score * 100)}%`}`
-                              : "Not mapped"}
-                          </span>
+                          <span className="pill pill--grey">Not matched yet</span>
                         )}
                       </td>
                     </tr>
@@ -249,6 +234,7 @@ export function MappingScreen(props: MappingScreenProps) {
             )}
           </div>
 
+          {props.notice && <p className="notice notice--info" role="status">{props.notice}</p>}
           {props.error && <p className="notice notice--error" role="alert">{props.error}</p>}
         </section>
 
@@ -258,7 +244,7 @@ export function MappingScreen(props: MappingScreenProps) {
             Capabilities follow the columns you confirmed, not the column names themselves.
           </p>
 
-          <CapabilityGroup title="Available now" tone="on" items={capabilities.availableNow} />
+          <CapabilityGroup title="You can do this now" tone="on" items={capabilities.availableNow} />
           <CapabilityGroup title="Needs more information" tone="off" items={capabilities.needsMoreInformation} />
           <CapabilityGroup title="Locked until iteration 2" tone="locked" items={capabilities.locked} />
         </aside>

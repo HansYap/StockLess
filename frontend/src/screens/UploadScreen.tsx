@@ -6,6 +6,7 @@ import {
   PRIVACY_NOTICE,
   UPLOAD_ATTRIBUTE_GUIDE,
   UPLOAD_REQUIREMENTS,
+  createCsvImportError,
   type CsvProgress,
   type SourceMode,
 } from "../engine.ts";
@@ -20,10 +21,10 @@ interface UploadScreenProps {
     onProgress: (progress: CsvProgress) => void,
     signal: AbortSignal,
   ) => Promise<void>;
+  readonly onCancel: () => void;
 }
 
 interface ImportFailure {
-  readonly code: string;
   readonly message: string;
   readonly recovery: string;
 }
@@ -35,8 +36,41 @@ const PHASE_LABEL: Readonly<Record<CsvProgress["phase"], string>> = {
   complete: "Finishing up",
 };
 
+/** Reads a browser File in cancellable chunks while reporting visible progress. */
+async function readFileBytes(
+  file: File,
+  signal: AbortSignal,
+  onProgress: (processed: number) => void,
+): Promise<Uint8Array> {
+  const reader = file.stream().getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const cancelReader = () => void reader.cancel(signal.reason);
+  signal.addEventListener("abort", cancelReader, { once: true });
+  try {
+    while (true) {
+      if (signal.aborted) throw new DOMException("Import cancelled.", "AbortError");
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      total += value.byteLength;
+      onProgress(total);
+    }
+  } finally {
+    signal.removeEventListener("abort", cancelReader);
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 /** Screen 01. Accepts a retailer CSV or the bundled sample and reports failures. */
-export function UploadScreen({ onSource }: UploadScreenProps) {
+export function UploadScreen({ onSource, onCancel }: UploadScreenProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
@@ -51,62 +85,64 @@ export function UploadScreen({ onSource }: UploadScreenProps) {
   useEffect(() => () => abortRef.current?.abort(), []);
 
   async function run(
-    bytes: Uint8Array,
     name: string,
     mode: SourceMode,
     mimeType: string | undefined,
+    expectedBytes: number,
+    loadBytes: (signal: AbortSignal, onReadProgress: (processed: number) => void) => Promise<Uint8Array>,
   ) {
     const controller = new AbortController();
     abortRef.current?.abort();
     abortRef.current = controller;
     setFailure(null);
     setBusy(true);
-    setProgress({ phase: "decode", processed: 0, total: bytes.byteLength });
+    setProgress({ phase: "decode", processed: 0, total: expectedBytes });
     try {
+      const bytes = await loadBytes(controller.signal, (processed) => {
+        setProgress({ phase: "decode", processed, total: expectedBytes });
+      });
       await onSource(bytes, name, mode, mimeType, setProgress, controller.signal);
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        setFailure({
-          code: "IMPORT_CANCELLED",
-          message: "Import cancelled.",
-          recovery: "Your previous session was left unchanged. Choose a file when you are ready.",
-        });
+      if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+        setFailure(null);
       } else if (error instanceof CsvImportError) {
-        setFailure({ code: error.code, message: error.message, recovery: error.recovery });
+        setFailure({ message: error.message, recovery: error.recovery });
       } else {
-        setFailure({
-          code: "UNEXPECTED",
-          message: error instanceof Error ? error.message : "The file could not be read.",
-          recovery: "Try the file again, or choose a different export.",
-        });
+        const rejection = createCsvImportError("INVALID_UTF8", name);
+        setFailure({ message: rejection.message, recovery: rejection.recovery });
       }
     } finally {
-      if (abortRef.current === controller) abortRef.current = null;
-      setBusy(false);
-      setProgress(null);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setBusy(false);
+        setProgress(null);
+      }
     }
   }
 
   async function handleFile(file: File) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    await run(bytes, file.name, "user", file.type || undefined);
+    await run(file.name, "user", file.type || undefined, file.size, async (signal, onReadProgress) => {
+      if (file.size > UPLOAD_REQUIREMENTS.maxBytes) {
+        throw createCsvImportError("FILE_TOO_LARGE", file.name);
+      }
+      return readFileBytes(file, signal, onReadProgress);
+    });
   }
 
   async function handleSample() {
+    await run("sample_with_issues.csv", "sample", "text/csv", 0, async (signal) => {
+      const response = await fetch("/samples/sample_with_issues.csv", { signal });
+      if (!response.ok) throw new Error("Sample unavailable");
+      return new Uint8Array(await response.arrayBuffer());
+    });
+  }
+
+  function cancelImport() {
+    abortRef.current?.abort();
     setFailure(null);
-    setBusy(true);
-    try {
-      const response = await fetch("/samples/sample_with_issues.csv");
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      await run(bytes, "sample_with_issues.csv", "sample", "text/csv");
-    } catch {
-      setFailure({
-        code: "SAMPLE_UNAVAILABLE",
-        message: "The sample file could not be loaded.",
-        recovery: "Reload the page, or choose your own CSV instead.",
-      });
-      setBusy(false);
-    }
+    setBusy(false);
+    setProgress(null);
+    onCancel();
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
@@ -163,7 +199,16 @@ export function UploadScreen({ onSource }: UploadScreenProps) {
                     ? `${Math.min(100, Math.round((progress.processed / progress.total) * 100))}% complete`
                     : "Working in this browser…"}
                 </p>
-                <div className="progress" role="progressbar" aria-label="Import progress">
+                <div
+                  className="progress"
+                  role="progressbar"
+                  aria-label="Import progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progress && progress.total > 0
+                    ? Math.min(100, Math.round((progress.processed / progress.total) * 100))
+                    : 0}
+                >
                   <span
                     className="progress__fill"
                     style={{
@@ -173,8 +218,8 @@ export function UploadScreen({ onSource }: UploadScreenProps) {
                     }}
                   />
                 </div>
-                <button type="button" className="btn btn--ghost btn--small" onClick={() => abortRef.current?.abort()}>
-                  Cancel import
+                <button type="button" className="btn btn--ghost btn--small" onClick={cancelImport}>
+                  Cancel
                 </button>
               </>
             ) : (
@@ -190,7 +235,7 @@ export function UploadScreen({ onSource }: UploadScreenProps) {
                   </button>
                 </div>
                 <p className="dropzone__limits">
-                  {UPLOAD_REQUIREMENTS.supportedExtension} up to {megabyteLimit} MB ·
+                  {UPLOAD_REQUIREMENTS.supportedExtension} up to {megabyteLimit} MiB ·
                   {" "}{UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en")} rows ·
                   {" "}comma, semicolon or tab
                 </p>
@@ -216,7 +261,6 @@ export function UploadScreen({ onSource }: UploadScreenProps) {
               <div>
                 <p className="alert__title">{failure.message}</p>
                 <p className="alert__body">{failure.recovery}</p>
-                <p className="alert__code">{failure.code}</p>
               </div>
             </div>
           )}

@@ -179,7 +179,7 @@ async function semanticScores(
       scores: Object.freeze(requests.map(() => 0)),
       requests: Object.freeze(requests),
       usedModel: false,
-      notice: "Local semantic model is unavailable. Deterministic aliases, lexical matching, type checks, and manual mapping remain available.",
+      notice: "The local AI model could not load. Suggestions may be less complete, but your file is still loaded and every attribute can be matched by hand.",
     };
   }
 
@@ -194,7 +194,7 @@ async function semanticScores(
       scores: Object.freeze(requests.map(() => 0)),
       requests: Object.freeze(requests),
       usedModel: false,
-      notice: "Local semantic model could not be loaded. The uploaded session was preserved and deterministic/manual mapping remains available.",
+      notice: "The local AI model could not load. Suggestions may be less complete, but your file is still loaded and every attribute can be matched by hand.",
     };
   }
 }
@@ -304,23 +304,24 @@ export function createMappingState(): MappingState {
   return Object.freeze({ mappings: Object.freeze({}), identityConfirmed: false });
 }
 
-/** Assigns a source column to a target while preventing incompatible reuse. */
+/** Assigns a source column to a target; unconfirmed choices may temporarily overlap. */
 export function setMapping(
   state: MappingState,
   targetField: CanonicalField,
   sourceColumnId: string,
   confirmed = false,
 ): MappingState {
-  for (const [existingTarget, mapping] of Object.entries(state.mappings) as [CanonicalField, FieldMapping][]) {
-    if (existingTarget !== targetField && mapping.sourceColumnId === sourceColumnId) {
-      throw new MappingConflictError(sourceColumnId, existingTarget);
+  const mappings = { ...state.mappings };
+  if (confirmed) {
+    for (const [existingTarget, mapping] of Object.entries(mappings) as [CanonicalField, FieldMapping][]) {
+      if (existingTarget !== targetField && mapping.sourceColumnId === sourceColumnId) delete mappings[existingTarget];
     }
   }
 
   return Object.freeze({
     ...state,
     mappings: Object.freeze({
-      ...state.mappings,
+      ...mappings,
       [targetField]: Object.freeze({
         targetField,
         sourceColumnId,
@@ -335,14 +336,47 @@ export function setMapping(
 export function removeMapping(state: MappingState, targetField: CanonicalField): MappingState {
   const mappings = { ...state.mappings };
   delete mappings[targetField];
-  return Object.freeze({ ...state, mappings: Object.freeze(mappings) });
+  const removedIdentityField = state.identityMode === "stable"
+    ? targetField === "product_code"
+    : state.identityMode === "composite" && (targetField === "product_name" || targetField === "pack_variant");
+  return Object.freeze({
+    ...state,
+    mappings: Object.freeze(mappings),
+    identityConfirmed: removedIdentityField ? false : state.identityConfirmed,
+  });
+}
+
+export interface ConfirmMappingResult {
+  readonly state: MappingState;
+  readonly releasedFields: readonly CanonicalField[];
+}
+
+/** Confirms a mapping and releases any other attribute using the same column. */
+export function confirmMappingWithRelease(state: MappingState, targetField: CanonicalField): ConfirmMappingResult {
+  const mapping = state.mappings[targetField];
+  if (!mapping) throw new Error(`Cannot confirm ${targetField}: no source column is selected.`);
+
+  const releasedFields = (Object.entries(state.mappings) as [CanonicalField, FieldMapping][])
+    .filter(([existingTarget, existing]) =>
+      existingTarget !== targetField && existing.sourceColumnId === mapping.sourceColumnId)
+    .map(([existingTarget]) => existingTarget);
+  const confirmed = setMapping(state, targetField, mapping.sourceColumnId, true);
+  const releasedIdentityField = releasedFields.some((field) =>
+    state.identityMode === "stable"
+      ? field === "product_code"
+      : state.identityMode === "composite" && (field === "product_name" || field === "pack_variant"));
+
+  return Object.freeze({
+    state: releasedIdentityField
+      ? Object.freeze({ ...confirmed, identityConfirmed: false })
+      : confirmed,
+    releasedFields: Object.freeze(releasedFields),
+  });
 }
 
 /** Marks an existing field mapping as retailer-confirmed. */
 export function confirmMapping(state: MappingState, targetField: CanonicalField): MappingState {
-  const mapping = state.mappings[targetField];
-  if (!mapping) throw new Error(`Cannot confirm ${targetField}: no source column is selected.`);
-  return setMapping(state, targetField, mapping.sourceColumnId, true);
+  return confirmMappingWithRelease(state, targetField).state;
 }
 
 /** Confirms a valid stable-code or composite product identity path. */
