@@ -1,10 +1,11 @@
 import type {
   CorrectionReport,
   CorrectionReportMetadata,
+  DemandProductEvidence,
   ReadinessSnapshot,
   RowUseState,
 } from "./contracts.ts";
-import { buildProductTimelines } from "./timeline.ts";
+import { buildDemandReview } from "./demand.ts";
 
 const REPORT_COLUMNS = Object.freeze([
   "record_type",
@@ -37,6 +38,23 @@ const REPORT_COLUMNS = Object.freeze([
   "recent_observed_weeks",
   "recent_window_state",
   "recent_window_reasons",
+  "recent_average",
+  "current_stock",
+  "stock_as_of_date",
+  "stock_age_days",
+  "stock_freshness_state",
+  "weeks_of_cover",
+  "cover_state",
+  "cover_reasons",
+  "forecast_ready",
+  "week_start",
+  "week_end",
+  "positive_quantity",
+  "negative_quantity",
+  "net_quantity",
+  "week_record_count",
+  "week_state",
+  "week_source_rows",
 ] as const);
 
 type ReportColumn = typeof REPORT_COLUMNS[number];
@@ -82,6 +100,7 @@ function recordsToCsv(records: readonly ReportRecord[]): string {
 
 /** Serializes issues, normalizations, and matching summary counts without mutation. */
 export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionReport {
+  const demandReview = buildDemandReview(snapshot);
   const metadata: CorrectionReportMetadata = Object.freeze({
     snapshotId: snapshot.id,
     issueTotal: snapshot.issues.length,
@@ -153,7 +172,8 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
     return Object.freeze(record);
   });
 
-  const productSummaryRecords = buildProductTimelines(snapshot).map((timeline): ReportRecord => {
+  const productSummaryRecords = demandReview.products.map((product): ReportRecord => {
+    const { timeline, recentAverage, cover } = product;
     const record = emptyRecord();
     Object.assign(record, {
       record_type: "product_summary",
@@ -176,19 +196,88 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
       recent_observed_weeks: String(timeline.recentWindow.observedWeekCount),
       recent_window_state: timeline.recentWindow.state,
       recent_window_reasons: timeline.recentWindow.reasonCodes.join("|"),
+      recent_average: recentAverage.value === undefined ? "" : String(recentAverage.value),
+      current_stock: cover.currentStock === undefined ? "" : String(cover.currentStock),
+      stock_as_of_date: cover.stockAsOfDate ?? "",
+      stock_age_days: cover.stockAgeDays === undefined ? "" : String(cover.stockAgeDays),
+      stock_freshness_state: cover.freshnessState ?? "",
+      weeks_of_cover: cover.value === undefined ? "" : String(cover.value),
+      cover_state: cover.state,
+      cover_reasons: cover.reasonCodes.join("|"),
+      forecast_ready: String(product.forecastReady),
     });
     return Object.freeze(record);
   });
+
+  const weeklyRecords = demandReview.products.flatMap((product) =>
+    product.timeline.weeks.map((week): ReportRecord => {
+      const record = demandProductRecord(metadata, snapshot, product);
+      Object.assign(record, {
+        record_type: "weekly_evidence",
+        week_start: week.weekStart,
+        week_end: week.weekEnd,
+        positive_quantity: week.positiveQuantity === null ? "" : String(week.positiveQuantity),
+        negative_quantity: week.negativeQuantity === null ? "" : String(week.negativeQuantity),
+        net_quantity: week.netQuantity === null ? "" : String(week.netQuantity),
+        week_record_count: String(week.recordCount),
+        week_state: week.state,
+        week_source_rows: week.sourceRows.join("|"),
+      });
+      return Object.freeze(record);
+    }),
+  );
 
   const csvText = recordsToCsv([
     Object.freeze(summary),
     ...issueRecords,
     ...normalizationRecords,
     ...productSummaryRecords,
+    ...weeklyRecords,
   ]);
   return Object.freeze({
     metadata,
     csvText,
     utf8Bytes: new TextEncoder().encode(csvText),
   });
+}
+
+/** Creates the shared product-level evidence columns used by summary and weekly records. */
+function demandProductRecord(
+  metadata: CorrectionReportMetadata,
+  snapshot: ReadinessSnapshot,
+  product: DemandProductEvidence,
+): Record<ReportColumn, string> {
+  const record = emptyRecord();
+  const { timeline, recentAverage, cover } = product;
+  Object.assign(record, {
+    snapshot_id: metadata.snapshotId,
+    source_mode: snapshot.sourceMode === "sample" ? "Sample data" : "Retailer file",
+    source_file: snapshot.sourceName,
+    product: product.productKey,
+    rows_in: String(metadata.rowsIn),
+    rows_used: String(metadata.rowsUsed),
+    rows_excluded: String(metadata.rowsExcluded),
+    rows_safely_normalized: String(metadata.rowsSafelyNormalized),
+    issue_total: String(metadata.issueTotal),
+    first_week: timeline.summary.firstWeek,
+    last_week: timeline.summary.lastWeek,
+    observed_weeks: String(timeline.summary.observedWeekCount),
+    weeks_in_span: String(timeline.summary.weeksInSpan),
+    missing_weeks: String(timeline.summary.missingWeekCount),
+    recent_window_start: recentAverage.windowStart ?? "",
+    recent_window_end: recentAverage.windowEnd ?? "",
+    recent_observed_weeks: String(recentAverage.observedWeekCount),
+    recent_window_state: recentAverage.state,
+    recent_window_reasons: recentAverage.reasonCodes.join("|"),
+    recent_average: recentAverage.value === undefined ? "" : String(recentAverage.value),
+    current_stock: cover.currentStock === undefined ? "" : String(cover.currentStock),
+    stock_as_of_date: cover.stockAsOfDate ?? "",
+    stock_age_days: cover.stockAgeDays === undefined ? "" : String(cover.stockAgeDays),
+    stock_freshness_state: cover.freshnessState ?? "",
+    weeks_of_cover: cover.value === undefined ? "" : String(cover.value),
+    cover_state: cover.state,
+    cover_reasons: cover.reasonCodes.join("|"),
+    forecast_ready: String(product.forecastReady),
+  });
+  return record;
 }

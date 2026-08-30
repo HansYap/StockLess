@@ -1,0 +1,32 @@
+transaction_date,product_code,product_name,pack_variant,quantity_sold,current_stock,stock_as_of_date
+2026-06-29,100,Standard Coffee,10 sachets,8,40,2026-08-24
+2026-07-06,100,Standard Coffee,10 sachets,10,40,2026-08-24
+2026-07-13,100,Standard Coffee,10 sachets,9,40,2026-08-24
+2026-07-20,100,Standard Coffee,10 sachets,11,40,2026-08-24
+2026-07-27,100,Standard Coffee,10 sachets,12,40,2026-08-24
+2026-08-03,100,Standard Coffee,10 sachets,10,40,2026-08-24
+2026-08-10,100,Standard Coffee,10 sachets,13,40,2026-08-24
+2026-08-17,100,Standard Coffee,10 sachets,12,40,2026-08-24
+2026-06-22,200,Gap Coffee,20 sachets,5,22,2026-08-18
+2026-06-29,200,Gap Coffee,20 sachets,5,22,2026-08-18
+2026-07-06,200,Gap Coffee,20 sachets,5,22,2026-08-18
+2026-07-20,200,Gap Coffee,20 sachets,5,22,2026-08-18
+2026-07-27,200,Gap Coffee,20 sachets,5,22,2026-08-18
+2026-08-03,200,Gap Coffee,20 sachets,5,22,2026-08-18
+2026-08-10,200,Gap Coffee,20 sachets,5,22,2026-08-18
+2026-08-17,200,Gap Coffee,20 sachets,5,22,2026-08-18
+2026-08-17,300,Net Zero Coffee,10 sachets,5,12,2026-08-24
+2026-08-18,300,Net Zero Coffee,10 sachets,-5,12,2026-08-24
+2026-08-17,400,Short History Coffee,10 sachets,3,9,2026-08-24
+2026-06-29,500,Stale Stock Coffee,10 sachets,2,10,2026-08-05
+2026-07-06,500,Stale Stock Coffee,10 sachets,2,10,2026-08-05
+2026-07-13,500,Stale Stock Coffee,10 sachets,2,10,2026-08-05
+2026-07-20,500,Stale Stock Coffee,10 sachets,2,10,2026-08-05
+2026-07-27,500,Stale Stock Coffee,10 sachets,2,10,2026-08-05
+2026-08-03,500,Stale Stock Coffee,10 sachets,2,10,2026-08-05
+2026-08-10,500,Stale Stock Coffee,10 sachets,2,10,2026-08-05
+2026-08-17,500,Stale Stock Coffee,10 sachets,2,10,2026-08-05
+2026-08-17,600,Duplicate Coffee,10 sachets,4,12,2026-08-24
+2026-08-17,600,Duplicate Coffee,10 sachets,4,12,2026-08-24
+2026-08-17,700,Returns Coffee,10 sachets,-2,10,2026-08-24
+2026-08-24,800,Current Week Coffee,10 sachets,5,10,2026-08-24

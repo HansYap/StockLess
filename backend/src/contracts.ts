@@ -408,6 +408,64 @@ export interface ProductTimeline {
   readonly recentWindow: RecentWindowEvidence;
 }
 
+export type RecentAverageReasonCode = RecentWindowEvidence["reasonCodes"][number];
+
+export interface RecentAverageEvidence {
+  readonly value?: number;
+  readonly state: "standard" | "limited" | "cannot_calculate";
+  readonly selectedWeekStarts: readonly string[];
+  readonly windowStart?: string;
+  readonly windowEnd?: string;
+  readonly observedWeekCount: number;
+  readonly reasonCodes: readonly RecentAverageReasonCode[];
+}
+
+export type CoverReasonCode =
+  | "MISSING_CURRENT_STOCK"
+  | "INVALID_CURRENT_STOCK"
+  | "CONFLICTING_CURRENT_STOCK"
+  | "MISSING_STOCK_DATE"
+  | "INVALID_STOCK_DATE"
+  | "CONFLICTING_STOCK_DATE"
+  | "FUTURE_STOCK_DATE"
+  | "STALE_STOCK"
+  | "NO_COMPLETED_OBSERVED_WEEK"
+  | "ZERO_AVERAGE"
+  | "NEGATIVE_AVERAGE"
+  | "FEWER_THAN_8_COMPLETED_WEEKS"
+  | "MISSING_WEEK_IN_RECENT_SPAN"
+  | "AGED_STOCK"
+  | "DUPLICATE_UNRESOLVED";
+
+export interface WeeksOfCoverEvidence {
+  readonly value?: number;
+  readonly state: "standard" | "limited" | "cannot_calculate";
+  readonly currentStock?: number;
+  readonly recentAverage?: number;
+  readonly stockAsOfDate?: string;
+  readonly stockAgeDays?: number;
+  readonly freshnessState?: StockFreshnessState;
+  readonly reasonCodes: readonly CoverReasonCode[];
+}
+
+export interface DemandProductEvidence {
+  readonly productKey: string;
+  readonly displayName: string;
+  readonly timeline: ProductTimeline;
+  readonly recentAverage: RecentAverageEvidence;
+  readonly cover: WeeksOfCoverEvidence;
+  readonly state: "standard" | "limited";
+  readonly stateReasons: readonly (RecentAverageReasonCode | "DUPLICATE_UNRESOLVED")[];
+  /** Iteration 1 is intentionally descriptive and never forecast-ready. */
+  readonly forecastReady: false;
+}
+
+export interface DemandReview {
+  readonly snapshotId: string;
+  readonly analysisDate: string;
+  readonly products: readonly DemandProductEvidence[];
+}
+
 export interface CorrectionReportMetadata {
   readonly snapshotId: string;
   readonly issueTotal: number;

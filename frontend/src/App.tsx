@@ -284,10 +284,9 @@ export default function App() {
         </section>
       )}
 
-      {step === 4 && dataset && (
+      {step === 4 && readiness && (
         <DemandScreen
-          dataset={dataset}
-          mapping={envelope.session.mapping}
+          snapshot={readiness}
           selectedKey={productKey}
           onSelect={setProductKey}
           onBack={() => setStep(3)}

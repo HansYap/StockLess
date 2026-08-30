@@ -9,4 +9,5 @@ export * from "./dates.ts";
 export * from "./freshness.ts";
 export * from "./readiness.ts";
 export * from "./timeline.ts";
+export * from "./demand.ts";
 export * from "./correction-report.ts";
