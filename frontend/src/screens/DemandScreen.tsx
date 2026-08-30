@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  CAPABILITY_LABELS,
   buildDemandReview,
   type CoverReasonCode,
   type DemandProductEvidence,
@@ -17,8 +18,8 @@ interface DemandScreenProps {
 }
 
 const REASON_TEXT: Record<CoverReasonCode, string> = {
-  MISSING_CURRENT_STOCK: "Current stock is missing.",
-  INVALID_CURRENT_STOCK: "Current stock is not a valid non-negative number.",
+  MISSING_CURRENT_STOCK: "Stock on hand is missing.",
+  INVALID_CURRENT_STOCK: "Stock on hand is not a valid non-negative number.",
   CONFLICTING_CURRENT_STOCK: "This product has conflicting current-stock values.",
   MISSING_STOCK_DATE: "The stock snapshot date is missing.",
   INVALID_STOCK_DATE: "The stock snapshot date is invalid.",
@@ -26,8 +27,8 @@ const REASON_TEXT: Record<CoverReasonCode, string> = {
   FUTURE_STOCK_DATE: "The stock snapshot date is after the analysis date.",
   STALE_STOCK: "The stock snapshot is more than 14 days old.",
   NO_COMPLETED_OBSERVED_WEEK: "There is no completed observed week before the analysis date.",
-  ZERO_AVERAGE: "The recent weekly average is zero.",
-  NEGATIVE_AVERAGE: "The recent weekly average is negative after returns.",
+  ZERO_AVERAGE: "The selected weekly mean is zero.",
+  NEGATIVE_AVERAGE: "The selected weekly mean is negative after returns.",
   FEWER_THAN_8_COMPLETED_WEEKS: "Fewer than 8 completed observed weeks are available.",
   MISSING_WEEK_IN_RECENT_SPAN: "A week is missing inside the recent evidence span.",
   AGED_STOCK: "The stock snapshot is 8–14 days old.",
@@ -44,8 +45,8 @@ const RECOVERY_TEXT: Partial<Record<CoverReasonCode, string>> = {
   FUTURE_STOCK_DATE: "Correct the stock date or use a later valid analysis date.",
   STALE_STOCK: "Provide a stock count dated within 14 days of the analysis date.",
   NO_COMPLETED_OBSERVED_WEEK: "Add sales from at least one completed Monday–Sunday week.",
-  ZERO_AVERAGE: "Cover needs a recent average above zero.",
-  NEGATIVE_AVERAGE: "Review returns and sales; cover needs a positive recent average.",
+  ZERO_AVERAGE: "This calculation needs the selected weekly mean above zero.",
+  NEGATIVE_AVERAGE: "Review returns and sales; the selected weekly mean must be positive.",
 };
 
 const WEEK_STATE_LABEL: Record<WeekState, string> = {
@@ -132,9 +133,9 @@ export function DemandScreen(props: DemandScreenProps) {
         <section className="card chart-card">
           <div className="card__head chart-head">
             <div>
-              <h2 className="card-title">Weekly net quantity</h2>
+              <h2 className="card-title">{CAPABILITY_LABELS.weekly_history}</h2>
               <p className="card-sub">
-                ISO Monday–Sunday · {timeline.summary.dateRangeStart} to {timeline.summary.dateRangeEnd}
+                <b>{CAPABILITY_LABELS.timeline_gap_evidence}</b> · ISO Monday–Sunday · {timeline.summary.dateRangeStart} to {timeline.summary.dateRangeEnd}
               </p>
             </div>
             <div className="legend" aria-label="Chart legend">
@@ -149,7 +150,7 @@ export function DemandScreen(props: DemandScreenProps) {
         </section>
 
         <aside className={`cover cover--${selected.cover.state}`}>
-          <h2>Current weeks of cover</h2>
+          <h2>{CAPABILITY_LABELS.weeks_of_cover}</h2>
           {selected.cover.state === "cannot_calculate" ? (
             <>
               <p className="cover__lede">The required evidence did not pass the cover checks.</p>
@@ -164,7 +165,7 @@ export function DemandScreen(props: DemandScreenProps) {
             </>
           ) : (
             <>
-              <p className="cover__lede">Current stock divided by the recent weekly average.</p>
+              <p className="cover__lede">Stock on hand divided by the selected completed-week mean.</p>
               <div className="cover__value">{selected.cover.value!.toFixed(2)}</div>
               <div className="cover__unit">weeks · {selected.cover.state}</div>
               {selected.cover.reasonCodes.length > 0 && (
@@ -172,7 +173,7 @@ export function DemandScreen(props: DemandScreenProps) {
               )}
               <div className="cover__maths">
                 <b>Inputs used at full precision</b>
-                {exactNumber(selected.cover.currentStock)} stock ÷ {exactNumber(selected.cover.recentAverage)} recent average
+                {exactNumber(selected.cover.currentStock)} stock on hand ÷ {exactNumber(selected.cover.recentAverage)} selected mean
                 <br />Stock date {selected.cover.stockAsOfDate ?? "not available"} · age {selected.cover.stockAgeDays ?? "not available"} days
               </div>
             </>
@@ -182,7 +183,7 @@ export function DemandScreen(props: DemandScreenProps) {
 
       <div className="metrics metrics--four">
         <div className="metric">
-          <div className="metric__label">Recent weekly average</div>
+          <div className="metric__label">{CAPABILITY_LABELS.recent_weekly_average}</div>
           <div className="metric__value">
             {selected.recentAverage.value === undefined ? "Cannot calculate" : `${exactNumber(selected.recentAverage.value)} units`}
           </div>
@@ -219,7 +220,7 @@ export function DemandScreen(props: DemandScreenProps) {
 
       {selected.recentAverage.reasonCodes.length > 0 && (
         <p className="evidence-note">
-          Recent average is limited because {selected.recentAverage.reasonCodes.map((reason) => RECENT_REASON_LABEL[reason]).join(" and ")}.
+          {CAPABILITY_LABELS.recent_weekly_average} is limited because {selected.recentAverage.reasonCodes.map((reason) => RECENT_REASON_LABEL[reason]).join(" and ")}.
         </p>
       )}
 
@@ -276,9 +277,9 @@ export function DemandScreen(props: DemandScreenProps) {
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Recent average</th>
-                <th>Current stock</th>
-                <th>Weeks of cover</th>
+                <th>{CAPABILITY_LABELS.recent_weekly_average}</th>
+                <th>Stock on hand</th>
+                <th>{CAPABILITY_LABELS.weeks_of_cover}</th>
                 <th>Demand history</th>
               </tr>
             </thead>

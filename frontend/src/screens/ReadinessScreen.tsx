@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  CAPABILITY_LABELS,
   buildProductTimelines,
   createCorrectionReport,
   detectDateFormatCandidate,
@@ -294,8 +295,8 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       <section className="card evidence-section">
         <div className="card__head">
           <div>
-            <h2 className="card-title">Product week evidence</h2>
-            <p className="card-sub">Each product starts at its own first observed week and ends at its own last observed week.</p>
+            <h2 className="card-title">{CAPABILITY_LABELS.weekly_history}</h2>
+            <p className="card-sub"><b>{CAPABILITY_LABELS.timeline_gap_evidence}</b> · Each product starts at its own first observed week and ends at its own last observed week.</p>
           </div>
           <span className="pill pill--grey">{timelines.length} products</span>
         </div>
@@ -308,10 +309,10 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                   <span>{timeline.summary.observedWeekCount} observed · {timeline.summary.weeksInSpan} in span · {timeline.summary.missingWeekCount} missing</span>
                   <span>{timeline.summary.dateRangeStart} to {timeline.summary.dateRangeEnd}</span>
                   <span className={`pill ${timeline.recentWindow.state === "standard" ? "pill--teal" : "pill--amber"}`}>
-                    Recent window: {humanize(timeline.recentWindow.state)}
+                    {CAPABILITY_LABELS.recent_weekly_average}: {humanize(timeline.recentWindow.state)}
                   </span>
                 </div>
-                <div className="week-strip" aria-label={`Weekly evidence for ${timeline.productKey}`}>
+                <div className="week-strip" aria-label={`${CAPABILITY_LABELS.weekly_history} for ${timeline.productKey}`}>
                   {timeline.weeks.map((week) => (
                     <span
                       className={`week-chip week-chip--${week.state}`}
@@ -333,7 +334,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         <section className="card evidence-section">
           <div className="card__head">
             <div>
-              <h2 className="card-title">Stock freshness evidence</h2>
+              <h2 className="card-title">{CAPABILITY_LABELS.stock_freshness}</h2>
               <p className="card-sub">Age is measured in calendar days at Asia/Kuala_Lumpur midnight.</p>
             </div>
             <span className="pill pill--grey">As at {props.snapshot.analysisDate}</span>
@@ -386,7 +387,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         </p>
         <div className="footer-row__right">
           <button type="button" className="btn btn--ghost" onClick={download}>↓ Download correction report</button>
-          <button type="button" className="btn btn--primary" onClick={props.onContinue}>Review product history →</button>
+          <button type="button" className="btn btn--primary" onClick={props.onContinue}>Review demand →</button>
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import type {
   CapabilityEvidenceContext,
   MappingState,
 } from "./contracts.ts";
-import { CANONICAL_FIELDS, FIELD_REGISTRY } from "./field-registry.ts";
+import { CANONICAL_FIELDS, CORE_COLUMN_PATHS, FIELD_REGISTRY } from "./field-registry.ts";
 
 interface CapabilityDefinition {
   readonly id: CapabilityId;
@@ -15,15 +15,119 @@ interface CapabilityDefinition {
   readonly requiredFields: readonly CanonicalField[];
 }
 
+export const CAPABILITY_LABELS: Readonly<Record<CapabilityId, string>> = Object.freeze({
+  weekly_history: "Weekly product history",
+  timeline_gap_evidence: "Timeline gap evidence",
+  recent_weekly_average: "Recent weekly average",
+  stock_freshness: "Stock freshness",
+  weeks_of_cover: "Descriptive weeks of cover",
+  purchase_audit: "Purchase audit",
+  expiry_aware_note: "Expiry-aware note",
+  supplier_scenario: "Supplier scenario",
+});
+
 const CAPABILITY_REGISTRY: readonly CapabilityDefinition[] = Object.freeze([
-  { id: "weekly_history", label: "Weekly product history", iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold"] },
-  { id: "timeline_gap_evidence", label: "Timeline-gap evidence", iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold"] },
-  { id: "recent_weekly_average", label: "Recent weekly average", iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold"] },
-  { id: "stock_freshness", label: "Stock freshness", iterationEnabled: true, requiredFields: ["current_stock", "stock_as_of_date"] },
-  { id: "weeks_of_cover", label: "Descriptive weeks of cover", iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold", "current_stock", "stock_as_of_date"] },
-  { id: "purchase_audit", label: "Purchase audit", iterationEnabled: false, requiredFields: ["planned_order_quantity", "incoming_stock_quantity", "current_stock"] },
-  { id: "expiry_aware_note", label: "Expiry-aware note", iterationEnabled: false, requiredFields: ["expiry_date", "expiry_quantity"] },
-  { id: "supplier_scenario", label: "Supplier scenario", iterationEnabled: false, requiredFields: ["supplier_id_or_name", "supplier_lead_time_days", "pack_size"] },
+  { id: "weekly_history", label: CAPABILITY_LABELS.weekly_history, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold"] },
+  { id: "timeline_gap_evidence", label: CAPABILITY_LABELS.timeline_gap_evidence, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold"] },
+  { id: "recent_weekly_average", label: CAPABILITY_LABELS.recent_weekly_average, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold"] },
+  { id: "stock_freshness", label: CAPABILITY_LABELS.stock_freshness, iterationEnabled: true, requiredFields: ["current_stock", "stock_as_of_date"] },
+  { id: "weeks_of_cover", label: CAPABILITY_LABELS.weeks_of_cover, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold", "current_stock", "stock_as_of_date"] },
+  { id: "purchase_audit", label: CAPABILITY_LABELS.purchase_audit, iterationEnabled: false, requiredFields: ["planned_order_quantity", "incoming_stock_quantity", "current_stock"] },
+  { id: "expiry_aware_note", label: CAPABILITY_LABELS.expiry_aware_note, iterationEnabled: false, requiredFields: ["expiry_date", "expiry_quantity"] },
+  { id: "supplier_scenario", label: CAPABILITY_LABELS.supplier_scenario, iterationEnabled: false, requiredFields: ["supplier_id_or_name", "supplier_lead_time_days", "pack_size"] },
+]);
+
+export interface UploadAttributeGuide {
+  readonly id: string;
+  readonly label: string;
+  readonly requirement: "required" | "optional";
+  readonly description: string;
+  readonly capabilities: readonly CapabilityId[];
+  readonly acceptedForms?: readonly string[];
+}
+
+function featureList(...capabilities: CapabilityId[]): readonly CapabilityId[] {
+  return Object.freeze(capabilities);
+}
+
+/** The nine plain-language upload attributes and the exact features that depend on them. */
+export const UPLOAD_ATTRIBUTE_GUIDE: readonly UploadAttributeGuide[] = Object.freeze([
+  Object.freeze({
+    id: "sale_date",
+    label: "Sale date",
+    requirement: "required",
+    description: "The date each sale or return was recorded.",
+    capabilities: featureList("weekly_history", "timeline_gap_evidence", "recent_weekly_average", "weeks_of_cover"),
+  }),
+  Object.freeze({
+    id: "product_identity",
+    label: "How your products are named or coded",
+    requirement: "required",
+    description: "Choose either accepted form. Both keep products and pack sizes separate.",
+    acceptedForms: Object.freeze([
+      "One code column: SKU, barcode or product code",
+      "Product name together with pack size",
+    ]),
+    capabilities: featureList(
+      "weekly_history",
+      "timeline_gap_evidence",
+      "recent_weekly_average",
+      "stock_freshness",
+      "weeks_of_cover",
+      "purchase_audit",
+      "expiry_aware_note",
+      "supplier_scenario",
+    ),
+  }),
+  Object.freeze({
+    id: "quantity_sold",
+    label: "Quantity sold",
+    requirement: "required",
+    description: "The quantity sold or returned in each record.",
+    capabilities: featureList("weekly_history", "timeline_gap_evidence", "recent_weekly_average", "weeks_of_cover"),
+  }),
+  Object.freeze({
+    id: "stock_on_hand",
+    label: "Stock on hand",
+    requirement: "optional",
+    description: "Your latest counted quantity for each product.",
+    capabilities: featureList("stock_freshness", "weeks_of_cover", "purchase_audit"),
+  }),
+  Object.freeze({
+    id: "stock_count_date",
+    label: "Stock count date",
+    requirement: "optional",
+    description: "The date that stock count was taken.",
+    capabilities: featureList("stock_freshness", "weeks_of_cover"),
+  }),
+  Object.freeze({
+    id: "planned_orders",
+    label: "Planned orders",
+    requirement: "optional",
+    description: "Quantities you are considering ordering.",
+    capabilities: featureList("purchase_audit"),
+  }),
+  Object.freeze({
+    id: "incoming_stock",
+    label: "Incoming stock",
+    requirement: "optional",
+    description: "Quantities already ordered and expected to arrive.",
+    capabilities: featureList("purchase_audit"),
+  }),
+  Object.freeze({
+    id: "expiry_dates",
+    label: "Expiry dates",
+    requirement: "optional",
+    description: "Expiry dates and affected quantities for product batches.",
+    capabilities: featureList("expiry_aware_note"),
+  }),
+  Object.freeze({
+    id: "supplier_details",
+    label: "Supplier details",
+    requirement: "optional",
+    description: "Supplier identity, delivery time and ordering pack information.",
+    capabilities: featureList("supplier_scenario"),
+  }),
 ]);
 
 /** Returns whether a field has a confirmed mapping and passes known validation. */
@@ -71,11 +175,10 @@ function missingFieldReasons(
     }
   }
 
-  if (["weekly_history", "timeline_gap_evidence", "recent_weekly_average", "weeks_of_cover"].includes(definition.id)
-    && !identityReady(state, context)) {
+  if (!identityReady(state, context)) {
     reasons.push({
       code: "PRODUCT_IDENTITY_NOT_CONFIRMED",
-      message: "Confirm either a stable product code or product name plus pack variant.",
+      message: `Confirm ${CORE_COLUMN_PATHS.map((path) => path.label).join(" or ")}.`,
       acquisitionSource: "file",
     });
   }
@@ -150,7 +253,7 @@ export function evaluateCapabilities(
           capability: definition.id,
           label: definition.label,
           state: "limited",
-          reasons: Object.freeze([{ code: "LIMITED_RECENT_EVIDENCE", message: "The recent average is available with limited evidence." }]),
+          reasons: Object.freeze([{ code: "LIMITED_RECENT_EVIDENCE", message: `${CAPABILITY_LABELS.recent_weekly_average} is available with limited evidence.` }]),
           iterationEnabled: true,
         });
       }
@@ -181,7 +284,7 @@ export function evaluateCapabilities(
         capability: definition.id,
         label: definition.label,
         state: "needs_information",
-        reasons: Object.freeze([{ code: "COVER_PREREQUISITES_FAILED", message: "Current valid stock and a positive eligible recent average are required." }]),
+        reasons: Object.freeze([{ code: "COVER_PREREQUISITES_FAILED", message: `Valid stock on hand and a positive value for ${CAPABILITY_LABELS.recent_weekly_average} are required.` }]),
         iterationEnabled: true,
       });
     }
@@ -193,7 +296,7 @@ export function evaluateCapabilities(
       label: definition.label,
       state: limited ? "limited" : "available",
       reasons: Object.freeze(limited
-        ? [{ code: "LIMITED_INPUT", message: "Weeks of cover is available but one or more inputs are Limited." }]
+        ? [{ code: "LIMITED_INPUT", message: `${CAPABILITY_LABELS.weeks_of_cover} is available but one or more inputs are Limited.` }]
         : []),
       iterationEnabled: true,
     });

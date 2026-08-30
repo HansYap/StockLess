@@ -367,7 +367,7 @@ export function getReadinessBlockers(state: MappingState): readonly string[] {
     && state.mappings.product_name?.confirmed
     && state.mappings.pack_variant?.confirmed;
   if (!stableReady && !compositeReady) {
-    blockers.push("Product identity (stable code or confirmed product name plus pack variant)");
+    blockers.push("How your products are named or coded");
   }
   return Object.freeze(blockers);
 }

@@ -101,8 +101,8 @@ export function MappingScreen(props: MappingScreenProps) {
             <div>
               <h2 className="card-title">Column mapping</h2>
               <p className="card-sub">
-                Nothing is applied until you confirm it. Transaction date, quantity sold and a
-                product identity are required.
+                Nothing is applied until you confirm it. Sale date, quantity sold and how your
+                products are named or coded are required.
               </p>
             </div>
             <span className={`pill ${confirmedCount === fields.length ? "pill--teal" : "pill--grey"}`}>
@@ -236,7 +236,7 @@ export function MappingScreen(props: MappingScreenProps) {
                       <li key={`${conflict.code}-${conflict.productHint}`}>
                         <b>{conflict.productHint}</b>{" "}
                         {conflict.code === "CODE_TO_MULTIPLE_VARIANTS"
-                          ? "covers more than one pack variant"
+                          ? "covers more than one pack size"
                           : "maps to more than one product code"}
                         : {conflict.values.join(", ")} (rows{" "}
                         {conflict.sourceRows.slice(0, 6).join(", ")}

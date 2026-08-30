@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import {
   CsvImportError,
-  CANONICAL_FIELDS,
-  CORE_COLUMN_PATHS,
-  FIELD_REGISTRY,
+  CAPABILITY_LABELS,
   PRIVACY_NOTICE,
+  UPLOAD_ATTRIBUTE_GUIDE,
   UPLOAD_REQUIREMENTS,
   type CsvProgress,
   type SourceMode,
@@ -46,22 +45,8 @@ export function UploadScreen({ onSource }: UploadScreenProps) {
   const [dragging, setDragging] = useState(false);
 
   const megabyteLimit = Math.round(UPLOAD_REQUIREMENTS.maxBytes / (1024 * 1024));
-  const coreGuidance = useMemo(() => [
-    FIELD_REGISTRY.transaction_date,
-    {
-      field: "product_identity",
-      label: "Product identity",
-      description: CORE_COLUMN_PATHS.map((path) => path.label).join(" or "),
-      unlocks: ["Separate product and pack histories"],
-    },
-    FIELD_REGISTRY.quantity_sold,
-  ], []);
-  const additionalFields = useMemo(
-    () => CANONICAL_FIELDS
-      .filter((field) => !["transaction_date", "product_code", "product_name", "pack_variant", "quantity_sold"].includes(field))
-      .map((field) => FIELD_REGISTRY[field]),
-    [],
-  );
+  const requiredAttributes = UPLOAD_ATTRIBUTE_GUIDE.filter((item) => item.requirement === "required");
+  const optionalAttributes = UPLOAD_ATTRIBUTE_GUIDE.filter((item) => item.requirement === "optional");
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -139,31 +124,23 @@ export function UploadScreen({ onSource }: UploadScreenProps) {
 
       <div className="s1-grid">
         <div>
-          <h2 className="card-title">What can StockLess work with?</h2>
-          <div className="s1-list">
-            {coreGuidance.map((item, index) => (
-              <div className="s1-item" key={item.field}>
-                <span className="s1-item__n">{String(index + 1).padStart(2, "0")}</span>
-                <div>
-                  <div className="s1-item__t">{item.label}</div>
-                  <div className="s1-item__d">{item.description}</div>
-                  <div className="s1-item__unlock">Unlocks: {item.unlocks.join(" · ")}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <details className="field-guide">
-            <summary>Additional fields unlock more capabilities</summary>
-            <div className="field-guide__list">
-              {additionalFields.map((field) => (
-                <div className="field-guide__item" key={field.field}>
-                  <b>{field.label}</b>
-                  <span>{field.status === "later_locked" ? "Later / feature-dependent" : "Feature-dependent"}</span>
-                  <small>{field.unlocks.join(" · ")}</small>
-                </div>
-              ))}
-            </div>
-          </details>
+          <h2 className="card-title">What data can StockLess use?</h2>
+          <p className="card-sub attribute-guide__intro">
+            Start with the three required attributes. The six optional attributes are not needed to continue.
+          </p>
+
+          <AttributeSection
+            id="required-data"
+            title="Required data"
+            items={requiredAttributes}
+            startIndex={0}
+          />
+          <AttributeSection
+            id="optional-data"
+            title="Optional data"
+            items={optionalAttributes}
+            startIndex={requiredAttributes.length}
+          />
         </div>
 
         <div className="card upload-card">
@@ -254,5 +231,53 @@ export function UploadScreen({ onSource }: UploadScreenProps) {
         </div>
       </div>
     </>
+  );
+}
+
+function AttributeSection({
+  id,
+  title,
+  items,
+  startIndex,
+}: {
+  readonly id: string;
+  readonly title: string;
+  readonly items: typeof UPLOAD_ATTRIBUTE_GUIDE;
+  readonly startIndex: number;
+}) {
+  return (
+    <section className="attribute-section" aria-labelledby={id}>
+      <div className="attribute-section__head">
+        <h3 id={id}>{title}</h3>
+        <span className="pill pill--grey">{items.length} attributes</span>
+      </div>
+      <div className="attribute-list">
+        {items.map((item, index) => (
+          <article className="attribute-card" key={item.id}>
+            <div className="attribute-card__head">
+              <span className="attribute-card__number">{String(startIndex + index + 1).padStart(2, "0")}</span>
+              <h4>{item.label}</h4>
+              <span className={`attribute-mark attribute-mark--${item.requirement}`}>
+                {item.requirement === "required" ? "Required" : "Optional"}
+              </span>
+            </div>
+            <p>{item.description}</p>
+            {item.acceptedForms && (
+              <ol className="accepted-forms" aria-label="Two accepted ways to name a product">
+                {item.acceptedForms.map((form) => <li key={form}>{form}</li>)}
+              </ol>
+            )}
+            <div className="attribute-card__features">
+              <b>Unlocks</b>
+              <ul>
+                {item.capabilities.map((capability) => (
+                  <li key={capability}>{CAPABILITY_LABELS[capability]}</li>
+                ))}
+              </ul>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }

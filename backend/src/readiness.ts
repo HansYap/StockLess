@@ -415,7 +415,7 @@ export async function runReadinessCheck(
         observedValue: originalValue(row, transactionDateColumn),
         reason: date.issueCode === "DATE_FORMAT_CONFIRMATION_REQUIRED"
           ? "The date uses a non-ISO format that has not been confirmed for this column."
-          : "The transaction date is blank or is not a valid date under the confirmed column format.",
+          : "The sale date is blank or is not a valid date under the confirmed column format.",
         correctiveAction: date.issueCode === "DATE_FORMAT_CONFIRMATION_REQUIRED"
           ? "Confirm the column-level date format, or export dates as YYYY-MM-DD."
           : "Enter a real date using YYYY-MM-DD or the one confirmed column format.",
@@ -454,7 +454,7 @@ export async function runReadinessCheck(
         observedValue: hint ?? "",
         reason: mapping.identityMode === "stable"
           ? "The confirmed product-code identity is blank on this row."
-          : "The confirmed product name and pack variant identity is incomplete on this row.",
+          : "The confirmed product name and pack size identity is incomplete on this row.",
         correctiveAction: "Complete the confirmed product identity fields in the source file.",
         resolutionState: "unresolved",
       });
@@ -472,7 +472,7 @@ export async function runReadinessCheck(
         field: "current_stock",
         sourceColumn: currentStockColumn.header,
         observedValue: originalValue(row, currentStockColumn),
-        reason: "Current stock must be a finite non-negative decimal.",
+        reason: "Stock on hand must be a finite non-negative decimal.",
         correctiveAction: "Enter a non-negative stock quantity or leave the optional value blank.",
         resolutionState: "unresolved",
       });
@@ -535,7 +535,7 @@ export async function runReadinessCheck(
         field: "stock_as_of_date",
         sourceColumn: stockDateColumn.header,
         observedValue: "",
-        reason: "Current stock is present without its snapshot date.",
+        reason: "Stock on hand is present without its stock count date.",
         correctiveAction: "Enter the date when the current-stock count was measured.",
         resolutionState: "unresolved",
       });
