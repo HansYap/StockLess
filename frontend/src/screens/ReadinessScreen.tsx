@@ -9,6 +9,8 @@ interface ReadinessScreenProps {
   readonly onFilter: (kind: IssueKind | null) => void;
   readonly onBack: () => void;
   readonly onContinue: () => void;
+  readonly reportFilename: string;
+  readonly sourceLabel: "Sample data" | "Retailer file";
 }
 
 /** Screen 03. Shows what was excluded and why, and lets every row be traced. */
@@ -25,11 +27,11 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   const clean = result.corrections.length === 0;
 
   function download() {
-    const blob = new Blob([correctionReportCsv(result)], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([correctionReportCsv(result, props.sourceLabel)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `StockLess_correction_report_${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.download = props.reportFilename;
     anchor.click();
     URL.revokeObjectURL(url);
   }

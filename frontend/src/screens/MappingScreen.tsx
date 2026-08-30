@@ -155,22 +155,32 @@ export function MappingScreen(props: MappingScreenProps) {
                         )}
                       </td>
                       <td className="num">
-                        {column ? column.previewValues.slice(0, 2).join(" · ") || "—" : "—"}
+                        {column ? column.previewValues.slice(0, 5).join(" · ") || "—" : "—"}
                       </td>
                       <td>
                         {current?.confirmed ? (
                           <span className="pill pill--teal">Confirmed</span>
                         ) : current ? (
-                          <button
-                            type="button"
-                            className="btn btn--small btn--ghost"
-                            onClick={() => props.onConfirmField(field)}
-                          >
-                            Confirm
-                          </button>
+                          <div className="mapping-status">
+                            <button
+                              type="button"
+                              className="btn btn--small btn--ghost"
+                              onClick={() => props.onConfirmField(field)}
+                            >
+                              Confirm
+                            </button>
+                            {proposal && (
+                              <small>
+                                {BAND_LABEL[proposal.scoreBand]}
+                                {proposal.score === undefined ? "" : ` · ${Math.round(proposal.score * 100)}%`}
+                              </small>
+                            )}
+                          </div>
                         ) : (
                           <span className="pill pill--grey">
-                            {proposal ? BAND_LABEL[proposal.scoreBand] : "Not mapped"}
+                            {proposal
+                              ? `${BAND_LABEL[proposal.scoreBand]}${proposal.score === undefined ? "" : ` · ${Math.round(proposal.score * 100)}%`}`
+                              : "Not mapped"}
                           </span>
                         )}
                       </td>

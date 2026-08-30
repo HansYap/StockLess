@@ -230,7 +230,8 @@ function normalizeCell(
 
 /** Calculates a lowercase SHA-256 hash without modifying the input bytes. */
 async function sha256(bytes: Uint8Array): Promise<string> {
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  const digestBytes = Uint8Array.from(bytes);
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", digestBytes.buffer);
   return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
 }
 

@@ -3,7 +3,7 @@
  *
  * Screens import from here, never from the engine directly.
  *
- * TO SWITCH TO THE REAL ENGINE: change "./engine.mock.ts" below to
- * "@stockless/backend" and delete engine.mock.ts. Nothing else changes.
+ * The frontend consumes the browser-safe domain package through this one
+ * boundary so screen code never duplicates the domain rules.
  */
-export * from "./engine.mock.ts";
+export * from "@stockless/backend";

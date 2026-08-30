@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { SourceMode } from "../engine.ts";
 import { Logo } from "./Logo.tsx";
 
 export type StepId = 1 | 2 | 3 | 4;
@@ -15,17 +16,43 @@ interface AppShellProps {
   /** Highest step the session has legitimately reached. */
   readonly reached: StepId;
   readonly onNavigate: (step: StepId) => void;
+  readonly sourceMode?: SourceMode;
+  readonly sourceName?: string;
+  readonly notice?: string | null;
+  readonly onClear?: () => void;
   readonly children: ReactNode;
 }
 
 /** Frames every screen with the brand bar and the four-step progress indicator. */
-export function AppShell({ current, reached, onNavigate, children }: AppShellProps) {
+export function AppShell({
+  current,
+  reached,
+  onNavigate,
+  sourceMode,
+  sourceName,
+  notice,
+  onClear,
+  children,
+}: AppShellProps) {
   return (
     <div className="frame">
       <header className="topbar">
-        <a className="brand" href="#" aria-label="StockLess — home">
+        <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label="StockLess — upload">
           <Logo />
-        </a>
+        </button>
+        {sourceMode && (
+          <div className="session-status" aria-label="Active session">
+            <span className={`pill ${sourceMode === "sample" ? "pill--amber" : "pill--teal"}`}>
+              {sourceMode === "sample" ? "Sample data" : "Retailer file"}
+            </span>
+            {sourceName && <span className="session-status__name">{sourceName}</span>}
+            {onClear && (
+              <button type="button" className="btn btn--small btn--ghost" onClick={onClear}>
+                Clear session
+              </button>
+            )}
+          </div>
+        )}
       </header>
 
       <nav className="stepper" aria-label="Progress">
@@ -56,7 +83,10 @@ export function AppShell({ current, reached, onNavigate, children }: AppShellPro
         </ol>
       </nav>
 
-      <div className="page">{children}</div>
+      <div className="page">
+        {notice && <p className="notice notice--info" role="status">{notice}</p>}
+        {children}
+      </div>
     </div>
   );
 }

@@ -7,13 +7,14 @@ import { DemandScreen } from "./screens/DemandScreen.tsx";
 import type { IssueKind } from "./mock-analysis.ts";
 import {
   MappingConflictError,
+  clearActiveSession,
   confirmIdentityMode,
   confirmMapping,
   createEmptySession,
+  correctionReportMetadata,
   proposeMappings,
   recordConfirmedIdentity,
   removeMapping,
-  replaceSessionSource,
   setMapping,
   updateSessionMapping,
   type CanonicalField,
@@ -23,6 +24,9 @@ import {
   type SessionEnvelope,
   type SourceMode,
 } from "./engine.ts";
+import { replaceSessionSourceInWorker } from "./workers/import-session-client.ts";
+import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
+import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
 
 /** Seeds an unconfirmed mapping state from the engine's proposals. */
 function seedFromProposals(
@@ -51,6 +55,7 @@ export default function App() {
   const [mappingError, setMappingError] = useState<string | null>(null);
   const [issueFilter, setIssueFilter] = useState<IssueKind | null>(null);
   const [productKey, setProductKey] = useState<string | null>(null);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
 
   const dataset = envelope.session.dataset;
 
@@ -66,22 +71,28 @@ export default function App() {
       sourceMode: SourceMode,
       mimeType: string | undefined,
       onProgress: (progress: CsvProgress) => void,
+      signal: AbortSignal,
     ) => {
-      // replaceSessionSource throws CsvImportError, which UploadScreen renders.
-      const next = await replaceSessionSource(envelope, bytes, {
+      const previousMode = envelope.session.sourceMode;
+      const next = await replaceSessionSourceInWorker(envelope, bytes, {
         sourceMode,
         sourceName,
         mimeType,
         onProgress,
+        signal,
       });
       const parsed = next.session.dataset;
       if (!parsed) throw new Error("The parsed dataset is missing from the session.");
 
-      // No semantic scorer yet: the engine falls back to alias, lexical and type gates.
-      const proposed = await proposeMappings(parsed);
+      const proposed = await proposeMappings(parsed, createLocalSemanticScorer(signal));
       setProposals(proposed);
       setEnvelope(updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed)));
       setMappingError(null);
+      setIssueFilter(null);
+      setProductKey(null);
+      setSessionNotice(previousMode && previousMode !== sourceMode
+        ? `${previousMode === "sample" ? "Sample data" : "The retailer file"} was replaced. Dataset-specific mappings and results were cleared.`
+        : sourceMode === "sample" ? "Sample data loaded." : "Retailer file loaded locally.");
       goTo(2);
     },
     [envelope, goTo],
@@ -139,8 +150,34 @@ export default function App() {
     });
   }, []);
 
+  const handleClearSession = useCallback(() => {
+    terminateStocklessWorkers();
+    const cleared = clearActiveSession(envelope);
+    setEnvelope(cleared.envelope);
+    setProposals(null);
+    setMappingError(null);
+    setIssueFilter(null);
+    setProductKey(null);
+    setReached(1);
+    setStep(1);
+    setSessionNotice(cleared.message);
+  }, [envelope]);
+
+  const reportMetadata = correctionReportMetadata(
+    envelope.session,
+    new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" }),
+  );
+
   return (
-    <AppShell current={step} reached={reached} onNavigate={goTo}>
+    <AppShell
+      current={step}
+      reached={reached}
+      onNavigate={goTo}
+      sourceMode={envelope.session.sourceMode}
+      sourceName={dataset?.sourceName}
+      notice={sessionNotice}
+      onClear={dataset ? handleClearSession : undefined}
+    >
       {step === 1 && <UploadScreen onSource={handleSource} />}
 
       {step === 2 && dataset && (
@@ -153,9 +190,6 @@ export default function App() {
           onConfirmField={handleConfirmField}
           onConfirmIdentity={handleConfirmIdentity}
           onBack={() => {
-            setEnvelope(createEmptySession(envelope.preferences));
-            setProposals(null);
-            setReached(1);
             setStep(1);
           }}
           onContinue={() => goTo(3)}
@@ -170,6 +204,8 @@ export default function App() {
           onFilter={setIssueFilter}
           onBack={() => setStep(2)}
           onContinue={() => goTo(4)}
+          reportFilename={reportMetadata.filename}
+          sourceLabel={reportMetadata.sourceMode}
         />
       )}
 

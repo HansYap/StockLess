@@ -38,7 +38,7 @@ function buildRecentWindow(
       selectedWeekStarts: Object.freeze([]),
       observedWeekCount: 0,
       state: "unavailable",
-      reasonCodes: Object.freeze(["NO_COMPLETED_OBSERVED_WEEK"]),
+      reasonCodes: Object.freeze(["NO_COMPLETED_OBSERVED_WEEK"] as const),
     });
   }
 

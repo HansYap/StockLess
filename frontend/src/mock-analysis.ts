@@ -4,7 +4,7 @@
  * Computes readiness and weekly demand from the parsed dataset so screens 3
  * and 4 behave for real. Swap for the engine's own exports when they land.
  */
-import type { CanonicalField, MappingState, ParsedDataset } from "./engine.mock.ts";
+import type { CanonicalField, MappingState, ParsedDataset } from "./engine.ts";
 
 /* ── types ──────────────────────────────────────────────────────────────── */
 
@@ -112,7 +112,7 @@ function isNumber(value: string): boolean {
 
 const ISSUE_META: Record<IssueKind, { label: string; hint: string; severity: "fix" | "review" }> = {
   invalid_date: { label: "Invalid dates", hint: "Rows cannot be placed on the timeline", severity: "fix" },
-  invalid_quantity: { label: "Invalid quantities", hint: "Text, symbols or negatives in quantity", severity: "fix" },
+  invalid_quantity: { label: "Invalid quantities", hint: "Text or symbols in a numeric quantity", severity: "fix" },
   duplicate_row: { label: "Duplicate rows", hint: "Possible repeated transactions", severity: "review" },
   missing_value: { label: "Missing values", hint: "A confirmed field is blank", severity: "review" },
 };
@@ -171,14 +171,6 @@ export function analyseReadiness(dataset: ParsedDataset, mapping: MappingState):
         sourceRow: row.sourceRow, kind: "invalid_quantity",
         issueLabel: "Invalid quantity", foundValue: rawQty || "blank",
         howToFix: "Replace text with a number",
-      });
-    } else if (Number(rawQty) < 0) {
-      counts.invalid_quantity += 1;
-      ok = false;
-      corrections.push({
-        sourceRow: row.sourceRow, kind: "invalid_quantity",
-        issueLabel: "Negative quantity", foundValue: rawQty,
-        howToFix: "Confirm whether this is a return, or correct the value",
       });
     }
 
@@ -256,13 +248,37 @@ export function analyseReadiness(dataset: ParsedDataset, mapping: MappingState):
 }
 
 /** Renders the correction report as CSV text for download. */
-export function correctionReportCsv(result: ReadinessResult): string {
-  const header = "row,issue,found_value,how_to_fix";
+export function correctionReportCsv(
+  result: ReadinessResult,
+  sourceMode: "Sample data" | "Retailer file",
+): string {
+  const header = "record_type,source_mode,row,issue,found_value,how_to_fix,rows_in,rows_used,rows_excluded";
   const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
   const lines = result.corrections.map((row) =>
-    [row.sourceRow, escape(row.issueLabel), escape(row.foundValue), escape(row.howToFix)].join(","),
+    [
+      "issue",
+      escape(sourceMode),
+      row.sourceRow,
+      escape(row.issueLabel),
+      escape(row.foundValue),
+      escape(row.howToFix),
+      result.totalRows,
+      result.usableRows,
+      result.totalRows - result.usableRows,
+    ].join(","),
   );
-  return [header, ...lines].join("\n");
+  const summary = [
+    "summary",
+    escape(sourceMode),
+    "",
+    "",
+    "",
+    "",
+    result.totalRows,
+    result.usableRows,
+    result.totalRows - result.usableRows,
+  ].join(",");
+  return [header, summary, ...lines].join("\r\n");
 }
 
 /* ── demand ─────────────────────────────────────────────────────────────── */
@@ -291,7 +307,7 @@ export function analyseDemand(dataset: ParsedDataset, mapping: MappingState): De
     const values = row.normalizedValues;
     const date = parseDate(cell(values, dateIndex));
     const rawQty = cell(values, qtyIndex);
-    if (!date || !isNumber(rawQty) || Number(rawQty) < 0) continue;
+    if (!date || !isNumber(rawQty)) continue;
 
     const code = cell(values, codeIndex);
     const name = cell(values, nameIndex);

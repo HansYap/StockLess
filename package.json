@@ -1,0 +1,19 @@
+{
+  "name": "stockless",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace stockless-frontend",
+    "test": "npm run test --workspace @stockless/backend && npm run test --workspace stockless-frontend",
+    "test:epic1": "npm run test:epic1 --workspace @stockless/backend && npm run test:epic1 --workspace stockless-frontend",
+    "verify:model": "npm run verify:model --workspace stockless-frontend",
+    "benchmark:mapping": "npm run benchmark:mapping --workspace stockless-frontend"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
