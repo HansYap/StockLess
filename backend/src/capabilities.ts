@@ -161,7 +161,7 @@ function missingFieldReasons(
     if (!state.mappings[field]?.confirmed) {
       reasons.push({
         code: "FIELD_NOT_CONFIRMED",
-        message: `${FIELD_REGISTRY[field].label} must be mapped and confirmed. It can come from ${FIELD_REGISTRY[field].acquisitionSource === "file" ? "a file column" : FIELD_REGISTRY[field].acquisitionSource === "aina" ? "Aina" : "a file column or Aina"}.`,
+        message: `${FIELD_REGISTRY[field].label} must be mapped and confirmed. It can come from ${FIELD_REGISTRY[field].acquisitionSource === "file" ? "a file column" : FIELD_REGISTRY[field].acquisitionSource === "manual" ? "manual entry" : "a file column or manual entry"}.`,
         field,
         acquisitionSource: FIELD_REGISTRY[field].acquisitionSource,
       });

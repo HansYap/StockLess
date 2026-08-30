@@ -25,7 +25,7 @@ export type FieldStatus =
   | "later_locked";
 
 export type ValueKind = "date" | "decimal" | "non_negative_decimal" | "text" | "non_negative_integer";
-export type AcquisitionSource = "file" | "aina" | "either";
+export type AcquisitionSource = "file" | "manual" | "either";
 
 export interface FieldDefinition {
   readonly field: CanonicalField;
