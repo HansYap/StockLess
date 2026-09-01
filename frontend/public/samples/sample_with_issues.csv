@@ -1,18 +1,34 @@
-sale_date,sku,product_name,pack_variant,qty_sold,stock_on_hand,stock_date
-2026-05-25,000123,Sambal Ikan Bilis,200 g jar,10,40,2026-08-24
-2026-06-01,000123,Sambal Ikan Bilis,200 g jar,12,40,2026-08-24
-2026-06-08,000123,Sambal Ikan Bilis,200 g jar,0,40,2026-08-24
-2026-06-15,000123,Sambal Ikan Bilis,200 g jar,8,40,2026-08-24
-2026-06-29,000123,Sambal Ikan Bilis,200 g jar,5,40,2026-08-24
-2026-07-06,000123,Sambal Ikan Bilis,200 g jar,-2,40,2026-08-24
-2026-07-13,000123,Sambal Ikan Bilis,200 g jar,9,40,2026-08-24
-2026-07-20,000123,Sambal Ikan Bilis,200 g jar,11,40,2026-08-24
-2026-07-27,000123,Sambal Ikan Bilis,200 g jar,7,40,2026-08-24
-2026-07-13,000124,Sambal Ikan Bilis,500 g jar,4,22,2026-08-18
-2026-07-20,000124,Sambal Ikan Bilis,500 g jar,6,22,2026-08-18
-2026-07-27,000124,Sambal Ikan Bilis,500 g jar,5,22,2026-08-18
-2026-07-06,000125,Kopi O,10 sachets,4,12,2026-08-05
-2026-07-06,000125,Kopi O,10 sachets,4,12,2026-08-05
-31/02/2026,000123,Sambal Ikan Bilis,200 g jar,3,40,2026-08-24
-2026-08-03,000123,Sambal Ikan Bilis,200 g jar,three,40,2026-08-24
-2026-08-03,,Keropok Ikan,250 g bag,2,18,2026-08-24
+transaction_date,product_code,product_name,pack_variant,quantity_sold,current_stock,stock_as_of_date
+2026-07-06,000101,Sambal Ikan Bilis,200 g jar,5,30,2026-08-27
+2026-07-08,000202,Kopi O,10 sachets,7,25,2026-08-27
+2026-07-09,000101,Sambal Ikan Bilis,200 g jar,4,30,2026-08-27
+2026-07-10,000101,Sambal Ikan Bilis,200 g jar,3,30,2026-08-27
+2026-07-14,000202,Kopi O,10 sachets,6,25,2026-08-27
+2026-07-15,000202,Kopi O,10 sachets,5,25,2026-08-27
+31/02/2026,000101,Sambal Ikan Bilis,200 g jar,4,30,2026-08-27
+2026-07-17,000101,Sambal Ikan Bilis,200 g jar,5,30,2026-08-27
+2026-07-21,000101,Sambal Ikan Bilis,200 g jar,three,30,2026-08-27
+2026-07-22,000101,Sambal Ikan Bilis,200 g jar,6,30,2026-08-27
+2026-07-24,000202,Kopi O,10 sachets,5,25,2026-08-27
+2026-07-29,000202,Kopi O,10 sachets,8,25,2026-08-27
+2026-07-31,000303,Nasi Goréng Spesial,250 g pack,4,,
+2026-08-04,000101,Sambal Ikan Bilis,200 g jar,0,30,2026-08-27
+2026-08-05,000202,Kopi O,10 sachets,5,25,2026-08-27
+2026-08-06,000303,Nasi Goréng Spesial,250 g pack,3,,
+2026-08-07,000202,Kopi O,10 sachets,-5,25,2026-08-27
+2026-08-09,000303,Nasi Goréng Spesial,250 g pack,3,,
+2026-08-11,000101,Sambal Ikan Bilis,200 g jar,5,30,2026-08-27
+2026-08-11,000101,Sambal Ikan Bilis,200 g jar,5,30,2026-08-27
+2026-08-12,,Kopi O,10 sachets,6,25,2026-08-27
+2026-08-13,000202,Kopi O,10 sachets,4,25,2026-08-27
+2026-08-14,000410,Gula Pasir,1 kg bag,10,-5,2026-08-27
+2026-08-15,000420,Minyak Goreng,1 L bottle,8,15,2099-01-01
+2026-08-16,000202,Kopi O,10 sachets,6,25,2026-08-27
+2026-08-18,000430,Beras Wangi,5 kg bag,12,20,2020-01-01
+2026-08-19,000440,Kerupuk Udang,250 g pack,6,10,2026-08-27
+2026-08-19,000101,Sambal Ikan Bilis,200 g jar,5,30,2026-08-27
+2026-08-20,000101,Sambal Ikan Bilis,200 g jar,-2,30,2026-08-27
+2026-08-21,000440,Kerupuk Udang,250 g pack,4,11,2026-08-27
+2026-08-21,000102,Sambal Ikan Bilis,500 g jar,3,15,2026-08-27
+2026-08-22,000303,Nasi Goréng Spesial,250 g pack,5,,
+2026-08-23,000202,Kopi O,10 sachets,5,25,2026-08-27
