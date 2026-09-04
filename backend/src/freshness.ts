@@ -30,7 +30,6 @@ export function evaluateStockFreshness(
     return Object.freeze({
       snapshotDate: stockAsOfDate,
       analysisDate,
-      ageDays,
       state: "unusable",
       reasonCode: "FUTURE_STOCK_DATE",
     });
