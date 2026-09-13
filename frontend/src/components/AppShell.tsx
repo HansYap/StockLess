@@ -40,6 +40,7 @@ export function AppShell({
         <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label="StockLess — upload">
           <Logo />
         </button>
+        <a className="workspace-home-link" href="#home">← Homepage</a>
         {sourceMode && (
           <div className="session-status" aria-label="Active session">
             <span className={`pill ${sourceMode === "sample" ? "pill--amber" : "pill--teal"}`}>

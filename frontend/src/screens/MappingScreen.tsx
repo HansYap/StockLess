@@ -8,6 +8,7 @@ import {
   getReadinessBlockers,
   partitionCapabilities,
   type CanonicalField,
+  type MappingProposal,
   type MappingProposalResult,
   type MappingState,
   type ParsedDataset,

@@ -4,9 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "node scripts/run.mjs dev",
+    "build": "node scripts/run.mjs build",
+    "preview": "node scripts/run.mjs preview",
+    "typecheck": "node scripts/run.mjs typecheck",
+    "export:homepage": "node scripts/export-homepage.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "3.8.1",
@@ -18,6 +20,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^5.0.0",
+    "esbuild": "^0.25.0",
     "typescript": "^5.8.3",
     "vite": "^7.0.0"
   }
