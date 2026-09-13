@@ -22,6 +22,7 @@ import {
   type CsvProgress,
   type DateFormatConfirmation,
   type DuplicateDecision,
+  type DemandForecastReview,
   type MappingProposalResult,
   type MappingState,
   type ReadinessSnapshot,
@@ -29,6 +30,7 @@ import {
   type SourceMode,
 } from "./engine.ts";
 import { replaceSessionSourceInWorker } from "./workers/import-session-client.ts";
+import { runDemandForecastInWorker } from "./workers/forecast-client.ts";
 import { runReadinessCheckInWorker } from "./workers/readiness-client.ts";
 import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
@@ -65,17 +67,31 @@ export default function App() {
   const [readiness, setReadiness] = useState<ReadinessSnapshot | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [forecast, setForecast] = useState<DemandForecastReview | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const [forecastError, setForecastError] = useState<string | null>(null);
   const [dateConfirmations, setDateConfirmations] = useState<readonly DateFormatConfirmation[]>([]);
   const [duplicateDecisions, setDuplicateDecisions] = useState<Readonly<Record<string, DuplicateDecision>>>({});
   const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
   const readinessRun = useRef(0);
   const readinessAbort = useRef<AbortController | null>(null);
+  const forecastRun = useRef(0);
+  const forecastAbort = useRef<AbortController | null>(null);
 
   const dataset = envelope.session.dataset;
 
   const goTo = useCallback((next: StepId) => {
     setStep(next);
     setReached((current) => (next > current ? next : current));
+  }, []);
+
+  const resetForecastEvidence = useCallback(() => {
+    forecastAbort.current?.abort();
+    forecastAbort.current = null;
+    forecastRun.current += 1;
+    setForecast(null);
+    setForecastLoading(false);
+    setForecastError(null);
   }, []);
 
   const resetReadinessEvidence = useCallback(() => {
@@ -88,8 +104,9 @@ export default function App() {
     setDateConfirmations([]);
     setDuplicateDecisions({});
     setIssueFilter(null);
+    resetForecastEvidence();
     setReached((current) => current > 2 ? 2 : current);
-  }, []);
+  }, [resetForecastEvidence]);
 
   const executeReadiness = useCallback(async (
     confirmations: readonly DateFormatConfirmation[] = dateConfirmations,
@@ -111,6 +128,7 @@ export default function App() {
         duplicateDecisions: decisions,
       }, controller.signal);
       if (readinessRun.current !== runId) return;
+      resetForecastEvidence();
       setReadiness(snapshot);
       if (navigate) goTo(3);
     } catch (error) {
@@ -120,7 +138,34 @@ export default function App() {
       if (readinessAbort.current === controller) readinessAbort.current = null;
       if (readinessRun.current === runId) setReadinessLoading(false);
     }
-  }, [analysisDate, dataset, dateConfirmations, duplicateDecisions, envelope.session.mapping, goTo]);
+  }, [analysisDate, dataset, dateConfirmations, duplicateDecisions, envelope.session.mapping, goTo, resetForecastEvidence]);
+
+  const executeForecast = useCallback(async () => {
+    if (!readiness) return;
+    if (forecast?.snapshotId === readiness.id) {
+      goTo(4);
+      return;
+    }
+    forecastAbort.current?.abort();
+    const controller = new AbortController();
+    forecastAbort.current = controller;
+    const runId = forecastRun.current + 1;
+    forecastRun.current = runId;
+    setForecastLoading(true);
+    setForecastError(null);
+    try {
+      const review = await runDemandForecastInWorker(readiness, controller.signal);
+      if (forecastRun.current !== runId) return;
+      setForecast(review);
+      goTo(4);
+    } catch (error) {
+      if (forecastRun.current !== runId) return;
+      setForecastError(error instanceof Error ? error.message : "Demand estimation could not be completed.");
+    } finally {
+      if (forecastAbort.current === controller) forecastAbort.current = null;
+      if (forecastRun.current === runId) setForecastLoading(false);
+    }
+  }, [forecast, goTo, readiness]);
 
   const handleSource = useCallback(async (
     bytes: Uint8Array,
@@ -280,12 +325,14 @@ export default function App() {
           dateConfirmations={dateConfirmations}
           checking={readinessLoading}
           error={readinessError}
+          forecasting={forecastLoading}
+          forecastError={forecastError}
           filter={issueFilter}
           onFilter={setIssueFilter}
           onConfirmDateFormat={handleConfirmDateFormat}
           onDuplicateDecision={handleDuplicateDecision}
           onBack={() => setStep(2)}
-          onContinue={() => goTo(4)}
+          onContinue={() => void executeForecast()}
           reportFilename={reportMetadata.filename}
         />
       )}
@@ -308,7 +355,7 @@ export default function App() {
         </section>
       )}
 
-      {step === 4 && readiness && (
+      {step === 4 && readiness && forecast && (
         <DemandScreen
           snapshot={readiness}
           selectedKey={productKey}

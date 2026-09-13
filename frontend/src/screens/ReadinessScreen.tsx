@@ -26,6 +26,8 @@ interface ReadinessScreenProps {
   readonly dateConfirmations: readonly DateFormatConfirmation[];
   readonly checking: boolean;
   readonly error: string | null;
+  readonly forecasting: boolean;
+  readonly forecastError: string | null;
   readonly filter: ReadinessIssueFilter | null;
   readonly onFilter: (kind: ReadinessIssueFilter | null) => void;
   readonly onConfirmDateFormat: (sourceColumnId: string, format: ConfirmedDateFormat) => void;
@@ -484,6 +486,8 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         </section>
       )}
 
+      {props.forecastError && <p className="notice notice--error" role="alert">{props.forecastError}</p>}
+
       <div className="footer-row">
         <p className="validity">
           <i aria-hidden="true">✓</i>
@@ -493,7 +497,16 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         </p>
         <div className="footer-row__right">
           <button type="button" className="btn btn--ghost" onClick={download}>↓ Download problems</button>
-          <button type="button" className="btn btn--primary" onClick={props.onContinue}>Review demand →</button>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={props.onContinue}
+            disabled={props.forecasting}
+            aria-busy={props.forecasting}
+          >
+            {props.forecasting && <span className="btn__spinner" aria-hidden="true" />}
+            {props.forecasting ? "Estimating demand locally…" : "Review demand →"}
+          </button>
         </div>
       </div>
 
