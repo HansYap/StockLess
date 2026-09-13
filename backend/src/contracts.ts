@@ -463,6 +463,58 @@ export interface DemandReview {
   readonly products: readonly DemandProductEvidence[];
 }
 
+/** Epic 3 labels are based only on the eight complete weeks before analysis. */
+export type DemandReadinessLabel = "Ready" | "Limited" | "Cannot assess";
+
+export type DemandPattern = "Steady seller" | "Occasional seller";
+
+export type DemandForecastMethod = "recent_mean_8" | "tsb_alpha_0_2_beta_0_2";
+
+export type DemandAssessmentReasonCode =
+  | "INSUFFICIENT_RECORDED_WEEKS"
+  | "DUPLICATE_ROWS_NOT_DECIDED";
+
+export interface DemandAssessmentReason {
+  readonly code: DemandAssessmentReasonCode;
+  readonly message: string;
+  readonly recordedWeekCount?: number;
+}
+
+/** Internal forecast evidence; the results UI only needs the whole-number low and high. */
+export interface DemandRangeEvidence {
+  readonly low: number;
+  readonly high: number;
+  readonly unroundedCentral: number;
+  readonly unroundedLow: number;
+  readonly unroundedHigh: number;
+  readonly horizonWeeks: 4;
+  readonly basedOnWeekCount: number;
+  readonly firstWeekUsed: string;
+  readonly lastWeekUsed: string;
+  readonly method: DemandForecastMethod;
+  readonly intervalMethod:
+    | "symmetric_max_abs_historical_error_x1_5"
+    | "recent_variability_fallback";
+  readonly historicalErrorCount: number;
+}
+
+export interface ProductDemandEstimate {
+  readonly productKey: string;
+  readonly label: DemandReadinessLabel;
+  readonly labelReason?: DemandAssessmentReason;
+  readonly recordedWeeksInLast8: number;
+  readonly pattern?: DemandPattern;
+  readonly range?: DemandRangeEvidence;
+  readonly policyVersion: string;
+}
+
+export interface DemandForecastReview {
+  readonly snapshotId: string;
+  readonly analysisDate: string;
+  readonly policyVersion: string;
+  readonly products: readonly ProductDemandEstimate[];
+}
+
 export interface CorrectionReportMetadata {
   readonly snapshotId: string;
   readonly issueTotal: number;

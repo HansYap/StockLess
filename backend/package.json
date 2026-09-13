@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "description": "Browser-compatible StockLess domain engine. This is not an HTTP backend.",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "typecheck": "node ../frontend/node_modules/typescript/bin/tsc -p tsconfig.json"
+  },
   "exports": {
     ".": "./src/index.ts"
   },

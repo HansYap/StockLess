@@ -7,7 +7,9 @@
     "frontend"
   ],
   "scripts": {
-    "build": "npm run build --workspace stockless-frontend"
+    "build": "npm run build --workspace stockless-frontend",
+    "test": "npm test --workspace @stockless/backend",
+    "typecheck": "npm run typecheck --workspace @stockless/backend && npm run typecheck --workspace stockless-frontend"
   },
   "engines": {
     "node": ">=24"
