@@ -515,6 +515,127 @@ export interface DemandForecastReview {
   readonly products: readonly ProductDemandEstimate[];
 }
 
+/** Epic 5 input values are visit-only; persistence is owned by the UI session. */
+export type PurchaseInputSource = "from your file" | "typed by you";
+
+export type PurchaseFigureSource = PurchaseInputSource | "worked out by StockLess";
+
+export type PurchaseVerdict = "High risk" | "Needs review" | "Looks balanced";
+
+export type CannotJudgeReason =
+  | "the product is Cannot assess"
+  | "no stock on hand figure"
+  | "no stock count date"
+  | "the stock count date is more than 14 days old"
+  | "the stock count date is in the future";
+
+export type PurchaseQuantityField =
+  | { readonly state: "empty" }
+  | {
+      readonly state: "value";
+      readonly value: number;
+      readonly source: PurchaseInputSource;
+    };
+
+export type PurchaseQuantityValidation =
+  | { readonly accepted: true; readonly field: PurchaseQuantityField }
+  | {
+      readonly accepted: false;
+      readonly field: PurchaseQuantityField;
+      readonly message: "Whole numbers only";
+    };
+
+export interface ProductPurchaseInputs {
+  readonly incomingStock: PurchaseQuantityField;
+  readonly plannedOrder: PurchaseQuantityField;
+}
+
+export interface PurchaseFigure {
+  readonly value: number;
+  readonly source: PurchaseFigureSource;
+}
+
+export interface PurchaseWorkedFigures {
+  readonly stockOnHand: PurchaseFigure;
+  readonly incomingStock: PurchaseFigure;
+  readonly plannedOrder: PurchaseFigure;
+  readonly demandLow: PurchaseFigure;
+  readonly demandHigh: PurchaseFigure;
+  readonly availableAfterOrder: PurchaseFigure;
+}
+
+export type PurchaseAuditResult =
+  | { readonly state: "not_planned" }
+  | {
+      readonly state: "cannot_judge";
+      readonly label: "Cannot judge";
+      readonly reason: CannotJudgeReason;
+      readonly correctiveAction: string;
+      readonly gettingOld: false;
+    }
+  | {
+      readonly state: "verdict";
+      readonly verdict: PurchaseVerdict;
+      readonly reasonSentence: string;
+      readonly gettingOld: boolean;
+      readonly figures: PurchaseWorkedFigures;
+    };
+
+export type RestockEstimate =
+  | {
+      readonly state: "available";
+      readonly quantity: PurchaseFigure;
+      readonly midpointTarget: PurchaseFigure;
+    }
+  | {
+      readonly state: "unavailable";
+      readonly reason: CannotJudgeReason;
+    };
+
+export interface ExpiryCheckInput {
+  readonly columnConfirmed: boolean;
+  readonly dates: readonly string[];
+}
+
+export type ExpiryCheckResult =
+  | {
+      readonly state: "no_column";
+      readonly message: "Expiry not checked — your file has no expiry dates";
+    }
+  | {
+      readonly state: "no_usable_date";
+      readonly message: "Expiry not checked — no usable expiry date for this product";
+    }
+  | {
+      readonly state: "expires_within_four_weeks";
+      readonly message: string;
+      readonly earliestDate: string;
+      readonly daysUntilExpiry: number;
+    }
+  | {
+      readonly state: "no_expiry_inside_four_weeks";
+      readonly message: "No expiry inside the next 4 weeks";
+      readonly earliestDate: string;
+      readonly daysUntilExpiry: number;
+    };
+
+export interface ProductPurchasePlan {
+  readonly productKey: string;
+  readonly inputs: ProductPurchaseInputs;
+  readonly estimatedRestock: RestockEstimate;
+  readonly audit: PurchaseAuditResult;
+  readonly expiry: ExpiryCheckResult;
+  readonly purchasePolicyVersion: string;
+}
+
+export interface PurchasePlanReview {
+  readonly snapshotId: string;
+  readonly analysisDate: string;
+  readonly forecastPolicyVersion: string;
+  readonly purchasePolicyVersion: string;
+  readonly products: readonly ProductPurchasePlan[];
+}
+
 export interface CorrectionReportMetadata {
   readonly snapshotId: string;
   readonly issueTotal: number;
