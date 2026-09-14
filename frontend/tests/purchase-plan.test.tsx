@@ -165,7 +165,7 @@ describe("purchase planning", () => {
     expect(screen.getAllByText("from your file").length).toBeGreaterThan(2);
     expect(screen.getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "21" } });
-    expect(screen.getAllByText("typed by you").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("input by you").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Clear planned order" }));
     expect(screen.getByText("No plan entered")).toBeTruthy();
   });

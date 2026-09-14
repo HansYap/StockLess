@@ -459,7 +459,7 @@ export function ProductPurchaseDialog({
               })}
             </div>
             <p className="visit-note">
-              Typed figures are marked “typed by you” and last for this visit
+              Figures you enter are marked “input by you” and last for this visit
               only.
             </p>
           </section>

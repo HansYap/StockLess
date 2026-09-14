@@ -118,7 +118,7 @@ export function applyPurchaseQuantityEdit(
 
   return Object.freeze({
     accepted: true,
-    field: createPurchaseQuantity(value, "typed by you"),
+    field: createPurchaseQuantity(value, "input by you"),
   });
 }
 

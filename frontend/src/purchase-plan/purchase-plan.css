@@ -188,7 +188,7 @@
     .purchase-plan .quantity-slider__clear:hover { color:var(--teal); }
     .purchase-plan .source-tag { display:inline-flex; align-items:center; min-height:22px; padding:3px 7px; border-radius:7px; font-size:10px; font-weight:700; white-space:nowrap; }
     .purchase-plan .source--file { color:#315F73; background:#EDF4F8; }
-    .purchase-plan .source--typed { color:var(--amber); background:var(--amber-tint); }
+    .purchase-plan .source--input { color:var(--amber); background:var(--amber-tint); }
     .purchase-plan .source--worked { color:var(--teal-deep); background:var(--teal-tint); }
     .purchase-plan .visit-note { margin:12px 0 0; color:var(--muted); font-size:11px; }
 

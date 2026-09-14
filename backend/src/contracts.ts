@@ -544,7 +544,7 @@ export interface DemandForecastReview {
 }
 
 /** Epic 5 input values are visit-only; persistence is owned by the UI session. */
-export type PurchaseInputSource = "from your file" | "typed by you";
+export type PurchaseInputSource = "from your file" | "input by you";
 
 export type PurchaseFigureSource = PurchaseInputSource | "worked out by StockLess";
 

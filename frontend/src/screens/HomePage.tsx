@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Logo } from "../components/Logo.tsx";
 import "../homepage.css";
+import "../homepage-purchase-preview.css";
 
 type HomePageProps = { startHref?: string; assetRoot?: string; imageSources?: Record<string, string> };
 
@@ -21,34 +22,128 @@ function Icon({ name }: { name: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.leaf} /></svg>;
 }
 
+function PreviewSlider({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="sl-preview-slider">
+      <div className="sl-preview-slider-head">
+        <label htmlFor={id}>{label}</label>
+        <output htmlFor={id}>{value}<small> units</small></output>
+      </div>
+      <span className="sl-preview-source">input by you</span>
+      <input
+        id={id}
+        type="range"
+        min="0"
+        max="100"
+        step="1"
+        value={value}
+        aria-valuetext={`${value} units`}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+      />
+      <div className="sl-range-ends"><span>0 units</span><span>100 units</span></div>
+    </div>
+  );
+}
+
 function PurchasePreview() {
-  const [order, setOrder] = useState(60);
-  // Illustrative arithmetic only. Real recommendations belong to DemandScreen.
-  const remainingMin = Math.max(0, 12 + order - 36);
-  const remainingMax = Math.max(0, 12 + order - 28);
-  const shortage = Math.max(0, 36 - (12 + order));
-  const high = order > 24;
+  const [plannedOrder, setPlannedOrder] = useState(20);
+  const [incomingStock, setIncomingStock] = useState(0);
+  // Illustrative values use the same visible range-comparison rule as the workspace.
+  const stockOnHand = 12;
+  const demandLow = 28;
+  const demandHigh = 36;
+  const midpoint = 32;
+  const estimatedRestock = Math.max(0, midpoint - stockOnHand - incomingStock);
+  const availableAfterOrder = stockOnHand + incomingStock + plannedOrder;
+  const verdict = availableAfterOrder > demandHigh
+    ? {
+        tone: "high",
+        label: "High risk",
+        title: "This plan looks too high.",
+        reason: `${availableAfterOrder} units after this order is above the 36-unit demand range high.`,
+      }
+    : availableAfterOrder < demandLow
+      ? {
+          tone: "review",
+          label: "Needs review",
+          title: "This plan looks too low.",
+          reason: `${availableAfterOrder} units after this order is below the 28-unit demand range low.`,
+        }
+      : {
+          tone: "balanced",
+          label: "Looks balanced",
+          title: "This plan is within range.",
+          reason: `${availableAfterOrder} units after this order is within the 28–36 unit demand range.`,
+        };
+
   return (
     <div className="sl-demo" id="product-preview">
-      <div className="sl-demo-bar"><span className="sl-window-dots" aria-hidden="true">● ● ●</span><span>YOUR NEXT RESTOCK, WITH A CLEARER PICTURE</span><span className="sl-demo-label">Interactive example</span></div>
+      <div className="sl-demo-bar">
+        <span className="sl-window-dots" aria-hidden="true">● ● ●</span>
+        <span>YOUR PURCHASE PLAN, WITH DEMAND EVIDENCE</span>
+        <span className="sl-demo-label">Interactive example</span>
+      </div>
       <div className="sl-demo-grid">
         <div className="sl-evidence">
-          <div className="sl-product"><div><span className="sl-kicker">SELECTED PRODUCT</span><h3>Ikan Bilis 200g</h3></div><span className={`sl-risk ${high ? "sl-risk--high" : ""}`}>{high ? "Overstock risk" : "Review demand range"}</span></div>
-          <div className={`sl-warning ${high ? "sl-warning--high" : ""}`}><span aria-hidden="true">!</span><div><strong>{high ? "This order may leave you with excess stock." : "A smaller order reduces potential excess."}</strong><p>12 in stock + {order} planned = <b>{12 + order} units</b>, against expected four-week demand of <b>28–36 units</b>.</p></div></div>
-          <div className="sl-chart"><div className="sl-chart-heading"><div><span className="sl-kicker">DEMAND EVIDENCE</span><h4>Past sales. A clearer view ahead.</h4></div><span><i /> History <i className="sl-mint-dot" /> Expected range</span></div>
-            <svg viewBox="0 0 600 190" role="img" aria-label="Illustrative weekly sales history followed by a shaded future demand range. This is sample data."><g stroke="#e7eeeb" strokeWidth="1"><path d="M35 25H580 M35 65H580 M35 105H580 M35 145H580" /></g><g fill="#71827d" fontSize="11"><text x="12" y="29">12</text><text x="18" y="69">8</text><text x="18" y="109">4</text><text x="18" y="149">0</text><text x="35" y="176">Past 8 weeks</text><text x="429" y="176">Next 4 weeks</text></g><path d="M35 119 80 77 125 102 170 43 215 94 260 66 305 119 350 79 395 53 430 88" fill="none" stroke="#254854" strokeWidth="2.7" strokeLinejoin="round"/><path d="M430 62 465 49 502 58 540 44 580 32V110L540 96 502 107 465 99 430 114Z" fill="#cde6e0"/><path d="M430 88 465 77 502 83 540 70 580 68" fill="none" stroke="#167d74" strokeWidth="2" strokeDasharray="5 5"/><path d="M430 18V150" stroke="#9db8b0" strokeDasharray="4 4"/></svg>
+          <div className="sl-product">
+            <div><span className="sl-kicker">SELECTED PRODUCT · SKU 000101</span><h3>Ikan Bilis 200g</h3></div>
+            <div className="sl-preview-badges"><span className="sl-risk">Ready</span><span className="sl-preview-pattern">Steady seller</span></div>
           </div>
-          <div className="sl-demo-baseline"><span>Original plan <b>60 units</b></span><span>Original purchase cost <b>RM 240</b></span><span>Potential stock left <b>36–44 units</b></span></div>
+
+          <div className="sl-preview-estimate">
+            <div><span className="sl-kicker">ESTIMATED RESTOCK</span><strong>{estimatedRestock}<small> units</small></strong></div>
+            <p>A practical starting quantity for the next four weeks.<br /><span>Midpoint of range − stock on hand − incoming stock</span></p>
+          </div>
+
+          <div className="sl-chart">
+            <div className="sl-chart-heading">
+              <div><span className="sl-kicker">DEMAND EVIDENCE</span><h4>Past sales and expected demand</h4></div>
+              <span><i /> History <i className="sl-mint-dot" /> Expected range</span>
+            </div>
+            <svg viewBox="0 0 600 190" role="img" aria-label="Illustrative weekly sales history followed by a shaded four-week demand range.">
+              <g stroke="#e7eeeb" strokeWidth="1"><path d="M35 25H580 M35 65H580 M35 105H580 M35 145H580" /></g>
+              <g fill="#71827d" fontSize="11"><text x="12" y="29">12</text><text x="18" y="69">8</text><text x="18" y="109">4</text><text x="18" y="149">0</text><text x="35" y="176">Past 8 weeks</text><text x="429" y="176">Next 4 weeks</text></g>
+              <path d="M35 119 80 77 125 102 170 43 215 94 260 66 305 119 350 79 395 53 430 88" fill="none" stroke="#254854" strokeWidth="2.7" strokeLinejoin="round" />
+              <path d="M430 62 465 49 502 58 540 44 580 32V110L540 96 502 107 465 99 430 114Z" fill="#cde6e0" />
+              <path d="M430 88 465 77 502 83 540 70 580 68" fill="none" stroke="#167d74" strokeWidth="2" strokeDasharray="5 5" />
+              <path d="M430 18V150" stroke="#9db8b0" strokeDasharray="4 4" />
+            </svg>
+          </div>
+
+          <div className="sl-preview-metrics">
+            <span>Expected 4-week demand <b>28–36 units</b></span>
+            <span>Current stock <b>12 units</b></span>
+            <span>Recent weekly average <b>7 units</b></span>
+            <span>Current weeks of cover <b>1.7 weeks</b></span>
+          </div>
         </div>
-        <div className="sl-scenario"><span className="sl-kicker">TRY A DIFFERENT PLAN</span><h3>What if you ordered less?</h3><p>Move the slider to see what changes before you buy.</p>
-          <label htmlFor="planned-order">Planned order quantity <output htmlFor="planned-order">{order}<small> units</small></output></label>
-          <input id="planned-order" type="range" min="0" max="100" step="5" value={order} onChange={e => setOrder(Number(e.target.value))} />
-          <div className="sl-range-ends"><span>0 units</span><span>100 units</span></div>
-          <button type="button" className="sl-text-button" onClick={() => setOrder(order === 20 ? 60 : 20)}>{order === 20 ? "Reset to original plan ↺" : "Try a 20-unit order ↗"}</button>
-          <div className="sl-scenario-result" aria-live="polite" aria-atomic="true"><span>{order <= 60 ? "Less spent than the original plan" : "More spent than the original plan"}</span><strong>RM {Math.abs(60 - order) * 4}</strong><div><span>Potential stock left</span><b>{remainingMin}–{remainingMax} units</b></div><p>{shortage > 0 ? `Higher demand could leave you ${shortage} units short. Check timing before ordering.` : "Excess stock is a risk estimate, not measured food waste."}</p></div>
+
+        <div className="sl-scenario sl-preview-plan">
+          <span className="sl-kicker">YOUR PURCHASE</span>
+          <h3>What are you planning to order?</h3>
+          <p>Move either slider. The estimate and purchase check update immediately.</p>
+          <PreviewSlider id="homepage-planned-order" label="Planned order" value={plannedOrder} onChange={setPlannedOrder} />
+          <PreviewSlider id="homepage-incoming-stock" label="Incoming stock" value={incomingStock} onChange={setIncomingStock} />
+
+          <div className={`sl-preview-verdict sl-preview-verdict--${verdict.tone}`} aria-live="polite" aria-atomic="true">
+            <div><span>Purchase check</span><b>{verdict.label}</b></div>
+            <strong>{verdict.title}</strong>
+            <p>{verdict.reason}</p>
+            <small>StockLess works this out from stock, incoming stock, planned order and the demand range.</small>
+          </div>
         </div>
       </div>
-      <p className="sl-demo-note">Illustrative scenario · RM 4 per unit · Assumes no other incoming stock. Your results depend on your sales data.</p>
+      <p className="sl-demo-note">Illustrative product and figures · Your results depend on your own sales and stock data.</p>
     </div>
   );
 }

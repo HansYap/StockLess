@@ -84,10 +84,10 @@ function inputs(planned: number | undefined, incoming?: number) {
   return Object.freeze({
     plannedOrder: planned === undefined
       ? ({ state: "empty" } as const)
-      : createPurchaseQuantity(planned, "typed by you"),
+      : createPurchaseQuantity(planned, "input by you"),
     incomingStock: incoming === undefined
       ? ({ state: "empty" } as const)
-      : createPurchaseQuantity(incoming, "typed by you"),
+      : createPurchaseQuantity(incoming, "input by you"),
   });
 }
 
@@ -102,11 +102,11 @@ test("purchase fields accept only whole numbers from 0 to 999999", () => {
 
   assert.deepEqual(applyPurchaseQuantityEdit(previous, "0"), {
     accepted: true,
-    field: { state: "value", value: 0, source: "typed by you" },
+    field: { state: "value", value: 0, source: "input by you" },
   });
   assert.deepEqual(applyPurchaseQuantityEdit(previous, "999999"), {
     accepted: true,
-    field: { state: "value", value: 999999, source: "typed by you" },
+    field: { state: "value", value: 999999, source: "input by you" },
   });
   assert.deepEqual(applyPurchaseQuantityEdit(previous, "  "), {
     accepted: true,
@@ -144,7 +144,7 @@ test("incoming stock lowers the estimate but only the planned order triggers a v
   if (result.audit.state === "verdict") {
     assert.equal(result.audit.verdict, "Needs review");
     assert.equal(result.audit.figures.availableAfterOrder.value, 19);
-    assert.equal(result.audit.figures.incomingStock.source, "typed by you");
+    assert.equal(result.audit.figures.incomingStock.source, "input by you");
     assert.equal(result.audit.figures.demandLow.source, "worked out by StockLess");
   }
 });
@@ -229,7 +229,7 @@ test("empty incoming stock is treated as zero with explicit derived provenance",
 });
 
 test("clearing the planned order removes the verdict and worked figures", () => {
-  const oldPlan = createPurchaseQuantity(10, "typed by you");
+  const oldPlan = createPurchaseQuantity(10, "input by you");
   const cleared = applyPurchaseQuantityEdit(oldPlan, "");
   assert.equal(cleared.accepted, true);
   const result = evaluateProductPurchasePlan(demand(), {
@@ -321,7 +321,7 @@ test("expiry uses the earliest readable non-past date and never changes the audi
 
 test("input constructors reject values outside the contract", () => {
   for (const value of [-1, 1.2, 1_000_000, Number.NaN]) {
-    assert.throws(() => createPurchaseQuantity(value, "typed by you"));
+    assert.throws(() => createPurchaseQuantity(value, "input by you"));
   }
   const accepted: PurchaseQuantityField = createPurchaseQuantity(25, "from your file");
   assert.deepEqual(accepted, { state: "value", value: 25, source: "from your file" });
