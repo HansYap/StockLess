@@ -76,6 +76,9 @@ describe("purchase planning", () => {
       (within(dialog).getByLabelText("Incoming stock") as HTMLInputElement)
         .value,
     ).toBe("");
+    expect(
+      within(dialog).queryByRole("button", { name: /Use .* as my planned order/ }),
+    ).toBeNull();
     expect(within(dialog).getByText("No plan entered")).toBeTruthy();
   });
   it("opens the clicked row by product key even when display names are identical", () => {

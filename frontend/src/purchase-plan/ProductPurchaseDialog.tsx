@@ -417,18 +417,6 @@ export function ProductPurchaseDialog({
                 </div>
               ))}
             </div>
-            {restock?.state === "available" && !cannotJudge && (
-              <button
-                className="btn btn--primary use-estimate"
-                type="button"
-                onClick={() =>
-                  update("plannedOrder", String(restock.quantity.value))
-                }
-              >
-                Use {numberText(restock.quantity.value)} units as my planned
-                order
-              </button>
-            )}
             <p className="visit-note">
               Typed figures are marked “typed by you” and last for this visit
               only.
