@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   applyPurchaseQuantityEdit,
   type ProductPurchaseInputs,
@@ -38,6 +38,35 @@ function Metric({
       {source && <SourceTag source={source} />}
     </div>
   );
+}
+
+function purchaseValue(inputs: ProductPurchaseInputs, field: keyof ProductPurchaseInputs): number {
+  return inputs[field].state === "value" ? inputs[field].value : 0;
+}
+
+/** Keeps the sliders useful for both small examples and larger retailer quantities. */
+function purchaseSliderMaximum(
+  product: PurchaseProduct,
+  plan: ProductPurchasePlan | undefined,
+  inputs: ProductPurchaseInputs,
+): number {
+  const rangeHigh = product.demand?.range?.high ?? 0;
+  const stockOnHand = product.stock?.currentStock ?? 0;
+  const estimate = plan?.estimatedRestock.state === "available"
+    ? plan.estimatedRestock.quantity.value
+    : 0;
+  const largest = Math.max(
+    rangeHigh,
+    stockOnHand,
+    estimate,
+    purchaseValue(inputs, "plannedOrder"),
+    purchaseValue(inputs, "incomingStock"),
+  );
+  const target = Math.max(100, largest * 2);
+  if (target >= 999_999) return 999_999;
+  const magnitude = 10 ** Math.floor(Math.log10(target));
+  const interval = Math.max(10, magnitude / 2);
+  return Math.ceil(target / interval) * interval;
 }
 
 function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
@@ -143,9 +172,7 @@ export function ProductPurchaseDialog({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof ProductPurchaseInputs, string>>
-  >({});
+  const sliderMaximum = useRef(purchaseSliderMaximum(product, plan, inputs)).current;
   useEffect(() => {
     const dialog = ref.current!;
     const previousFocus =
@@ -163,10 +190,6 @@ export function ProductPurchaseDialog({
   }, []);
   const update = (field: keyof ProductPurchaseInputs, raw: string) => {
     const result = applyPurchaseQuantityEdit(inputs[field], raw);
-    setErrors((previous) => ({
-      ...previous,
-      [field]: result.accepted ? undefined : result.message,
-    }));
     if (result.accepted) onChange({ ...inputs, [field]: result.field });
   };
   const range =
@@ -376,46 +399,64 @@ export function ProductPurchaseDialog({
               valid figure changes.
             </p>
             <div className="form-grid">
-              {(["plannedOrder", "incomingStock"] as const).map((field) => (
-                <div className="field" key={field}>
-                  <label htmlFor={`purchase-${field}`}>
-                    <span>
-                      {field === "plannedOrder"
-                        ? "Planned order"
-                        : "Incoming stock"}
-                    </span>
-                  </label>
-                  {inputs[field].state === "value" && (
-                    <SourceTag source={inputs[field].source} />
-                  )}
-                  <input
-                    className="number-input"
-                    id={`purchase-${field}`}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={
-                      inputs[field].state === "value"
-                        ? String(inputs[field].value)
-                        : ""
-                    }
-                    placeholder={
-                      field === "plannedOrder" ? "Empty" : "Empty = 0"
-                    }
-                    aria-invalid={Boolean(errors[field])}
-                    aria-describedby={`purchase-${field}-error`}
-                    onChange={(event) =>
-                      update(field, event.currentTarget.value)
-                    }
-                  />
-                  <small
-                    className="input-error"
-                    id={`purchase-${field}-error`}
-                    role={errors[field] ? "alert" : undefined}
-                  >
-                    {errors[field]}
-                  </small>
-                </div>
-              ))}
+              {(["plannedOrder", "incomingStock"] as const).map((field) => {
+                const input = inputs[field];
+                const entered = input.state === "value";
+                const value = input.state === "value" ? input.value : 0;
+                const label = field === "plannedOrder" ? "Planned order" : "Incoming stock";
+                return (
+                  <div className="quantity-slider" key={field}>
+                    <div className="quantity-slider__head">
+                      <label htmlFor={`purchase-${field}`}>{label}</label>
+                      <output
+                        htmlFor={`purchase-${field}`}
+                        className={entered ? undefined : "quantity-slider__empty"}
+                        aria-live="polite"
+                      >
+                        {entered ? (
+                          <>{numberText(value)}<small> units</small></>
+                        ) : (
+                          "Not entered"
+                        )}
+                      </output>
+                    </div>
+                    {input.state === "value" && <SourceTag source={input.source} />}
+                    <input
+                      className="quantity-slider__input"
+                      id={`purchase-${field}`}
+                      type="range"
+                      min="0"
+                      max={sliderMaximum}
+                      step="1"
+                      value={value}
+                      aria-valuetext={entered ? `${numberText(value)} units` : "Not entered"}
+                      aria-describedby={`purchase-${field}-help`}
+                      onChange={(event) => update(field, event.currentTarget.value)}
+                    />
+                    <div className="quantity-slider__ends" aria-hidden="true">
+                      <span>0 units</span>
+                      <span>{numberText(sliderMaximum)} units</span>
+                    </div>
+                    <div className="quantity-slider__footer">
+                      <small id={`purchase-${field}-help`}>
+                        {field === "incomingStock"
+                          ? "Not entered is treated as 0."
+                          : "Move the slider to check the plan instantly."}
+                      </small>
+                      {entered && (
+                        <button
+                          type="button"
+                          className="quantity-slider__clear"
+                          onClick={() => update(field, "")}
+                          aria-label={`Clear ${label.toLowerCase()}`}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <p className="visit-note">
               Typed figures are marked “typed by you” and last for this visit

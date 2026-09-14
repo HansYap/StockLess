@@ -68,14 +68,14 @@ describe("purchase planning", () => {
     );
     open();
     const dialog = screen.getByRole("dialog");
-    expect(
-      (within(dialog).getByLabelText("Planned order") as HTMLInputElement)
-        .value,
-    ).toBe("");
-    expect(
-      (within(dialog).getByLabelText("Incoming stock") as HTMLInputElement)
-        .value,
-    ).toBe("");
+    const planned = within(dialog).getByLabelText("Planned order") as HTMLInputElement;
+    const incoming = within(dialog).getByLabelText("Incoming stock") as HTMLInputElement;
+    expect(planned.type).toBe("range");
+    expect(planned.value).toBe("0");
+    expect(planned.getAttribute("aria-valuetext")).toBe("Not entered");
+    expect(incoming.type).toBe("range");
+    expect(incoming.value).toBe("0");
+    expect(incoming.getAttribute("aria-valuetext")).toBe("Not entered");
     expect(
       within(dialog).queryByRole("button", { name: /Use .* as my planned order/ }),
     ).toBeNull();
@@ -100,7 +100,7 @@ describe("purchase planning", () => {
     render(<Harness />);
     const totals = screen.getByLabelText("Product data labels").textContent;
     open("000202");
-    await user.type(screen.getByLabelText("Planned order"), "0");
+    fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "1" } });
     expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
       false,
     );
@@ -111,45 +111,34 @@ describe("purchase planning", () => {
       totals,
     );
     open("000202");
-    await user.clear(screen.getByLabelText("Planned order"));
+    await user.click(screen.getByRole("button", { name: "Clear planned order" }));
     await user.click(screen.getByRole("button", { name: "Done" }));
     expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
       true,
     );
     expect(screen.getAllByRole("row")).toHaveLength(4);
   });
-  it("uses domain validation, retains valid input, and updates only the selected product", async () => {
-    const user = userEvent.setup();
+  it("updates only the selected product as either slider moves", () => {
     const evaluate = vi.fn(evaluateProductPurchasePlan);
     render(<Harness evaluate={evaluate} />);
     open();
-    const beforeTyping = evaluate.mock.calls.length;
-    await user.type(screen.getByLabelText("Planned order"), "23");
-    expect(evaluate.mock.calls.length).toBe(beforeTyping + 2);
-    const calls = evaluate.mock.calls.length;
+    const planned = screen.getByLabelText("Planned order") as HTMLInputElement;
+    expect(planned.min).toBe("0");
+    expect(planned.step).toBe("1");
+    expect(Number(planned.max)).toBeGreaterThanOrEqual(100);
+    const beforeMoving = evaluate.mock.calls.length;
     fireEvent.change(screen.getByLabelText("Planned order"), {
-      target: { value: "1.5" },
+      target: { value: "23" },
     });
-    expect(
-      (screen.getByLabelText("Planned order") as HTMLInputElement).value,
-    ).toBe("23");
-    expect(screen.getByRole("alert").textContent).toBe("Whole numbers only");
-    expect(evaluate.mock.calls.length).toBe(calls);
+    expect(evaluate.mock.calls.length).toBe(beforeMoving + 1);
+    const calls = evaluate.mock.calls.length;
     fireEvent.change(screen.getByLabelText("Incoming stock"), {
-      target: { value: "999999" },
+      target: { value: "40" },
     });
     expect(evaluate.mock.calls.length).toBe(calls + 1);
-    fireEvent.change(screen.getByLabelText("Incoming stock"), {
-      target: { value: "1000000" },
-    });
-    expect(
-      (screen.getByLabelText("Incoming stock") as HTMLInputElement).value,
-    ).toBe("999999");
-    await user.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
     open("000202");
-    expect(
-      (screen.getByLabelText("Planned order") as HTMLInputElement).value,
-    ).toBe("");
+    expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
   });
   it("prefills confirmed file figures, preserves provenance, and uses mapped expiry", () => {
     const data = makeEvidence();
@@ -177,7 +166,7 @@ describe("purchase planning", () => {
     expect(screen.getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "21" } });
     expect(screen.getAllByText("typed by you").length).toBeGreaterThan(0);
-    fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Clear planned order" }));
     expect(screen.getByText("No plan entered")).toBeTruthy();
   });
   it("shows No range and the reason for Cannot assess without demand figures or seller pattern", () => {

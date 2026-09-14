@@ -112,11 +112,11 @@ describe("App forecast and draft lifecycle", () => {
     await reachPurchase();
     open();
     expect(
-      (screen.getByLabelText("Planned order") as HTMLInputElement).value,
-    ).toBe("");
+      screen.getByLabelText("Planned order").getAttribute("aria-valuetext"),
+    ).toBe("Not entered");
     expect(
-      (screen.getByLabelText("Incoming stock") as HTMLInputElement).value,
-    ).toBe("");
+      screen.getByLabelText("Incoming stock").getAttribute("aria-valuetext"),
+    ).toBe("Not entered");
     fireEvent.change(screen.getByLabelText("Planned order"), {
       target: { value: "9" },
     });
@@ -126,8 +126,8 @@ describe("App forecast and draft lifecycle", () => {
     open();
     await waitFor(() =>
       expect(
-        (screen.getByLabelText("Planned order") as HTMLInputElement).value,
-      ).toBe(""),
+        screen.getByLabelText("Planned order").getAttribute("aria-valuetext"),
+      ).toBe("Not entered"),
     );
     expect(store).not.toHaveBeenCalled();
     store.mockRestore();

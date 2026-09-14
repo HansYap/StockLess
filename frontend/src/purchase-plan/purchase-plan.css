@@ -127,11 +127,7 @@
     .purchase-plan .range small, .purchase-plan .estimate small { display:block; margin-top:4px; color:var(--muted); font-family:var(--body); font-size:11px; font-weight:600; }
     .purchase-plan .estimate { color:var(--teal-deep); font-family:var(--display); font-size:17px; font-weight:800; }
     .purchase-plan .estimate--none { color:var(--muted); font-size:13px; }
-    .purchase-plan .table-input-wrap { min-width:94px; }
-    .purchase-plan .number-input { width:100%; min-height:42px; padding:8px 10px; border:1px solid var(--border-strong); border-radius:9px; color:var(--ink); background:#fff; font-family:var(--data); }
-    .purchase-plan .number-input[aria-invalid="true"] { border-color:var(--red); box-shadow:0 0 0 1px var(--red); }
     .purchase-plan .input-source { display:block; margin-top:4px; color:var(--muted); font-size:10px; }
-    .purchase-plan .input-error { display:block; min-height:14px; margin-top:3px; color:var(--red); font-size:10px; font-weight:700; }
     .purchase-plan .row-action { width:38px; height:38px; display:grid; place-items:center; border:1px solid var(--border-strong); border-radius:9px; color:var(--teal-deep); background:#fff; font-size:20px; }
     .purchase-plan .empty-row { padding:30px; color:var(--muted); text-align:center; }
     .purchase-plan .list-footer { padding:16px 26px; display:flex; align-items:center; justify-content:space-between; gap:20px; border-top:1px solid var(--line-soft); color:var(--muted); font-size:12px; }
@@ -174,9 +170,22 @@
     .purchase-plan .evidence-metric span { display:block; color:var(--muted); font-size:11px; }
     .purchase-plan .evidence-metric strong { display:block; margin-top:4px; color:var(--ink); font-family:var(--data); font-size:16px; }
 
-    .purchase-plan .form-grid { margin-top:18px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .purchase-plan .field label { display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--ink); font-weight:700; }
-    .purchase-plan .field .number-input { margin-top:7px; min-height:46px; font-size:16px; }
+    .purchase-plan .form-grid { margin-top:18px; display:grid; grid-template-columns:1fr; gap:20px; }
+    .purchase-plan .quantity-slider { padding-bottom:18px; border-bottom:1px solid var(--line-soft); }
+    .purchase-plan .quantity-slider:last-child { padding-bottom:0; border-bottom:0; }
+    .purchase-plan .quantity-slider__head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; }
+    .purchase-plan .quantity-slider__head label { color:var(--ink); font-weight:700; }
+    .purchase-plan .quantity-slider__head output { color:var(--ink); font-family:var(--display); font-size:31px; font-weight:800; line-height:1; }
+    .purchase-plan .quantity-slider__head output small { margin-left:4px; color:var(--muted); font-family:var(--body); font-size:12px; font-weight:500; }
+    .purchase-plan .quantity-slider__head .quantity-slider__empty { color:var(--muted); font-family:var(--body); font-size:13px; font-weight:600; }
+    .purchase-plan .quantity-slider>.source-tag { margin-top:8px; }
+    .purchase-plan .quantity-slider__input { display:block; width:100%; min-height:28px; margin:10px 0 3px; accent-color:var(--teal); cursor:pointer; }
+    .purchase-plan .quantity-slider__input:focus-visible { outline:2px solid var(--teal); outline-offset:3px; }
+    .purchase-plan .quantity-slider__ends { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:10px; }
+    .purchase-plan .quantity-slider__footer { min-height:24px; margin-top:7px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .purchase-plan .quantity-slider__footer small { color:var(--muted); font-size:10px; }
+    .purchase-plan .quantity-slider__clear { padding:2px 0; border:0; border-bottom:1px solid #8DBBB2; color:var(--teal-deep); background:transparent; font-size:11px; font-weight:700; cursor:pointer; }
+    .purchase-plan .quantity-slider__clear:hover { color:var(--teal); }
     .purchase-plan .source-tag { display:inline-flex; align-items:center; min-height:22px; padding:3px 7px; border-radius:7px; font-size:10px; font-weight:700; white-space:nowrap; }
     .purchase-plan .source--file { color:#315F73; background:#EDF4F8; }
     .purchase-plan .source--typed { color:var(--amber); background:var(--amber-tint); }
