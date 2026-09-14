@@ -8,7 +8,8 @@
     "build": "node scripts/run.mjs build",
     "preview": "node scripts/run.mjs preview",
     "typecheck": "node scripts/run.mjs typecheck",
-    "export:homepage": "node scripts/export-homepage.mjs"
+    "export:homepage": "node scripts/export-homepage.mjs",
+    "test": "node scripts/test.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "3.8.1",
@@ -17,11 +18,15 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^5.0.0",
     "esbuild": "^0.25.0",
+    "jsdom": "^30.0.1",
     "typescript": "^5.8.3",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "vitest": "^5.0.0"
   }
 }

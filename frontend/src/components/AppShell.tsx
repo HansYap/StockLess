@@ -8,7 +8,7 @@ const STEPS: readonly { id: StepId; label: string }[] = [
   { id: 1, label: "Upload" },
   { id: 2, label: "Map columns" },
   { id: 3, label: "Check readiness" },
-  { id: 4, label: "Review demand" },
+  { id: 4, label: "Plan purchases" },
 ];
 
 interface AppShellProps {

@@ -1,0 +1,232 @@
+import type { DemandRangeEvidence, WeeklyEvidence } from "../engine.ts";
+import { SourceTag } from "./SourceTag.tsx";
+
+/** SVG coordinates only: the four-week range is projected onto a weekly chart, not re-forecast. */
+export function DemandChart({
+  weeks,
+  range,
+  name,
+}: {
+  weeks: readonly WeeklyEvidence[];
+  range: DemandRangeEvidence;
+  name: string;
+}) {
+  const left = 42,
+    right = 622,
+    top = 22,
+    bottom = 184,
+    today = left + (right - left) * 0.68;
+  const max = Math.max(
+    1,
+    range.high / range.horizonWeeks,
+    ...weeks.map((w) => w.positiveQuantity ?? 0),
+  );
+  const y = (value: number) => bottom - (value / max) * (bottom - top);
+  const x = (index: number) =>
+    weeks.length <= 1
+      ? today
+      : left + (index * (today - left)) / (weeks.length - 1);
+  const segments: { x: number; y: number }[][] = [];
+  let segment: { x: number; y: number }[] = [];
+  weeks.forEach((week, i) => {
+    if (week.state === "missing" || week.positiveQuantity === null) {
+      if (segment.length) segments.push(segment);
+      segment = [];
+    } else segment.push({ x: x(i), y: y(week.positiveQuantity) });
+  });
+  if (segment.length) segments.push(segment);
+  const zero = weeks.some((w) => w.state === "confirmed_zero_sales");
+  const missing = weeks.some((w) => w.state === "missing");
+  const negative = weeks.filter(
+    (w) => w.netQuantity !== null && w.netQuantity < 0,
+  ).length;
+  const cancelled = weeks.filter(
+    (w) => w.state === "net_zero_with_activity",
+  ).length;
+  const highY = y(range.high / range.horizonWeeks),
+    lowY = y(range.low / range.horizonWeeks);
+  // Centre of the supplied visual band; no new demand estimate is produced.
+  const centreY = (highY + lowY) / 2;
+  return (
+    <>
+      <div className="chart-wrap">
+        <svg
+          viewBox="0 0 640 235"
+          role="img"
+          aria-label={`Observed sales and four-week expected demand range for ${name}`}
+        >
+          {[0, 0.5, 1].map((r) => (
+            <g key={r}>
+              <line
+                x1={left}
+                y1={y(max * r)}
+                x2={right}
+                y2={y(max * r)}
+                stroke="#E8EEEC"
+              />
+              <text
+                x={left - 9}
+                y={y(max * r) + 4}
+                textAnchor="end"
+                fill="#66767D"
+                fontSize="10"
+              >
+                {Math.round(max * r)}
+              </text>
+            </g>
+          ))}
+          <polygon
+            data-testid="forecast-band"
+            points={`${today},${highY} ${right},${highY} ${right},${lowY} ${today},${lowY}`}
+            fill="rgba(22,125,116,.17)"
+          />
+          <line
+            data-testid="today-divider"
+            x1={today}
+            x2={today}
+            y1={top}
+            y2={bottom}
+            stroke="#B8C8C4"
+            strokeDasharray="4 4"
+          />
+          <text
+            x={today - 7}
+            y={top + 10}
+            textAnchor="end"
+            fill="#66767D"
+            fontSize="9"
+          >
+            Today
+          </text>
+          <line
+            data-testid="forecast-centre"
+            x1={today}
+            x2={right}
+            y1={centreY}
+            y2={centreY}
+            stroke="#167D74"
+            strokeWidth="2.5"
+            strokeDasharray="7 6"
+          />
+          {segments.map((points, i) =>
+            points.length === 1 ? (
+              <line
+                key={i}
+                x1={points[0].x - 5}
+                x2={points[0].x + 5}
+                y1={points[0].y}
+                y2={points[0].y}
+                stroke="#16313B"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            ) : (
+              <polyline
+                key={i}
+                points={points.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke="#16313B"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ),
+          )}
+          {weeks.map((week, i) => (
+            <g key={week.weekStart}>
+              {week.state === "missing" && (
+                <g>
+                  <rect
+                    data-testid="missing-week"
+                    x={x(i) - 7}
+                    y={top}
+                    width="14"
+                    height={bottom - top}
+                    rx="5"
+                    fill="none"
+                    stroke="#86949A"
+                    strokeDasharray="4 4"
+                  >
+                    <title>{week.weekStart}: missing week</title>
+                  </rect>
+                  <text
+                    x={x(i)}
+                    y={bottom + 17}
+                    textAnchor="middle"
+                    fill="#66767D"
+                    fontSize="9"
+                  >
+                    Missing
+                  </text>
+                </g>
+              )}
+              {week.state === "confirmed_zero_sales" && (
+                <circle
+                  data-testid="zero-sales-dot"
+                  cx={x(i)}
+                  cy={y(0)}
+                  r="5"
+                  fill="#D99120"
+                  stroke="#fff"
+                  strokeWidth="2"
+                >
+                  <title>{week.weekStart}: 0 sales recorded</title>
+                </circle>
+              )}
+              <text
+                x={x(i)}
+                y="222"
+                textAnchor="middle"
+                fill="#66767D"
+                fontSize="9"
+              >
+                W{i + 1}
+                <title>
+                  {week.weekStart} to {week.weekEnd}
+                </title>
+              </text>
+            </g>
+          ))}
+          {[1, 2, 3, 4].map((i) => (
+            <text
+              key={i}
+              x={today + (i * (right - today)) / 4}
+              y="222"
+              textAnchor="middle"
+              fill="#66767D"
+              fontSize="9"
+            >
+              F{i}
+            </text>
+          ))}
+        </svg>
+      </div>
+      <div className="chart-legend">
+        <span>
+          <i className="legend-line" />
+          Observed weekly demand <SourceTag source="from your file" />
+        </span>
+        <span>
+          <i className="legend-forecast" />
+          Expected range <SourceTag source="worked out by StockLess" />
+        </span>
+        {zero && (
+          <span>
+            <i className="legend-dot" />0 sales recorded
+          </span>
+        )}
+        {missing && <span>Dashed column = missing week</span>}
+      </div>
+      {(negative > 0 || cancelled > 0) && (
+        <p className="evidence-warning">
+          <strong>Data note:</strong>{" "}
+          {negative > 0 &&
+            `${negative} ${negative === 1 ? "week had" : "weeks had"} returns greater than sales. `}
+          {cancelled > 0 &&
+            `In ${cancelled} ${cancelled === 1 ? "week" : "weeks"}, sales and returns cancelled each other out. `}
+          <SourceTag source="worked out by StockLess" />
+        </p>
+      )}
+    </>
+  );
+}

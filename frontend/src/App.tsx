@@ -3,7 +3,8 @@ import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
 import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessScreen.tsx";
-import { DemandScreen } from "./screens/DemandScreen.tsx";
+import { PurchasePlanScreen } from "./screens/PurchasePlanScreen.tsx";
+import type { PurchaseDrafts } from "./purchase-plan/model.ts";
 import {
   MappingConflictError,
   FIELD_REGISTRY,
@@ -67,6 +68,7 @@ export default function App() {
   const [readiness, setReadiness] = useState<ReadinessSnapshot | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [purchaseDrafts, setPurchaseDrafts] = useState<PurchaseDrafts>({});
   const [forecast, setForecast] = useState<DemandForecastReview | null>(null);
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
@@ -95,6 +97,8 @@ export default function App() {
   }, []);
 
   const resetReadinessEvidence = useCallback(() => {
+    setPurchaseDrafts({});
+    setProductKey(null);
     readinessAbort.current?.abort();
     readinessAbort.current = null;
     readinessRun.current += 1;
@@ -296,7 +300,7 @@ export default function App() {
       onNavigate={goTo}
       sourceMode={envelope.session.sourceMode}
       sourceName={dataset?.sourceName}
-      notice={sessionNotice}
+      notice={step === 4 ? null : sessionNotice}
       onClear={dataset ? handleClearSession : undefined}
     >
       {step === 1 && <UploadScreen onSource={handleSource} onCancel={handleClearSession} />}
@@ -356,8 +360,11 @@ export default function App() {
       )}
 
       {step === 4 && readiness && forecast && (
-        <DemandScreen
+        <PurchasePlanScreen
           snapshot={readiness}
+          forecast={forecast}
+          drafts={purchaseDrafts}
+          onDraftChange={(key, inputs) => setPurchaseDrafts(current => ({ ...current, [key]: inputs }))}
           selectedKey={productKey}
           onSelect={setProductKey}
           onBack={() => setStep(3)}
