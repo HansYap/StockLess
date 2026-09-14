@@ -1,7 +1,8 @@
 import {
   buildDemandReview,
   evaluateProductPurchasePlan,
-  emptyProductPurchaseInputs,
+  expiryInputFromFileEvidence,
+  purchaseInputsFromFileEvidence,
   type DemandForecastReview,
   type DemandProductEvidence,
   type ProductDemandEstimate,
@@ -15,7 +16,6 @@ export type PurchaseDrafts = Readonly<
   Record<string, ProductPurchaseInputs | undefined>
 >;
 export type PurchaseEvaluator = typeof evaluateProductPurchasePlan;
-export const EMPTY_INPUTS = emptyProductPurchaseInputs();
 
 export interface PurchaseProduct {
   readonly key: string;
@@ -25,6 +25,8 @@ export interface PurchaseProduct {
   readonly stock?: ProductStockEvidence;
   readonly demand?: ProductDemandEstimate;
   readonly issue?: string;
+  readonly fileInputs: ProductPurchaseInputs;
+  readonly fileExpiry: ExpiryCheckInput;
 }
 
 /** Presentation join only. All calculations stay behind engine.ts. Never join by display name. */
@@ -36,6 +38,9 @@ export function joinPurchaseEvidence(
     buildDemandReview(snapshot).products.map((p) => [p.productKey, p]),
   );
   const stocks = new Map(snapshot.productStock.map((p) => [p.productKey, p]));
+  const purchaseFiles = new Map(
+    (snapshot.purchaseFileEvidence?.products ?? []).map((p) => [p.productKey, p]),
+  );
   const identities = new Map<string, ReadinessSnapshot["rows"][number]>();
   for (const row of snapshot.rows) {
     if (
@@ -61,6 +66,7 @@ export function joinPurchaseEvidence(
   return [...keys].map((key) => {
     const row = identities.get(key)?.interpretedValues;
     const demand = demands.get(key);
+    const fileEvidence = purchaseFiles.get(key);
     const issue = mismatch
       ? "Forecast and readiness do not match. Return to readiness and run the forecast again."
       : duplicates.has(key)
@@ -84,6 +90,8 @@ export function joinPurchaseEvidence(
       stock: stocks.get(key),
       demand,
       issue,
+      fileInputs: purchaseInputsFromFileEvidence(fileEvidence),
+      fileExpiry: expiryInputFromFileEvidence(snapshot.purchaseFileEvidence, key, fileEvidence),
     };
   });
 }

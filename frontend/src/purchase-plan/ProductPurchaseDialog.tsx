@@ -132,7 +132,6 @@ export function ProductPurchaseDialog({
   plan,
   inputs,
   analysisDate,
-  expiryProvided,
   onChange,
   onClose,
 }: {
@@ -140,7 +139,6 @@ export function ProductPurchaseDialog({
   plan?: ProductPurchasePlan;
   inputs: ProductPurchaseInputs;
   analysisDate: string;
-  expiryProvided: boolean;
   onChange: (inputs: ProductPurchaseInputs) => void;
   onClose: () => void;
 }) {
@@ -302,7 +300,7 @@ export function ProductPurchaseDialog({
                   weeks={
                     evidence?.timeline.weeks.filter(
                       (week) => week.weekEnd < analysisDate,
-                    ) ?? []
+                    ).slice(-8) ?? []
                   }
                   range={range}
                   name={product.name}
@@ -443,12 +441,9 @@ export function ProductPurchaseDialog({
               <strong>Expiry information</strong>
               <br />
               <span>
-                {expiryProvided
-                  ? plan?.expiry.message
-                  : "Expiry not checked — expiry evidence is not available for this product"}
+                {plan?.expiry.message ?? "Expiry not checked — evidence mismatch for this product"}
               </span>
-              {expiryProvided &&
-                plan?.expiry &&
+              {plan?.expiry &&
                 "earliestDate" in plan.expiry && (
                   <>
                     <br />

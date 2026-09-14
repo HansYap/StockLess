@@ -15,17 +15,19 @@ import {
 import { makeEvidence } from "./fixtures.ts";
 
 function Harness({
-  data = makeEvidence(),
+  data,
   evaluate = evaluateProductPurchasePlan,
 }: {
   data?: ReturnType<typeof makeEvidence>;
   evaluate?: typeof evaluateProductPurchasePlan;
 }) {
+  const [defaultData] = useState(makeEvidence);
+  const evidence = data ?? defaultData;
   const [drafts, setDrafts] = useState<PurchaseDrafts>({});
   const [selectedKey, onSelect] = useState<string | null>(null);
   return (
     <PurchasePlanScreen
-      {...data}
+      {...evidence}
       drafts={drafts}
       selectedKey={selectedKey}
       onSelect={onSelect}
@@ -118,7 +120,9 @@ describe("purchase planning", () => {
     const evaluate = vi.fn(evaluateProductPurchasePlan);
     render(<Harness evaluate={evaluate} />);
     open();
+    const beforeTyping = evaluate.mock.calls.length;
     await user.type(screen.getByLabelText("Planned order"), "23");
+    expect(evaluate.mock.calls.length).toBe(beforeTyping + 2);
     const calls = evaluate.mock.calls.length;
     fireEvent.change(screen.getByLabelText("Planned order"), {
       target: { value: "1.5" },
@@ -131,7 +135,7 @@ describe("purchase planning", () => {
     fireEvent.change(screen.getByLabelText("Incoming stock"), {
       target: { value: "999999" },
     });
-    expect(evaluate.mock.calls.length).toBeGreaterThan(calls);
+    expect(evaluate.mock.calls.length).toBe(calls + 1);
     fireEvent.change(screen.getByLabelText("Incoming stock"), {
       target: { value: "1000000" },
     });
@@ -143,6 +147,35 @@ describe("purchase planning", () => {
     expect(
       (screen.getByLabelText("Planned order") as HTMLInputElement).value,
     ).toBe("");
+  });
+  it("prefills confirmed file figures, preserves provenance, and uses mapped expiry", () => {
+    const data = makeEvidence();
+    data.snapshot = {
+      ...data.snapshot,
+      purchaseFileEvidence: {
+        plannedOrderColumnConfirmed: true,
+        incomingStockColumnConfirmed: true,
+        expiryDateColumnConfirmed: true,
+        products: [{
+          productKey: "A",
+          plannedOrderQuantity: 20,
+          incomingStockQuantity: 3,
+          expiryDates: ["2026-09-20"],
+          reasonCodes: [],
+        }],
+      },
+    };
+    render(<Harness data={data} />);
+    expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(false);
+    open();
+    expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("20");
+    expect((screen.getByLabelText("Incoming stock") as HTMLInputElement).value).toBe("3");
+    expect(screen.getAllByText("from your file").length).toBeGreaterThan(2);
+    expect(screen.getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "21" } });
+    expect(screen.getAllByText("typed by you").length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "" } });
+    expect(screen.getByText("No plan entered")).toBeTruthy();
   });
   it("shows No range and the reason for Cannot assess without demand figures or seller pattern", () => {
     render(<Harness />);
@@ -236,6 +269,9 @@ describe("approved chart semantics", () => {
     ).toBe(today);
     expect(screen.getByTestId("forecast-centre").getAttribute("x1")).toBe(
       today,
+    );
+    expect(screen.getByTestId("forecast-centre").getAttribute("y1")).not.toBe(
+      screen.getByTestId("forecast-centre").getAttribute("y2"),
     );
   });
   it("shows orange dots only for genuine zero-sales weeks and a dashed marker only for missing weeks", () => {

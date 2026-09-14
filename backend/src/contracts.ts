@@ -259,6 +259,11 @@ export type DataIssueCode =
   | "FUTURE_STOCK_DATE"
   | "CONFLICTING_CURRENT_STOCK"
   | "CONFLICTING_STOCK_DATE"
+  | "INVALID_PLANNED_ORDER"
+  | "INVALID_INCOMING_STOCK"
+  | "CONFLICTING_PLANNED_ORDER"
+  | "CONFLICTING_INCOMING_STOCK"
+  | "INVALID_EXPIRY_DATE"
   | "DUPLICATE_CANDIDATE"
   | "DUPLICATE_CONFIRMED";
 
@@ -284,6 +289,9 @@ export interface InterpretedRowValues {
   readonly packVariant?: string;
   readonly currentStock?: number;
   readonly stockAsOfDate?: string;
+  readonly plannedOrderQuantity?: number;
+  readonly incomingStockQuantity?: number;
+  readonly expiryDate?: string;
 }
 
 export interface ValidatedRow {
@@ -339,6 +347,24 @@ export interface ProductLimitation {
   readonly message: string;
 }
 
+export interface ProductPurchaseFileEvidence {
+  readonly productKey: string;
+  readonly plannedOrderQuantity?: number;
+  readonly incomingStockQuantity?: number;
+  readonly expiryDates: readonly string[];
+  readonly reasonCodes: readonly (
+    | "CONFLICTING_PLANNED_ORDER"
+    | "CONFLICTING_INCOMING_STOCK"
+  )[];
+}
+
+export interface PurchaseFileEvidence {
+  readonly plannedOrderColumnConfirmed: boolean;
+  readonly incomingStockColumnConfirmed: boolean;
+  readonly expiryDateColumnConfirmed: boolean;
+  readonly products: readonly ProductPurchaseFileEvidence[];
+}
+
 export interface ReadinessOptions {
   readonly analysisDate: string;
   readonly dateConfirmations?: readonly DateFormatConfirmation[];
@@ -358,6 +384,8 @@ export interface ReadinessSnapshot {
   readonly reconciliation: ReconciliationSummary;
   readonly productStock: readonly ProductStockEvidence[];
   readonly productLimitations: readonly ProductLimitation[];
+  /** Optional for compatibility with snapshots made before Epic 5 file inputs. */
+  readonly purchaseFileEvidence?: PurchaseFileEvidence;
 }
 
 export type WeekState =

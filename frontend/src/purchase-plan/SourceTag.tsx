@@ -9,7 +9,7 @@ export function SourceTag({ source }: { source: PurchaseFigureSource }) {
   );
 }
 export function numberText(value: number) {
-  return new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(
+  return new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(
     value,
   );
 }

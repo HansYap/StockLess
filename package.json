@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace stockless-frontend",
-    "test": "npm test --workspace @stockless/backend",
+    "test": "npm test --workspace @stockless/backend && npm test --workspace stockless-frontend",
     "typecheck": "npm run typecheck --workspace @stockless/backend && npm run typecheck --workspace stockless-frontend"
   },
   "engines": {

@@ -38,8 +38,14 @@ interface ReadinessScreenProps {
 }
 
 const FILTER_CODES: Readonly<Record<ReadinessIssueFilter, readonly DataIssueCode[]>> = Object.freeze({
-  dates: ["INVALID_DATE", "DATE_FORMAT_CONFIRMATION_REQUIRED"],
-  quantities: ["INVALID_QUANTITY"],
+  dates: ["INVALID_DATE", "DATE_FORMAT_CONFIRMATION_REQUIRED", "INVALID_EXPIRY_DATE"],
+  quantities: [
+    "INVALID_QUANTITY",
+    "INVALID_PLANNED_ORDER",
+    "INVALID_INCOMING_STOCK",
+    "CONFLICTING_PLANNED_ORDER",
+    "CONFLICTING_INCOMING_STOCK",
+  ],
   identity: ["MISSING_IDENTITY"],
   duplicates: ["DUPLICATE_CANDIDATE", "DUPLICATE_CONFIRMED"],
   stock: [
@@ -59,7 +65,7 @@ const FILTER_META: Readonly<Record<ReadinessIssueFilter, Readonly<{
   severity: "fix" | "review";
 }>>> = Object.freeze({
   dates: { label: "Date issues", hint: "Invalid or unconfirmed date values", severity: "fix" },
-  quantities: { label: "Quantity issues", hint: "Values that are not finite decimals", severity: "fix" },
+  quantities: { label: "Quantity issues", hint: "Invalid or conflicting quantity values", severity: "fix" },
   identity: { label: "Missing identity", hint: "Rows without the chosen product identity", severity: "fix" },
   duplicates: { label: "Exact duplicates", hint: "Matching source rows needing a decision", severity: "review" },
   stock: { label: "Stock evidence", hint: "Optional stock values that limit cover", severity: "review" },
@@ -114,7 +120,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   useEffect(() => setProblemPage(0), [props.filter]);
 
   const dateEvidence = useMemo(() => {
-    const fields = ["transaction_date", "stock_as_of_date"] as const;
+    const fields = ["transaction_date", "stock_as_of_date", "expiry_date"] as const;
     return fields.flatMap((field) => {
       const sourceColumnId = props.mapping.mappings[field]?.confirmed
         ? props.mapping.mappings[field]?.sourceColumnId

@@ -118,7 +118,7 @@ function valueMatchesKind(value: string, kind: ValueKind): boolean {
     case "non_negative_decimal":
       return isFiniteDecimal(value) && Number(value) >= 0;
     case "non_negative_integer":
-      return /^\+?\d+$/.test(value);
+      return /^\d+$/.test(value) && Number.isSafeInteger(Number(value));
     case "text":
       return value.trim() !== "";
   }

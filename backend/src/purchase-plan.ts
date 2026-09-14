@@ -4,12 +4,14 @@ import type {
   ExpiryCheckInput,
   ExpiryCheckResult,
   ProductDemandEstimate,
+  ProductPurchaseFileEvidence,
   ProductPurchaseInputs,
   ProductPurchasePlan,
   ProductStockEvidence,
   PurchaseAuditResult,
   PurchaseFigure,
   PurchaseInputSource,
+  PurchaseFileEvidence,
   PurchasePlanReview,
   PurchaseQuantityField,
   PurchaseQuantityValidation,
@@ -19,7 +21,7 @@ import type {
 import { calendarDaysBetween, parseIsoDate } from "./dates.ts";
 
 /** Domain policy for submitted Epic 5 US5.1-US5.5. US5.6 is intentionally UI-owned. */
-export const EPIC5_POLICY_VERSION = "stockless-i2-e5-v1.0.0";
+export const EPIC5_POLICY_VERSION = "stockless-i2-e5-v1.1.0";
 
 export const EPIC5_POLICY = Object.freeze({
   maximumQuantity: 999_999,
@@ -27,7 +29,7 @@ export const EPIC5_POLICY = Object.freeze({
   maximumStockAgeDays: 14,
   expiryWindowDays: 28,
   verdictRule: "available_after_order_vs_four_week_range" as const,
-  restockTarget: "rounded_range_midpoint" as const,
+  restockTarget: "rounded_range_midpoint_then_ceiling_shortfall" as const,
 });
 
 export interface EvaluatePurchasePlanOptions {
@@ -54,6 +56,34 @@ export function emptyProductPurchaseInputs(): ProductPurchaseInputs {
   return Object.freeze({
     incomingStock: EMPTY_QUANTITY,
     plannedOrder: EMPTY_QUANTITY,
+  });
+}
+
+/** Converts validated optional file evidence into the same inputs used by typed edits. */
+export function purchaseInputsFromFileEvidence(
+  evidence: ProductPurchaseFileEvidence | undefined,
+): ProductPurchaseInputs {
+  return Object.freeze({
+    incomingStock: evidence?.incomingStockQuantity === undefined
+      ? EMPTY_QUANTITY
+      : createPurchaseQuantity(evidence.incomingStockQuantity, "from your file"),
+    plannedOrder: evidence?.plannedOrderQuantity === undefined
+      ? EMPTY_QUANTITY
+      : createPurchaseQuantity(evidence.plannedOrderQuantity, "from your file"),
+  });
+}
+
+/** Supplies the confirmed-column state even when one product has no usable expiry date. */
+export function expiryInputFromFileEvidence(
+  fileEvidence: PurchaseFileEvidence | undefined,
+  productKey: string,
+  knownProduct?: ProductPurchaseFileEvidence,
+): ExpiryCheckInput {
+  const product = knownProduct
+    ?? fileEvidence?.products.find((candidate) => candidate.productKey === productKey);
+  return Object.freeze({
+    columnConfirmed: fileEvidence?.expiryDateColumnConfirmed ?? false,
+    dates: product?.expiryDates ?? Object.freeze([]),
   });
 }
 
@@ -163,7 +193,9 @@ function estimateRestock(
   const range = requireRange(demand);
   const midpointTarget = Math.round((range.low + range.high) / 2);
   const incoming = inputs.incomingStock.state === "value" ? inputs.incomingStock.value : 0;
-  const quantity = Math.max(0, midpointTarget - stock!.currentStock! - incoming);
+  // Planned order accepts whole units. Ceiling prevents an adopted estimate
+  // from falling short of the midpoint when stock on hand is fractional.
+  const quantity = Math.max(0, Math.ceil(midpointTarget - stock!.currentStock! - incoming));
   return Object.freeze({
     state: "available",
     quantity: figure(quantity, "worked out by StockLess"),
@@ -300,11 +332,20 @@ export function buildPurchasePlanReview(
   }
 
   const stockByProduct = new Map(snapshot.productStock.map((stock) => [stock.productKey, stock]));
+  const fileEvidenceByProduct = new Map(
+    (snapshot.purchaseFileEvidence?.products ?? []).map((evidence) => [evidence.productKey, evidence]),
+  );
   const products = forecast.products.map((demand) => evaluateProductPurchasePlan(demand, {
     analysisDate: snapshot.analysisDate,
     stock: stockByProduct.get(demand.productKey),
-    inputs: options.inputsByProduct?.[demand.productKey],
-    expiry: options.expiryByProduct?.[demand.productKey],
+    inputs: options.inputsByProduct?.[demand.productKey]
+      ?? purchaseInputsFromFileEvidence(fileEvidenceByProduct.get(demand.productKey)),
+    expiry: options.expiryByProduct?.[demand.productKey]
+      ?? expiryInputFromFileEvidence(
+        snapshot.purchaseFileEvidence,
+        demand.productKey,
+        fileEvidenceByProduct.get(demand.productKey),
+      ),
     currentStockSource: options.currentStockSourceByProduct?.[demand.productKey],
   }));
 

@@ -11,6 +11,8 @@ import type {
   ParsedDataset,
   ParsedRow,
   ProductLimitation,
+  ProductPurchaseFileEvidence,
+  PurchaseFileEvidence,
   ProductStockEvidence,
   ReadinessOptions,
   ReadinessSnapshot,
@@ -52,7 +54,11 @@ interface RowDraft {
 
 interface DateInterpretation {
   readonly value?: string;
-  readonly issueCode?: "INVALID_DATE" | "DATE_FORMAT_CONFIRMATION_REQUIRED" | "INVALID_STOCK_DATE";
+  readonly issueCode?:
+    | "INVALID_DATE"
+    | "DATE_FORMAT_CONFIRMATION_REQUIRED"
+    | "INVALID_STOCK_DATE"
+    | "INVALID_EXPIRY_DATE";
   readonly normalization?: NormalizationEvent;
 }
 
@@ -84,6 +90,13 @@ function parseFiniteDecimal(value: string): number | undefined {
   if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value)) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/** Parses the exact whole-number contract shared by mapped Epic 5 inputs. */
+function parsePurchaseQuantity(value: string): number | undefined {
+  if (!/^\d+$/.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed <= 999_999 ? parsed : undefined;
 }
 
 /** Builds the most useful original product label available on a row. */
@@ -170,7 +183,7 @@ function interpretDate(
   column: MappedColumn,
   confirmations: ReadonlyMap<string, DateFormatConfirmation>,
   detection: DateFormatDetection,
-  invalidCode: "INVALID_DATE" | "INVALID_STOCK_DATE",
+  invalidCode: "INVALID_DATE" | "INVALID_STOCK_DATE" | "INVALID_EXPIRY_DATE",
 ): DateInterpretation {
   const current = normalizedValue(row, column);
   if (current === "") return Object.freeze({ issueCode: invalidCode });
@@ -240,7 +253,9 @@ function buildProductStockEvidence(
   const byProduct = new Map<string, RowDraft[]>();
   for (const row of drafts) {
     if (!row.productKey) continue;
-    byProduct.set(row.productKey, [...(byProduct.get(row.productKey) ?? []), row]);
+    const productRows = byProduct.get(row.productKey);
+    if (productRows) productRows.push(row);
+    else byProduct.set(row.productKey, [row]);
   }
 
   const evidence: ProductStockEvidence[] = [];
@@ -327,6 +342,99 @@ function buildProductStockEvidence(
   return Object.freeze(evidence);
 }
 
+/** Consolidates optional mapped Epic 5 values without summing repeated product snapshots. */
+function buildPurchaseFileEvidence(
+  drafts: readonly RowDraft[],
+  issues: DataIssue[],
+  plannedOrderColumn: MappedColumn | undefined,
+  incomingStockColumn: MappedColumn | undefined,
+  expiryDateColumn: MappedColumn | undefined,
+): PurchaseFileEvidence {
+  if (!plannedOrderColumn && !incomingStockColumn && !expiryDateColumn) {
+    return Object.freeze({
+      plannedOrderColumnConfirmed: false,
+      incomingStockColumnConfirmed: false,
+      expiryDateColumnConfirmed: false,
+      products: Object.freeze([]),
+    });
+  }
+  const byProduct = new Map<string, RowDraft[]>();
+  for (const row of drafts) {
+    if (!row.productKey) continue;
+    const productRows = byProduct.get(row.productKey);
+    if (productRows) productRows.push(row);
+    else byProduct.set(row.productKey, [row]);
+  }
+
+  const products: ProductPurchaseFileEvidence[] = [];
+  for (const [productKey, rows] of [...byProduct.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+    const plannedRows = rows.filter((row) => row.interpretedValues.plannedOrderQuantity !== undefined);
+    const incomingRows = rows.filter((row) => row.interpretedValues.incomingStockQuantity !== undefined);
+    const plannedValues = [...new Set(plannedRows.map((row) => row.interpretedValues.plannedOrderQuantity!))];
+    const incomingValues = [...new Set(incomingRows.map((row) => row.interpretedValues.incomingStockQuantity!))];
+    const expiryDates = [...new Set(
+      rows
+        .map((row) => row.interpretedValues.expiryDate)
+        .filter((value): value is string => value !== undefined),
+    )].sort();
+    const reasonCodes: ("CONFLICTING_PLANNED_ORDER" | "CONFLICTING_INCOMING_STOCK")[] = [];
+
+    if (plannedValues.length > 1) {
+      reasonCodes.push("CONFLICTING_PLANNED_ORDER");
+      for (const row of plannedRows) {
+        const issue = addIssue(issues, {
+          sourceRow: row.sourceRow,
+          productKey,
+          originalProductHint: row.originalProductHint,
+          issueCode: "CONFLICTING_PLANNED_ORDER",
+          field: "planned_order_quantity",
+          sourceColumn: plannedOrderColumn?.header,
+          observedValue: String(row.interpretedValues.plannedOrderQuantity),
+          reason: "This product has more than one different nonblank planned-order value.",
+          correctiveAction: "Keep one product-level planned-order figure, or leave the file values blank and enter it in StockLess.",
+          resolutionState: "unresolved",
+        });
+        row.issueIds.push(issue.id);
+      }
+    }
+    if (incomingValues.length > 1) {
+      reasonCodes.push("CONFLICTING_INCOMING_STOCK");
+      for (const row of incomingRows) {
+        const issue = addIssue(issues, {
+          sourceRow: row.sourceRow,
+          productKey,
+          originalProductHint: row.originalProductHint,
+          issueCode: "CONFLICTING_INCOMING_STOCK",
+          field: "incoming_stock_quantity",
+          sourceColumn: incomingStockColumn?.header,
+          observedValue: String(row.interpretedValues.incomingStockQuantity),
+          reason: "This product has more than one different nonblank incoming-stock value.",
+          correctiveAction: "Keep one product-level incoming-stock figure, or leave the file values blank and enter it in StockLess.",
+          resolutionState: "unresolved",
+        });
+        row.issueIds.push(issue.id);
+      }
+    }
+
+    if (plannedValues.length > 0 || incomingValues.length > 0 || expiryDates.length > 0 || reasonCodes.length > 0) {
+      products.push(Object.freeze({
+        productKey,
+        plannedOrderQuantity: plannedValues.length === 1 ? plannedValues[0] : undefined,
+        incomingStockQuantity: incomingValues.length === 1 ? incomingValues[0] : undefined,
+        expiryDates: Object.freeze(expiryDates),
+        reasonCodes: Object.freeze(reasonCodes),
+      }));
+    }
+  }
+
+  return Object.freeze({
+    plannedOrderColumnConfirmed: plannedOrderColumn !== undefined,
+    incomingStockColumnConfirmed: incomingStockColumn !== undefined,
+    expiryDateColumnConfirmed: expiryDateColumn !== undefined,
+    products: Object.freeze(products),
+  });
+}
+
 /** Calculates and verifies the exact terminal row-state reconciliation. */
 function reconcileRows(
   rows: readonly RowDraft[],
@@ -373,10 +481,16 @@ export async function runReadinessCheck(
   const variantColumn = mappedColumn(dataset, mapping, "pack_variant");
   const currentStockColumn = mappedColumn(dataset, mapping, "current_stock");
   const stockDateColumn = mappedColumn(dataset, mapping, "stock_as_of_date");
+  const plannedOrderColumn = mappedColumn(dataset, mapping, "planned_order_quantity");
+  const incomingStockColumn = mappedColumn(dataset, mapping, "incoming_stock_quantity");
+  const expiryDateColumn = mappedColumn(dataset, mapping, "expiry_date");
   const confirmations = confirmationMap(dataset, options.dateConfirmations ?? []);
   const transactionDateDetection = detectDateFormatCandidate(dataset, transactionDateColumn.id);
   const stockDateDetection = stockDateColumn
     ? detectDateFormatCandidate(dataset, stockDateColumn.id)
+    : undefined;
+  const expiryDateDetection = expiryDateColumn
+    ? detectDateFormatCandidate(dataset, expiryDateColumn.id)
     : undefined;
   const issues: DataIssue[] = [];
   const normalizations: NormalizationEvent[] = dataset.normalizations.map((event) => {
@@ -557,6 +671,75 @@ export async function runReadinessCheck(
       issueIds.push(issue.id);
     }
 
+    const plannedOrderText = normalizedValue(row, plannedOrderColumn);
+    const plannedOrderQuantity = plannedOrderText === "" ? undefined : parsePurchaseQuantity(plannedOrderText);
+    if (plannedOrderColumn && plannedOrderText !== "" && plannedOrderQuantity === undefined) {
+      const issue = addIssue(issues, {
+        sourceRow: row.sourceRow,
+        productKey,
+        originalProductHint: hint,
+        issueCode: "INVALID_PLANNED_ORDER",
+        field: "planned_order_quantity",
+        sourceColumn: plannedOrderColumn.header,
+        observedValue: originalValue(row, plannedOrderColumn),
+        reason: "Planned order must be a whole number from 0 to 999,999.",
+        correctiveAction: "Enter a whole planned-order quantity from 0 to 999,999, or leave it blank.",
+        resolutionState: "unresolved",
+      });
+      issueIds.push(issue.id);
+    }
+
+    const incomingStockText = normalizedValue(row, incomingStockColumn);
+    const incomingStockQuantity = incomingStockText === "" ? undefined : parsePurchaseQuantity(incomingStockText);
+    if (incomingStockColumn && incomingStockText !== "" && incomingStockQuantity === undefined) {
+      const issue = addIssue(issues, {
+        sourceRow: row.sourceRow,
+        productKey,
+        originalProductHint: hint,
+        issueCode: "INVALID_INCOMING_STOCK",
+        field: "incoming_stock_quantity",
+        sourceColumn: incomingStockColumn.header,
+        observedValue: originalValue(row, incomingStockColumn),
+        reason: "Incoming stock must be a whole number from 0 to 999,999.",
+        correctiveAction: "Enter a whole incoming-stock quantity from 0 to 999,999, or leave it blank.",
+        resolutionState: "unresolved",
+      });
+      issueIds.push(issue.id);
+    }
+
+    let expiryDate: string | undefined;
+    if (expiryDateColumn && normalizedValue(row, expiryDateColumn) !== "") {
+      const expiry = interpretDate(
+        row,
+        expiryDateColumn,
+        confirmations,
+        expiryDateDetection!,
+        "INVALID_EXPIRY_DATE",
+      );
+      if (expiry.normalization) normalizations.push(expiry.normalization);
+      expiryDate = expiry.value;
+      if (expiry.value) fingerprintValues[expiryDateColumn.index] = expiry.value;
+      if (expiry.issueCode) {
+        const issue = addIssue(issues, {
+          sourceRow: row.sourceRow,
+          productKey,
+          originalProductHint: hint,
+          issueCode: expiry.issueCode,
+          field: "expiry_date",
+          sourceColumn: expiryDateColumn.header,
+          observedValue: originalValue(row, expiryDateColumn),
+          reason: expiry.issueCode === "DATE_FORMAT_CONFIRMATION_REQUIRED"
+            ? "The expiry date uses a non-ISO format that has not been confirmed for this column."
+            : "The expiry date is not valid under the confirmed column format.",
+          correctiveAction: expiry.issueCode === "DATE_FORMAT_CONFIRMATION_REQUIRED"
+            ? "Confirm the column-level date format, or export dates as YYYY-MM-DD."
+            : "Enter a real expiry date using YYYY-MM-DD or the confirmed format.",
+          resolutionState: "unresolved",
+        });
+        issueIds.push(issue.id);
+      }
+    }
+
     const interpretedValues = Object.freeze({
       transactionDate: date.value,
       quantitySold,
@@ -565,6 +748,9 @@ export async function runReadinessCheck(
       packVariant,
       currentStock: currentStock !== undefined && currentStock >= 0 ? currentStock : undefined,
       stockAsOfDate,
+      plannedOrderQuantity,
+      incomingStockQuantity,
+      expiryDate,
     });
     const hasCoreIssue = date.value === undefined || quantitySold === undefined || productKey === undefined;
     drafts.push({
@@ -655,6 +841,13 @@ export async function runReadinessCheck(
     currentStockColumn !== undefined,
     stockDateColumn !== undefined,
   );
+  const purchaseFileEvidence = buildPurchaseFileEvidence(
+    drafts,
+    issues,
+    plannedOrderColumn,
+    incomingStockColumn,
+    expiryDateColumn,
+  );
   const reconciliation = reconcileRows(drafts, normalizations);
   const rows: readonly ValidatedRow[] = Object.freeze(drafts.map((row) => Object.freeze({
     sourceRow: row.sourceRow,
@@ -681,5 +874,6 @@ export async function runReadinessCheck(
     reconciliation,
     productStock,
     productLimitations: Object.freeze(productLimitations),
+    purchaseFileEvidence,
   });
 }

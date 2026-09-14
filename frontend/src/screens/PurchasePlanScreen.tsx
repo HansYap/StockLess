@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   evaluateProductPurchasePlan,
   type DemandForecastReview,
@@ -7,11 +7,11 @@ import {
   type ExpiryCheckInput,
 } from "../engine.ts";
 import {
-  EMPTY_INPUTS,
   evaluatePurchaseProduct,
   joinPurchaseEvidence,
   type PurchaseDrafts,
   type PurchaseEvaluator,
+  type PurchaseProduct,
 } from "../purchase-plan/model.ts";
 import {
   DataLabel,
@@ -32,6 +32,15 @@ interface Props {
   expiryByProduct?: Readonly<Record<string, ExpiryCheckInput | undefined>>;
 }
 
+interface PlanCacheEntry {
+  readonly product: PurchaseProduct;
+  readonly inputs: ProductPurchaseInputs;
+  readonly expiry: ExpiryCheckInput;
+  readonly evaluator: PurchaseEvaluator;
+  readonly analysisDate: string;
+  readonly result: ReturnType<typeof evaluatePurchaseProduct>;
+}
+
 export function PurchasePlanScreen({
   snapshot,
   forecast,
@@ -49,21 +58,43 @@ export function PurchasePlanScreen({
     () => joinPurchaseEvidence(snapshot, forecast),
     [snapshot, forecast],
   );
+  const planCache = useRef(new Map<string, PlanCacheEntry>());
   // Only Epic 5 depends on purchase drafts; readiness and Epic 3 evidence are stable.
   const plans = useMemo(
-    () =>
-      new Map(
-        products.map((product) => [
-          product.key,
-          evaluatePurchaseProduct(
-            product,
-            snapshot.analysisDate,
-            drafts[product.key] ?? EMPTY_INPUTS,
-            evaluatePurchase,
-            expiryByProduct?.[product.key],
-          ),
-        ]),
-      ),
+    () => {
+      const nextCache = new Map<string, PlanCacheEntry>();
+      const nextPlans = new Map<string, ReturnType<typeof evaluatePurchaseProduct>>();
+      for (const product of products) {
+        const inputs = drafts[product.key] ?? product.fileInputs;
+        const expiry = expiryByProduct?.[product.key] ?? product.fileExpiry;
+        const cached = planCache.current.get(product.key);
+        const result = cached
+          && cached.product === product
+          && cached.inputs === inputs
+          && cached.expiry === expiry
+          && cached.evaluator === evaluatePurchase
+          && cached.analysisDate === snapshot.analysisDate
+          ? cached.result
+          : evaluatePurchaseProduct(
+              product,
+              snapshot.analysisDate,
+              inputs,
+              evaluatePurchase,
+              expiry,
+            );
+        nextPlans.set(product.key, result);
+        nextCache.set(product.key, {
+          product,
+          inputs,
+          expiry,
+          evaluator: evaluatePurchase,
+          analysisDate: snapshot.analysisDate,
+          result,
+        });
+      }
+      planCache.current = nextCache;
+      return nextPlans;
+    },
     [
       products,
       snapshot.analysisDate,
@@ -72,8 +103,10 @@ export function PurchasePlanScreen({
       expiryByProduct,
     ],
   );
+  const inputsFor = (product: (typeof products)[number]) =>
+    drafts[product.key] ?? product.fileInputs;
   const hasPlans = products.some(
-    (product) => drafts[product.key]?.plannedOrder.state === "value",
+    (product) => inputsFor(product).plannedOrder.state === "value",
   );
   const visible = products.filter(
     (product) =>
@@ -82,7 +115,7 @@ export function PurchasePlanScreen({
         .includes(query.trim().toLowerCase()) &&
       (!orderingOnly ||
         !hasPlans ||
-        drafts[product.key]?.plannedOrder.state === "value"),
+        inputsFor(product).plannedOrder.state === "value"),
   );
   const selected = products.find((product) => product.key === selectedKey);
   const counts = (label: string) =>
@@ -105,7 +138,7 @@ export function PurchasePlanScreen({
       ],
       ...products.map((product) => {
         const plan = plans.get(product.key),
-          input = drafts[product.key] ?? EMPTY_INPUTS;
+          input = inputsFor(product);
         return [
           product.name,
           product.sku ?? "",
@@ -261,10 +294,10 @@ export function PurchasePlanScreen({
             <span>Only products I am ordering</span>
           </label>
         </div>
-        {!expiryByProduct && (
+        {!snapshot.purchaseFileEvidence?.expiryDateColumnConfirmed
+          && !Object.values(expiryByProduct ?? {}).some((input) => input?.columnConfirmed) && (
           <p className="expiry-note">
-            Expiry not checked — expiry evidence is not available in the current
-            readiness data.
+            Expiry not checked — your file has no expiry dates
           </p>
         )}
         <div className="table-scroll">
@@ -399,9 +432,8 @@ export function PurchasePlanScreen({
           key={selected.key}
           product={selected}
           plan={plans.get(selected.key)}
-          inputs={drafts[selected.key] ?? EMPTY_INPUTS}
+          inputs={inputsFor(selected)}
           analysisDate={snapshot.analysisDate}
-          expiryProvided={Boolean(expiryByProduct?.[selected.key])}
           onChange={(inputs) => onDraftChange(selected.key, inputs)}
           onClose={() => onSelect(null)}
         />

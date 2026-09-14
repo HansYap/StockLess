@@ -15,6 +15,8 @@ import {
   createPurchaseQuantity,
   emptyProductPurchaseInputs,
   evaluateProductPurchasePlan,
+  expiryInputFromFileEvidence,
+  purchaseInputsFromFileEvidence,
 } from "../src/purchase-plan.ts";
 
 const ANALYSIS_DATE = "2026-09-14";
@@ -145,6 +147,48 @@ test("incoming stock lowers the estimate but only the planned order triggers a v
     assert.equal(result.audit.figures.incomingStock.source, "typed by you");
     assert.equal(result.audit.figures.demandLow.source, "worked out by StockLess");
   }
+});
+
+test("a fractional stock count still produces a whole-number estimate that Planned order accepts", () => {
+  const result = evaluateProductPurchasePlan(demand(), {
+    analysisDate: ANALYSIS_DATE,
+    stock: stock(10.5),
+  });
+  assert.equal(result.estimatedRestock.state, "available");
+  if (result.estimatedRestock.state === "available") {
+    assert.equal(result.estimatedRestock.quantity.value, 15);
+    assert.equal(Number.isInteger(result.estimatedRestock.quantity.value), true);
+    assert.equal(
+      applyPurchaseQuantityEdit(
+        { state: "empty" },
+        String(result.estimatedRestock.quantity.value),
+      ).accepted,
+      true,
+    );
+  }
+});
+
+test("validated file evidence becomes file-sourced defaults and a confirmed expiry input", () => {
+  const fileEvidence = {
+    plannedOrderColumnConfirmed: true,
+    incomingStockColumnConfirmed: true,
+    expiryDateColumnConfirmed: true,
+    products: [{
+      productKey: "SKU-1",
+      plannedOrderQuantity: 12,
+      incomingStockQuantity: 3,
+      expiryDates: ["2026-09-20"],
+      reasonCodes: [],
+    }],
+  } as const;
+  assert.deepEqual(purchaseInputsFromFileEvidence(fileEvidence.products[0]), {
+    plannedOrder: { state: "value", value: 12, source: "from your file" },
+    incomingStock: { state: "value", value: 3, source: "from your file" },
+  });
+  assert.deepEqual(expiryInputFromFileEvidence(fileEvidence, "SKU-1"), {
+    columnConfirmed: true,
+    dates: ["2026-09-20"],
+  });
 });
 
 test("verdict boundaries are inclusive and reasons stay within 25 words", () => {

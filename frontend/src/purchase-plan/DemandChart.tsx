@@ -47,6 +47,10 @@ export function DemandChart({
     lowY = y(range.low / range.horizonWeeks);
   // Centre of the supplied visual band; no new demand estimate is produced.
   const centreY = (highY + lowY) / 2;
+  const lastObserved = [...weeks].reverse().find(
+    (week) => week.state !== "missing" && week.positiveQuantity !== null,
+  );
+  const firstFuture = today + (right - today) / 4;
   return (
     <>
       <div className="chart-wrap">
@@ -101,6 +105,15 @@ export function DemandChart({
           <line
             data-testid="forecast-centre"
             x1={today}
+            x2={firstFuture}
+            y1={y(lastObserved?.positiveQuantity ?? (range.unroundedCentral / range.horizonWeeks))}
+            y2={centreY}
+            stroke="#167D74"
+            strokeWidth="2.5"
+            strokeDasharray="7 6"
+          />
+          <line
+            x1={firstFuture}
             x2={right}
             y1={centreY}
             y2={centreY}
