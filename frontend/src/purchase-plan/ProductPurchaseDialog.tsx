@@ -309,7 +309,7 @@ export function ProductPurchaseDialog({
                 </strong>
                 {range ? (
                   <>
-                    <span>for the next 4 weeks</span>
+                    <span>total for the next 4 weeks</span>
                     <SourceTag source="worked out by StockLess" />
                   </>
                 ) : (

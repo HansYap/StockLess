@@ -265,6 +265,8 @@ describe("approved chart semantics", () => {
     expect(screen.getByTestId("forecast-centre").getAttribute("y1")).not.toBe(
       screen.getByTestId("forecast-centre").getAttribute("y2"),
     );
+    expect(screen.getByText("Units per week")).toBeTruthy();
+    expect(screen.getByText("Expected weekly equivalent")).toBeTruthy();
   });
   it("shows orange dots only for genuine zero-sales weeks and a dashed marker only for missing weeks", () => {
     const { snapshot, forecast } = makeEvidence();

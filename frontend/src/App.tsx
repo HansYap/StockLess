@@ -112,6 +112,13 @@ export default function App() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [step]);
+
   const goTo = useCallback((next: StepId) => {
     setStep(next);
     setReached((current) => (next > current ? next : current));

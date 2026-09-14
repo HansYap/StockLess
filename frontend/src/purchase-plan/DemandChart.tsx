@@ -59,6 +59,14 @@ export function DemandChart({
           role="img"
           aria-label={`Observed sales and four-week expected demand range for ${name}`}
         >
+          <text
+            x={left}
+            y="11"
+            fill="#66767D"
+            fontSize="9"
+          >
+            Units per week
+          </text>
           {[0, 0.5, 1].map((r) => (
             <g key={r}>
               <line
@@ -221,7 +229,7 @@ export function DemandChart({
         </span>
         <span>
           <i className="legend-forecast" />
-          Expected range <SourceTag source="worked out by StockLess" />
+          Expected weekly equivalent <SourceTag source="worked out by StockLess" />
         </span>
         {zero && (
           <span>
