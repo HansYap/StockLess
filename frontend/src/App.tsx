@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
+import { SavedMatchingBar } from "./components/SavedMatchingBar.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
 import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessScreen.tsx";
@@ -35,6 +36,7 @@ import { runDemandForecastInWorker } from "./workers/forecast-client.ts";
 import { runReadinessCheckInWorker } from "./workers/readiness-client.ts";
 import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
+import { confirmAllMatches, loadSavedMatching, saveMatching } from "./storage/saved-matching.ts";
 
 /** Seeds an unconfirmed mapping state from the engine's proposals. */
 function seedFromProposals(base: MappingState, proposals: MappingProposalResult): MappingState {
@@ -75,6 +77,7 @@ export default function App() {
   const [dateConfirmations, setDateConfirmations] = useState<readonly DateFormatConfirmation[]>([]);
   const [duplicateDecisions, setDuplicateDecisions] = useState<Readonly<Record<string, DuplicateDecision>>>({});
   const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
+  const [savedMatchingOffered, setSavedMatchingOffered] = useState(false);
   const readinessRun = useRef(0);
   const readinessAbort = useRef<AbortController | null>(null);
   const forecastRun = useRef(0);
@@ -190,10 +193,12 @@ export default function App() {
     const parsed = next.session.dataset;
     if (!parsed) throw new Error("The parsed dataset is missing from the session.");
 
-    const proposed = await proposeMappings(parsed, createLocalSemanticScorer(signal));
+    const saved = await loadSavedMatching(next);
+    const proposed = saved ? null : await proposeMappings(parsed, createLocalSemanticScorer(signal));
     resetReadinessEvidence();
     setProposals(proposed);
-    setEnvelope(updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed)));
+    setSavedMatchingOffered(saved?.offered ?? false);
+    setEnvelope(saved?.envelope ?? updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed!)));
     setMappingError(null);
     setMappingNotice(null);
     setProductKey(null);
@@ -305,6 +310,10 @@ export default function App() {
     >
       {step === 1 && <UploadScreen onSource={handleSource} onCancel={handleClearSession} />}
 
+      {step === 2 && dataset && savedMatchingOffered && (
+        <SavedMatchingBar mapping={envelope.session.mapping} onConfirmAll={() => setEnvelope(confirmAllMatches)} />
+      )}
+
       {step === 2 && dataset && (
         <MappingScreen
           dataset={dataset}
@@ -316,7 +325,10 @@ export default function App() {
           onConfirmField={handleConfirmField}
           onConfirmIdentity={handleConfirmIdentity}
           onBack={() => setStep(1)}
-          onContinue={() => void executeReadiness(dateConfirmations, duplicateDecisions, true)}
+          onContinue={() => {
+            void saveMatching(envelope).then((saved) => saved && setSessionNotice("Matching saved for next time"));
+            void executeReadiness(dateConfirmations, duplicateDecisions, true);
+          }}
           checking={readinessLoading}
         />
       )}
