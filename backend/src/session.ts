@@ -11,12 +11,15 @@ import { createMappingState } from "./mapping.ts";
 
 /** Documents which content may and may not be stored persistently. */
 export const PERSISTENCE_POLICY = Object.freeze({
-  retailerDataStores: Object.freeze([] as string[]),
-  allowedPersistentContent: Object.freeze(["static application assets", "local AI model assets"]),
+  retailerDataStores: Object.freeze(["mapping_templates"]),
+  allowedPersistentContent: Object.freeze([
+    "static application assets",
+    "local AI model assets",
+    "normalized column headings and confirmed column-matching rules",
+  ]),
   prohibitedPersistentContent: Object.freeze([
     "raw CSV rows",
-    "CSV headings and previews",
-    "confirmed mappings",
+    "CSV preview values",
     "derived series",
     "product identifiers",
   ]),

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { SavedMatchingBar } from "./components/SavedMatchingBar.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
@@ -36,7 +36,14 @@ import { runDemandForecastInWorker } from "./workers/forecast-client.ts";
 import { runReadinessCheckInWorker } from "./workers/readiness-client.ts";
 import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
-import { confirmAllMatches, loadSavedMatching, saveMatching } from "./storage/saved-matching.ts";
+import {
+  confirmAllMatches,
+  countSavedMatchings,
+  deleteAllSavedMatchings,
+  loadSavedMatching,
+  saveMatching,
+  type SavedMatchingDifferences,
+} from "./storage/saved-matching.ts";
 
 /** Seeds an unconfirmed mapping state from the engine's proposals. */
 function seedFromProposals(base: MappingState, proposals: MappingProposalResult): MappingState {
@@ -55,6 +62,16 @@ function seedFromProposals(base: MappingState, proposals: MappingProposalResult)
 /** Returns the retailer-facing calendar date in the specification's fixed zone. */
 function malaysiaDate(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+}
+
+function summarizeColumns(columns: readonly string[]): string {
+  if (columns.length === 0) return "none";
+  const shown = columns.slice(0, 5).map((column) => `“${column}”`).join(", ");
+  return columns.length > 5 ? `${shown}, and ${columns.length - 5} more` : shown;
+}
+
+function mismatchNotice(differences: SavedMatchingDifferences): string {
+  return `Saved matching not used because the columns changed. Missing: ${summarizeColumns(differences.missingColumns)}. New: ${summarizeColumns(differences.newColumns)}. Match the columns manually.`;
 }
 
 export default function App() {
@@ -78,12 +95,22 @@ export default function App() {
   const [duplicateDecisions, setDuplicateDecisions] = useState<Readonly<Record<string, DuplicateDecision>>>({});
   const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
   const [savedMatchingOffered, setSavedMatchingOffered] = useState(false);
+  const [savedMatchingCount, setSavedMatchingCount] = useState(0);
+  const [deletingSavedMatchings, setDeletingSavedMatchings] = useState(false);
   const readinessRun = useRef(0);
   const readinessAbort = useRef<AbortController | null>(null);
   const forecastRun = useRef(0);
   const forecastAbort = useRef<AbortController | null>(null);
 
   const dataset = envelope.session.dataset;
+
+  useEffect(() => {
+    let active = true;
+    void countSavedMatchings().then((count) => {
+      if (active) setSavedMatchingCount(count);
+    });
+    return () => { active = false; };
+  }, []);
 
   const goTo = useCallback((next: StepId) => {
     setStep(next);
@@ -200,7 +227,7 @@ export default function App() {
     setSavedMatchingOffered(saved?.offered ?? false);
     setEnvelope(saved?.envelope ?? updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed!)));
     setMappingError(null);
-    setMappingNotice(null);
+    setMappingNotice(saved?.differences ? mismatchNotice(saved.differences) : null);
     setProductKey(null);
     setAnalysisDate(malaysiaDate());
     setSessionNotice(previousMode && previousMode !== sourceMode
@@ -208,6 +235,18 @@ export default function App() {
       : sourceMode === "sample" ? "Sample data loaded." : "Retailer file loaded locally.");
     goTo(2);
   }, [envelope, goTo, resetReadinessEvidence]);
+
+  const handleDeleteSavedMatchings = useCallback(async () => {
+    setDeletingSavedMatchings(true);
+    const deleted = await deleteAllSavedMatchings();
+    setDeletingSavedMatchings(false);
+    if (deleted) {
+      setSavedMatchingCount(0);
+      setSessionNotice("Saved column matching deleted from this browser.");
+    } else {
+      setSessionNotice("Saved column matching could not be deleted in this browser.");
+    }
+  }, []);
 
   const handleSelectColumn = useCallback((field: CanonicalField, sourceColumnId: string | null) => {
     setMappingError(null);
@@ -296,6 +335,18 @@ export default function App() {
     setSessionNotice(cleared.message);
   }, [envelope, resetReadinessEvidence]);
 
+  const handleMappingContinue = useCallback(async () => {
+    const shouldSave = envelope.session.dataset?.sourceMode === "user";
+    const saved = await saveMatching(envelope);
+    if (saved) {
+      setSessionNotice("Matching saved for next time");
+      setSavedMatchingCount(await countSavedMatchings());
+    } else if (shouldSave) {
+      setSessionNotice("Matching could not be saved in this browser. You can still continue.");
+    }
+    await executeReadiness(dateConfirmations, duplicateDecisions, true);
+  }, [dateConfirmations, duplicateDecisions, envelope, executeReadiness]);
+
   const reportMetadata = correctionReportMetadata(envelope.session, analysisDate);
 
   return (
@@ -308,10 +359,21 @@ export default function App() {
       notice={step === 4 ? null : sessionNotice}
       onClear={dataset ? handleClearSession : undefined}
     >
-      {step === 1 && <UploadScreen onSource={handleSource} onCancel={handleClearSession} />}
+      {step === 1 && (
+        <UploadScreen
+          onSource={handleSource}
+          onCancel={handleClearSession}
+          savedMatchingCount={savedMatchingCount}
+          deletingSavedMatchings={deletingSavedMatchings}
+          onDeleteSavedMatchings={() => void handleDeleteSavedMatchings()}
+        />
+      )}
 
       {step === 2 && dataset && savedMatchingOffered && (
-        <SavedMatchingBar mapping={envelope.session.mapping} onConfirmAll={() => setEnvelope(confirmAllMatches)} />
+        <SavedMatchingBar
+          mapping={envelope.session.mapping}
+          onConfirmAll={() => setEnvelope((current) => confirmAllMatches(current))}
+        />
       )}
 
       {step === 2 && dataset && (
@@ -325,10 +387,7 @@ export default function App() {
           onConfirmField={handleConfirmField}
           onConfirmIdentity={handleConfirmIdentity}
           onBack={() => setStep(1)}
-          onContinue={() => {
-            void saveMatching(envelope).then((saved) => saved && setSessionNotice("Matching saved for next time"));
-            void executeReadiness(dateConfirmations, duplicateDecisions, true);
-          }}
+          onContinue={() => void handleMappingContinue()}
           checking={readinessLoading}
         />
       )}

@@ -22,6 +22,9 @@ interface UploadScreenProps {
     signal: AbortSignal,
   ) => Promise<void>;
   readonly onCancel: () => void;
+  readonly savedMatchingCount: number;
+  readonly deletingSavedMatchings: boolean;
+  readonly onDeleteSavedMatchings: () => void;
 }
 
 interface ImportFailure {
@@ -70,7 +73,13 @@ async function readFileBytes(
 }
 
 /** Screen 01. Accepts a retailer CSV or the bundled sample and reports failures. */
-export function UploadScreen({ onSource, onCancel }: UploadScreenProps) {
+export function UploadScreen({
+  onSource,
+  onCancel,
+  savedMatchingCount,
+  deletingSavedMatchings,
+  onDeleteSavedMatchings,
+}: UploadScreenProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
@@ -272,6 +281,25 @@ export function UploadScreen({ onSource, onCancel }: UploadScreenProps) {
               <span>{PRIVACY_NOTICE.beforeUpload}</span>
             </p>
           </div>
+
+          {savedMatchingCount > 0 && (
+            <div className="saved-setup" aria-label="Saved column matching">
+              <div>
+                <b>
+                  {savedMatchingCount} saved column {savedMatchingCount === 1 ? "matching" : "matchings"}
+                </b>
+                <span>Only column headings and matching rules are stored for returning use.</span>
+              </div>
+              <button
+                type="button"
+                className="btn btn--small btn--ghost"
+                disabled={deletingSavedMatchings}
+                onClick={onDeleteSavedMatchings}
+              >
+                {deletingSavedMatchings ? "Deleting…" : "Delete saved matching"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

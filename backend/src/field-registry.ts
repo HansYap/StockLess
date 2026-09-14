@@ -197,7 +197,7 @@ export const UPLOAD_REQUIREMENTS = Object.freeze({
 
 export const PRIVACY_NOTICE = Object.freeze({
   beforeUpload:
-    "Your raw CSV rows are processed in this browser and no account is required. StockLess may download local AI model assets, but your headings, preview values, rows, derived series, and product identifiers are not uploaded to an AI or API service.",
+    "Your raw CSV rows are processed in this browser and no account is required. StockLess may save column headings and confirmed matching rules in this browser, but your preview values, rows, derived series, and product identifiers are not uploaded to an AI or API service.",
   persistence:
-    "Unsaved retailer data is kept in memory only. Clearing or closing the session removes application references; JavaScript cannot claim a physical RAM overwrite.",
+    "Only saved column matching remains for returning use. Dataset rows, forecasts and purchase plans stay in the active session and are not saved in the browser database.",
 });
