@@ -61,7 +61,7 @@ describe("purchase planning", () => {
     expect(screen.queryByLabelText("Planned order")).toBeNull();
     expect(screen.queryByLabelText("Incoming stock")).toBeNull();
     expect(
-      screen.queryByText(/High risk|Needs review|Looks balanced|Cannot judge/),
+      screen.queryByText(/Overstock Risk|Needs review|Looks balanced|Cannot judge/),
     ).toBeNull();
     expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
       true,

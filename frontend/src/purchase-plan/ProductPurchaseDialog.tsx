@@ -136,7 +136,9 @@ function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
     >
       <div className="verdict-label">
         <strong>Purchase check</strong>
-        <span className={`pill pill--${tone}`}>{audit.verdict}</span>
+        <span className={`pill pill--${tone}`}>
+          {audit.verdict === "High risk" ? "Overstock Risk" : audit.verdict}
+        </span>
       </div>
       <h3>{titles[tone]}</h3>
       <p>

@@ -68,7 +68,7 @@ function PurchasePreview() {
   const verdict = availableAfterOrder > demandHigh
     ? {
         tone: "high",
-        label: "High risk",
+        label: "Overstock Risk",
         title: "This plan looks too high.",
         reason: `${availableAfterOrder} units after this order is above the 36-unit demand range high.`,
       }

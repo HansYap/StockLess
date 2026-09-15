@@ -19,7 +19,7 @@ describe("homepage purchase-plan example", () => {
 
     fireEvent.change(incoming, { target: { value: "10" } });
     expect(estimate?.textContent).toContain("10 units");
-    expect(screen.getByText("High risk")).toBeTruthy();
+    expect(screen.getByText("Overstock Risk")).toBeTruthy();
 
     fireEvent.change(planned, { target: { value: "0" } });
     expect(screen.getByText("Needs review")).toBeTruthy();
