@@ -247,7 +247,7 @@ export function MappingScreen(props: MappingScreenProps) {
 
           <CapabilityGroup title="You can do this now" tone="on" items={capabilities.availableNow} />
           <CapabilityGroup title="Needs more information" tone="off" items={capabilities.needsMoreInformation} />
-          <CapabilityGroup title="Locked until iteration 2" tone="locked" items={capabilities.locked} />
+          <CapabilityGroup title="Locked until iteration 3" tone="locked" items={capabilities.locked} />
         </aside>
       </div>
 
