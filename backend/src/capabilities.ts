@@ -196,7 +196,7 @@ export function evaluateCapabilities(
     if (!definition.iterationEnabled) {
       const lockedReason: CapabilityReason = {
         code: "LATER_ITERATION",
-        message: `${definition.label} is visible but locked until Iteration 2.`,
+        message: `${definition.label} is visible but locked until Iteration 3.`,
       };
       return Object.freeze({
         capability: definition.id,

@@ -374,7 +374,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
               <div>
                 <h3 className="card-title">Every tidy-up</h3>
                 <p className="card-sub">
-                  Each event shows its source row, exact before-and-after value, and the tidy-up permitted by AC2.
+                  Each event shows its source row, exact before-and-after value, and the tidy-up.
                 </p>
               </div>
               <span className="pill pill--grey">{props.snapshot.normalizations.length} events</span>
