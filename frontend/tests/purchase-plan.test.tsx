@@ -61,7 +61,7 @@ describe("purchase planning", () => {
     expect(screen.queryByLabelText("Planned order")).toBeNull();
     expect(screen.queryByLabelText("Incoming stock")).toBeNull();
     expect(
-      screen.queryByText(/High risk|Needs review|Looks balanced|Cannot judge/),
+      screen.queryByText(/Overstock risk|Needs review|Looks balanced|Cannot judge/),
     ).toBeNull();
     expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
       true,
@@ -76,6 +76,8 @@ describe("purchase planning", () => {
     expect(incoming.type).toBe("range");
     expect(incoming.value).toBe("0");
     expect(incoming.getAttribute("aria-valuetext")).toBe("Not entered");
+    expect(within(screen.getByRole("table")).getAllByText("Steady seller")).toHaveLength(2);
+    expect(within(dialog).getAllByText("Steady seller")).toHaveLength(1);
     expect(
       within(dialog).queryByRole("button", { name: /Use .* as my planned order/ }),
     ).toBeNull();
@@ -94,6 +96,7 @@ describe("purchase planning", () => {
     expect(
       within(screen.getByRole("dialog")).getByText("Limited"),
     ).toBeTruthy();
+    expect(within(screen.getByRole("dialog")).getAllByText("Steady seller")).toHaveLength(1);
   });
   it("enables ordering after a plan, keeps totals unchanged, and restores disabled state after clearing the last plan", async () => {
     const user = userEvent.setup();
@@ -256,9 +259,12 @@ describe("approved chart semantics", () => {
     );
     expect(screen.queryByTestId("missing-week")).toBeNull();
     const today = screen.getByTestId("today-divider").getAttribute("x1");
-    expect(
-      screen.getByTestId("forecast-band").getAttribute("points")?.split(",")[0],
-    ).toBe(today);
+    expect(screen.getByTestId("forecast-band").getAttribute("d")).toMatch(
+      new RegExp(`^M ${today} `),
+    );
+    expect(screen.getByTestId("forecast-upper-bound").getAttribute("d")).not.toBe(
+      screen.getByTestId("forecast-lower-bound").getAttribute("d"),
+    );
     expect(screen.getByTestId("forecast-centre").getAttribute("x1")).toBe(
       today,
     );

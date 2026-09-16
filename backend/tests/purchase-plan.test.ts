@@ -196,7 +196,7 @@ test("verdict boundaries are inclusive and reasons stay within 25 words", () => 
     { planned: 9, expected: "Needs review" },
     { planned: 10, expected: "Looks balanced" },
     { planned: 20, expected: "Looks balanced" },
-    { planned: 21, expected: "High risk" },
+    { planned: 21, expected: "Overstock risk" },
   ] as const;
 
   for (const item of cases) {
@@ -327,7 +327,7 @@ test("input constructors reject values outside the contract", () => {
   assert.deepEqual(accepted, { state: "value", value: 25, source: "from your file" });
 });
 
-test("a purchase review joins stock to Epic 3 output without aggregate US5.6 policy", () => {
+test("a purchase review joins stock and submitted US5.6 guidance to Epic 3 output", () => {
   const productDemand = demand();
   const productStock = stock();
   const snapshot: ReadinessSnapshot = Object.freeze({

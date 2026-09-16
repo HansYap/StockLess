@@ -50,7 +50,14 @@ export function DemandChart({
   const lastObserved = [...weeks].reverse().find(
     (week) => week.state !== "missing" && week.positiveQuantity !== null,
   );
-  const firstFuture = today + (right - today) / 4;
+  const forecastStartY = y(
+    lastObserved?.positiveQuantity ?? (range.unroundedCentral / range.horizonWeeks),
+  );
+  const fanControlNear = today + (right - today) * 0.28;
+  const fanControlFar = today + (right - today) * 0.72;
+  const upperFanPath = `M ${today} ${forecastStartY} C ${fanControlNear} ${forecastStartY}, ${fanControlFar} ${highY}, ${right} ${highY}`;
+  const lowerFanPath = `M ${today} ${forecastStartY} C ${fanControlNear} ${forecastStartY}, ${fanControlFar} ${lowY}, ${right} ${lowY}`;
+  const forecastFanPath = `${upperFanPath} L ${right} ${lowY} C ${fanControlFar} ${lowY}, ${fanControlNear} ${forecastStartY}, ${today} ${forecastStartY} Z`;
   return (
     <>
       <div className="chart-wrap">
@@ -87,9 +94,9 @@ export function DemandChart({
               </text>
             </g>
           ))}
-          <polygon
+          <path
             data-testid="forecast-band"
-            points={`${today},${highY} ${right},${highY} ${right},${lowY} ${today},${lowY}`}
+            d={forecastFanPath}
             fill="rgba(22,125,116,.17)"
           />
           <line
@@ -110,20 +117,29 @@ export function DemandChart({
           >
             Today
           </text>
+          <path
+            data-testid="forecast-upper-bound"
+            d={upperFanPath}
+            fill="none"
+            stroke="#167D74"
+            strokeWidth="1.5"
+            strokeDasharray="5 5"
+            opacity=".62"
+          />
+          <path
+            data-testid="forecast-lower-bound"
+            d={lowerFanPath}
+            fill="none"
+            stroke="#167D74"
+            strokeWidth="1.5"
+            strokeDasharray="5 5"
+            opacity=".62"
+          />
           <line
             data-testid="forecast-centre"
             x1={today}
-            x2={firstFuture}
-            y1={y(lastObserved?.positiveQuantity ?? (range.unroundedCentral / range.horizonWeeks))}
-            y2={centreY}
-            stroke="#167D74"
-            strokeWidth="2.5"
-            strokeDasharray="7 6"
-          />
-          <line
-            x1={firstFuture}
             x2={right}
-            y1={centreY}
+            y1={forecastStartY}
             y2={centreY}
             stroke="#167D74"
             strokeWidth="2.5"

@@ -548,7 +548,7 @@ export type PurchaseInputSource = "from your file" | "input by you";
 
 export type PurchaseFigureSource = PurchaseInputSource | "worked out by StockLess";
 
-export type PurchaseVerdict = "High risk" | "Needs review" | "Looks balanced";
+export type PurchaseVerdict = "Overstock risk" | "Needs review" | "Looks balanced";
 
 export type CannotJudgeReason =
   | "the product is Cannot assess"

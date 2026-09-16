@@ -358,6 +358,11 @@ export function PurchasePlanScreen({
                         {range
                           ? `${numberText(range.low)}–${numberText(range.high)} units`
                           : "No range"}
+                        {range && product.demand?.pattern && (
+                          <span className="pill pill--neutral range-pattern">
+                            {product.demand.pattern}
+                          </span>
+                        )}
                         <small>
                           {range
                             ? "for the next 4 weeks"

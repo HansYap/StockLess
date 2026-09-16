@@ -20,7 +20,7 @@ import type {
 } from "./contracts.ts";
 import { calendarDaysBetween, parseIsoDate } from "./dates.ts";
 
-/** Domain policy for submitted Epic 5 US5.1-US5.5. US5.6 is intentionally UI-owned. */
+/** Domain policy for submitted Epic 5 US5.1-US5.6. */
 export const EPIC5_POLICY_VERSION = "stockless-i2-e5-v1.1.0";
 
 export const EPIC5_POLICY = Object.freeze({
@@ -229,10 +229,10 @@ function auditPurchase(
   const available = stock!.currentStock! + incomingStock.value + plannedOrder.value;
   const availableText = formatQuantity(available);
 
-  let verdict: "High risk" | "Needs review" | "Looks balanced";
+  let verdict: "Overstock risk" | "Needs review" | "Looks balanced";
   let reasonSentence: string;
   if (available > range.high) {
-    verdict = "High risk";
+    verdict = "Overstock risk";
     reasonSentence = `You would have ${availableText} units, above the ${range.high}-unit four-week range, so the planned order looks too much.`;
   } else if (available < range.low) {
     verdict = "Needs review";

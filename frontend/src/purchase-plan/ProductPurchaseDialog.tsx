@@ -110,7 +110,7 @@ function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
       </section>
     );
   const tone =
-    audit.verdict === "High risk"
+    audit.verdict === "Overstock risk"
       ? "high"
       : audit.verdict === "Needs review"
         ? "review"
@@ -242,7 +242,6 @@ export function ProductPurchaseDialog({
           </p>
           <div className="dialog-badges">
             <DataLabel product={product} />
-            {pattern && <span className="pill pill--neutral">{pattern}</span>}
             {stock?.freshness.state === "limited" && (
               <span className="pill pill--limited">Getting old</span>
             )}
@@ -307,6 +306,7 @@ export function ProductPurchaseDialog({
                     ? `${numberText(range.low)}–${numberText(range.high)} units`
                     : "No range"}
                 </strong>
+                {pattern && <span className="pill pill--neutral range-pattern">{pattern}</span>}
                 {range ? (
                   <>
                     <span>total for the next 4 weeks</span>
@@ -331,12 +331,7 @@ export function ProductPurchaseDialog({
                 <p className="basis">
                   Range based on {range.basedOnWeekCount} weeks, from{" "}
                   {range.firstWeekUsed} to {range.lastWeekUsed}.
-                  {pattern && (
-                    <>
-                      {" "}
-                      Pattern: <strong>{pattern}</strong>.
-                    </>
-                  )}{" "}
+                  {" "}
                   <SourceTag source="worked out by StockLess" />
                 </p>
                 {reason && <p className="evidence-warning">{reason}</p>}
