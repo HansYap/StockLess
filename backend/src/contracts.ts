@@ -249,6 +249,7 @@ export type RowUseState = "used" | "excluded";
 
 export type DataIssueCode =
   | "INVALID_DATE"
+  | "FUTURE_TRANSACTION_DATE"
   | "DATE_FORMAT_CONFIRMATION_REQUIRED"
   | "INVALID_QUANTITY"
   | "MISSING_IDENTITY"

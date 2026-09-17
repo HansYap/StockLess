@@ -6,7 +6,10 @@ import {
   PRIVACY_NOTICE,
   UPLOAD_ATTRIBUTE_GUIDE,
   UPLOAD_REQUIREMENTS,
+  addCalendarDays,
+  calendarDaysBetween,
   createCsvImportError,
+  parseIsoDate,
   type CsvProgress,
   type SourceMode,
 } from "../engine.ts";
@@ -38,6 +41,15 @@ const PHASE_LABEL: Readonly<Record<CsvProgress["phase"], string>> = {
   parse: "Parsing rows",
   complete: "Finishing up",
 };
+
+const SAMPLE_REFERENCE_DATE = "2026-09-03";
+
+/** Keeps the built-in example useful without removing its intentional old/future-date cases. */
+export function rebaseSampleCsvDates(csv: string, targetAnalysisDate: string): string {
+  const offset = calendarDaysBetween(SAMPLE_REFERENCE_DATE, targetAnalysisDate);
+  return csv.replace(/\b\d{4}-\d{2}-\d{2}\b/g, (value) =>
+    parseIsoDate(value) ? addCalendarDays(value, offset) : value);
+}
 
 /** Reads a browser File in cancellable chunks while reporting visible progress. */
 async function readFileBytes(
@@ -84,6 +96,7 @@ export function UploadScreen({
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<CsvProgress | null>(null);
+  const [finishingSeconds, setFinishingSeconds] = useState(0);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -92,6 +105,14 @@ export function UploadScreen({
   const optionalAttributes = UPLOAD_ATTRIBUTE_GUIDE.filter((item) => item.requirement === "optional");
 
   useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => {
+    if (!busy || progress?.phase !== "complete") {
+      setFinishingSeconds(0);
+      return;
+    }
+    const timer = window.setInterval(() => setFinishingSeconds((seconds) => seconds + 1), 1_000);
+    return () => window.clearInterval(timer);
+  }, [busy, progress?.phase]);
 
   async function run(
     name: string,
@@ -142,7 +163,9 @@ export function UploadScreen({
     await run("sample_with_issues.csv", "sample", "text/csv", 0, async (signal) => {
       const response = await fetch("/samples/sample_with_issues.csv", { signal });
       if (!response.ok) throw new Error("Sample unavailable");
-      return new Uint8Array(await response.arrayBuffer());
+      const csv = await response.text();
+      const analysisDate = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+      return new TextEncoder().encode(rebaseSampleCsvDates(csv, analysisDate));
     });
   }
 
@@ -205,7 +228,7 @@ export function UploadScreen({
                 <h3>{progress ? PHASE_LABEL[progress.phase] : "Reading the file"}</h3>
                 <p>
                   {progress && progress.total > 0
-                    ? `${Math.min(100, Math.round((progress.processed / progress.total) * 100))}% complete`
+                    ? `${Math.min(100, Math.round((progress.processed / progress.total) * 100))}% complete${progress.phase === "complete" ? ` · still working (${finishingSeconds}s)` : ""}`
                     : "Working in this browser…"}
                 </p>
                 <div

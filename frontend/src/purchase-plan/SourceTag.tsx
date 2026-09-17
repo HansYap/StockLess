@@ -13,3 +13,10 @@ export function numberText(value: number) {
     value,
   );
 }
+
+export function oneDecimalText(value: number) {
+  return new Intl.NumberFormat("en", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+}

@@ -38,7 +38,7 @@ interface ReadinessScreenProps {
 }
 
 const FILTER_CODES: Readonly<Record<ReadinessIssueFilter, readonly DataIssueCode[]>> = Object.freeze({
-  dates: ["INVALID_DATE", "DATE_FORMAT_CONFIRMATION_REQUIRED", "INVALID_EXPIRY_DATE"],
+  dates: ["INVALID_DATE", "FUTURE_TRANSACTION_DATE", "DATE_FORMAT_CONFIRMATION_REQUIRED", "INVALID_EXPIRY_DATE"],
   quantities: [
     "INVALID_QUANTITY",
     "INVALID_PLANNED_ORDER",
@@ -441,7 +441,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         </div>
         {timelines.length === 0 ? <p className="empty">No valid demand rows are available.</p> : (
           <div className="timeline-list">
-            {timelines.slice(0, 12).map((timeline) => (
+            {timelines.map((timeline) => (
               <article className="timeline-row" key={timeline.productKey}>
                 <div className="timeline-row__summary">
                   <b className="num">{timeline.productKey}</b>
@@ -479,7 +479,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
             <span className="pill pill--grey">As at {props.snapshot.analysisDate}</span>
           </div>
           <div className="freshness-grid">
-            {props.snapshot.productStock.slice(0, 12).map((stock) => (
+            {props.snapshot.productStock.map((stock) => (
               <article className={`freshness-card freshness-card--${stock.freshness.state}`} key={stock.productKey}>
                 <b className="num">{stock.productKey}</b>
                 <span>Snapshot: {stock.stockAsOfDate ?? "missing"}</span>

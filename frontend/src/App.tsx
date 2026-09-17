@@ -64,10 +64,9 @@ function malaysiaDate(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
 }
 
-function summarizeColumns(columns: readonly string[]): string {
+export function summarizeColumns(columns: readonly string[]): string {
   if (columns.length === 0) return "none";
-  const shown = columns.slice(0, 5).map((column) => `“${column}”`).join(", ");
-  return columns.length > 5 ? `${shown}, and ${columns.length - 5} more` : shown;
+  return columns.map((column) => `“${column}”`).join(", ");
 }
 
 function mismatchNotice(differences: SavedMatchingDifferences): string {

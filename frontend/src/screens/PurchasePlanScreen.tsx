@@ -18,6 +18,10 @@ import {
   ProductPurchaseDialog,
 } from "../purchase-plan/ProductPurchaseDialog.tsx";
 import { SourceTag, numberText } from "../purchase-plan/SourceTag.tsx";
+import {
+  purchasePlanFilename,
+  serializePurchasePlanCsv,
+} from "../purchase-plan/purchase-plan-export.ts";
 import "../purchase-plan/purchase-plan.css";
 
 interface Props {
@@ -160,22 +164,13 @@ export function PurchasePlanScreen({
         ];
       }),
     ];
-    const csv = rows
-      .map((row) =>
-        row
-          .map((value) => {
-            const text = String(value);
-            return `"${(/^[=+@\-\t\r]/.test(text) ? "'" + text : text).replaceAll('"', '""')}"`;
-          })
-          .join(","),
-      )
-      .join("\r\n");
+    const csv = serializePurchasePlanCsv(rows, snapshot.sourceMode);
     const url = URL.createObjectURL(
       new Blob([csv], { type: "text/csv;charset=utf-8" }),
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = "stockless-purchase-plan.csv";
+    link.download = purchasePlanFilename(snapshot.sourceMode);
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }

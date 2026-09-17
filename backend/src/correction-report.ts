@@ -50,8 +50,9 @@ function rowOutcome(state: RowUseState | undefined): string {
 }
 
 /** Serializes one record per problem as UTF-8 CSV with a compatibility BOM. */
-function recordsToCsv(records: readonly ReportRecord[]): string {
+function recordsToCsv(records: readonly ReportRecord[], sourceMode: ReadinessSnapshot["sourceMode"]): string {
   const lines = [
+    ["StockLess data source", sourceMode === "sample" ? "Sample data" : "Retailer file"].map(csvCell).join(","),
     REPORT_COLUMNS.map(csvCell).join(","),
     ...records.map((record) => REPORT_COLUMNS.map((column) => csvCell(record[column])).join(",")),
   ];
@@ -79,7 +80,7 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
     "Whether that row was used or left out": rowOutcome(sourceRowState(snapshot, issue.sourceRow)),
   }));
 
-  const csvText = recordsToCsv(records);
+  const csvText = recordsToCsv(records, snapshot.sourceMode);
   return Object.freeze({
     metadata,
     csvText,

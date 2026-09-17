@@ -46,14 +46,25 @@ function classifyObservedWeek(week: WeekAccumulator): Exclude<WeekState, "missin
   return "confirmed_zero_sales";
 }
 
-/** Builds the latest completed observed-week window and its evidence state. */
+/** Returns the eight complete calendar weeks immediately before the analysis week. */
+function recentCompleteWeekStarts(analysisDate: string): readonly string[] {
+  const currentWeekStart = isoWeekStart(analysisDate);
+  return Object.freeze(Array.from(
+    { length: 8 },
+    (_, index) => addCalendarDays(currentWeekStart, (index - 8) * 7),
+  ));
+}
+
+/** Builds evidence from records inside the last eight complete calendar weeks only. */
 function buildRecentWindow(
   weeks: readonly WeeklyEvidence[],
   analysisDate: string,
 ): RecentWindowEvidence {
-  const completedObserved = weeks
-    .filter((week) => week.state !== "missing" && week.weekEnd < analysisDate)
-    .slice(-8);
+  const indexed = new Map(weeks.map((week) => [week.weekStart, week]));
+  const completeWeekStarts = recentCompleteWeekStarts(analysisDate);
+  const completedObserved = completeWeekStarts
+    .map((weekStart) => indexed.get(weekStart))
+    .filter((week): week is WeeklyEvidence => week !== undefined && week.state !== "missing");
   if (completedObserved.length === 0) {
     return Object.freeze({
       selectedWeekStarts: Object.freeze([]),
@@ -64,24 +75,14 @@ function buildRecentWindow(
   }
 
   const selectedWeekStarts = completedObserved.map((week) => week.weekStart);
-  const selectedSet = new Set(selectedWeekStarts);
   const reasons: ("FEWER_THAN_8_COMPLETED_WEEKS" | "MISSING_WEEK_IN_RECENT_SPAN")[] = [];
   if (completedObserved.length < 8) reasons.push("FEWER_THAN_8_COMPLETED_WEEKS");
-  for (
-    let cursor = selectedWeekStarts[0];
-    cursor <= selectedWeekStarts[selectedWeekStarts.length - 1];
-    cursor = addCalendarDays(cursor, 7)
-  ) {
-    if (!selectedSet.has(cursor)) {
-      reasons.push("MISSING_WEEK_IN_RECENT_SPAN");
-      break;
-    }
-  }
+  if (completedObserved.length < completeWeekStarts.length) reasons.push("MISSING_WEEK_IN_RECENT_SPAN");
 
   return Object.freeze({
     selectedWeekStarts: Object.freeze(selectedWeekStarts),
-    windowStart: selectedWeekStarts[0],
-    windowEnd: selectedWeekStarts[selectedWeekStarts.length - 1],
+    windowStart: completeWeekStarts[0],
+    windowEnd: addCalendarDays(completeWeekStarts[completeWeekStarts.length - 1], 6),
     observedWeekCount: completedObserved.length,
     state: completedObserved.length === 8 && reasons.length === 0 ? "standard" : "limited",
     reasonCodes: Object.freeze(reasons),

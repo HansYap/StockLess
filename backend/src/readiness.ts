@@ -537,6 +537,22 @@ export async function runReadinessCheck(
       });
       issueIds.push(issue.id);
     }
+    const futureTransactionDate = date.value !== undefined && date.value > options.analysisDate;
+    if (futureTransactionDate) {
+      const issue = addIssue(issues, {
+        sourceRow: row.sourceRow,
+        productKey,
+        originalProductHint: hint,
+        issueCode: "FUTURE_TRANSACTION_DATE",
+        field: "transaction_date",
+        sourceColumn: transactionDateColumn.header,
+        observedValue: originalValue(row, transactionDateColumn),
+        reason: "The sale date is later than the analysis date.",
+        correctiveAction: "Correct the sale date so it is not in the future.",
+        resolutionState: "unresolved",
+      });
+      issueIds.push(issue.id);
+    }
 
     const quantityText = normalizedValue(row, quantityColumn);
     const quantitySold = parseFiniteDecimal(quantityText);
@@ -752,7 +768,7 @@ export async function runReadinessCheck(
       incomingStockQuantity,
       expiryDate,
     });
-    const hasCoreIssue = date.value === undefined || quantitySold === undefined || productKey === undefined;
+    const hasCoreIssue = date.value === undefined || futureTransactionDate || quantitySold === undefined || productKey === undefined;
     drafts.push({
       sourceRow: row.sourceRow,
       productKey,

@@ -7,7 +7,7 @@ import {
   type PurchaseFigureSource,
 } from "../engine.ts";
 import type { PurchaseProduct } from "./model.ts";
-import { SourceTag, numberText } from "./SourceTag.tsx";
+import { SourceTag, numberText, oneDecimalText } from "./SourceTag.tsx";
 import { DemandChart } from "./DemandChart.tsx";
 
 export function DataLabel({ product }: { product: PurchaseProduct }) {
@@ -376,7 +376,7 @@ export function ProductPurchaseDialog({
                 value={
                   !range || evidence?.cover.value === undefined
                     ? "Cannot calculate"
-                    : `${numberText(evidence.cover.value)} weeks`
+                    : `${oneDecimalText(evidence.cover.value)} weeks`
                 }
                 source={
                   range && evidence?.cover.value !== undefined
