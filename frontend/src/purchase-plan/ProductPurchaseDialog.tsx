@@ -1,3 +1,4 @@
+import { t, useLanguage } from "../i18n/index.ts";
 import { useEffect, useRef } from "react";
 import {
   applyPurchaseQuantityEdit,
@@ -11,13 +12,14 @@ import { SourceTag, numberText, oneDecimalText } from "./SourceTag.tsx";
 import { DemandChart } from "./DemandChart.tsx";
 
 export function DataLabel({ product }: { product: PurchaseProduct }) {
+  useLanguage();
   const label = product.issue ? "Evidence mismatch" : product.demand?.label;
   return (
     <span
       className={`pill pill--${label === "Ready" ? "ready" : label === "Limited" ? "limited" : "cannot"}`}
-      title={product.issue || product.demand?.labelReason?.message}
+      title={t(product.issue || product.demand?.labelReason?.message)}
     >
-      {label}
+      {t(label)}
     </span>
   );
 }
@@ -31,11 +33,12 @@ function Metric({
   value: string;
   source?: PurchaseFigureSource;
 }) {
+  useLanguage();
   return (
     <div className="evidence-metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {source && <SourceTag source={source} />}
+      <span>{t(label)}</span>
+      <strong>{t(value)}</strong>
+      {t(source && <SourceTag source={source} />)}
     </div>
   );
 }
@@ -70,42 +73,41 @@ function purchaseSliderMaximum(
 }
 
 function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
+  useLanguage();
   if (!audit)
     return (
-      <section className="verdict verdict--none" aria-label="Purchase check">
-        <strong>Purchase check</strong>
-        <p>Refresh the evidence before checking a purchase.</p>
+      <section className="verdict verdict--none" aria-label={t("Purchase check")}>
+        <strong>{t("Purchase check")}</strong>
+        <p>{t("Refresh the evidence before checking a purchase.")}</p>
       </section>
     );
   if (audit.state === "not_planned")
     return (
-      <section className="verdict verdict--none" aria-label="Purchase check">
+      <section className="verdict verdict--none" aria-label={t("Purchase check")}>
         <div className="verdict-label">
-          <strong>Purchase check</strong>
-          <span className="pill pill--neutral">No plan entered</span>
+          <strong>{t("Purchase check")}</strong>
+          <span className="pill pill--neutral">{t("No plan entered")}</span>
         </div>
-        <h3>Enter a planned order when you are ready.</h3>
+        <h3>{t("Enter a planned order when you are ready.")}</h3>
         <p>
-          StockLess will check it immediately. You can leave this product alone
-          without answering anything.
-        </p>
+          {t("StockLess will check it immediately. You can leave this product alone without answering anything.")}</p>
       </section>
     );
   if (audit.state === "cannot_judge")
     return (
       <section
         className="verdict verdict--cannot"
-        aria-label="Purchase check"
+        aria-label={t("Purchase check")}
         aria-live="polite"
       >
         <div className="verdict-label">
-          <strong>Purchase check</strong>
-          <span className="pill pill--cannot">{audit.label}</span>
+          <strong>{t("Purchase check")}</strong>
+          <span className="pill pill--cannot">{t(audit.label)}</span>
         </div>
-        <h3>StockLess cannot judge this purchase.</h3>
-        <p>{audit.reason}.</p>
+        <h3>{t("StockLess cannot judge this purchase.")}</h3>
+        <p>{t(audit.reason)}.</p>
         <p className="verdict-action">
-          What you can do: {audit.correctiveAction}
+          {t("What you can do: ")}{t(audit.correctiveAction)}
         </p>
       </section>
     );
@@ -131,28 +133,28 @@ function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
   return (
     <section
       className={`verdict verdict--${tone}`}
-      aria-label="Purchase check"
+      aria-label={t("Purchase check")}
       aria-live="polite"
     >
       <div className="verdict-label">
-        <strong>Purchase check</strong>
+        <strong>{t("Purchase check")}</strong>
         <span className={`pill pill--${tone}`}>
-          {audit.verdict}
+          {t(audit.verdict)}
         </span>
       </div>
-      <h3>{titles[tone]}</h3>
+      <h3>{t(titles[tone])}</h3>
       <p>
-        {audit.reasonSentence} <SourceTag source="worked out by StockLess" />
+        {t(audit.reasonSentence)} <SourceTag source="worked out by StockLess" />
       </p>
-      {audit.gettingOld && <p className="verdict-action">Getting old</p>}
+      {t(audit.gettingOld && <p className="verdict-action">{t("Getting old")}</p>)}
       <div className="figure-grid">
-        {(Object.keys(labels) as (keyof typeof labels)[]).map((key) => (
+        {t((Object.keys(labels) as (keyof typeof labels)[]).map((key) => (
           <div className="figure" key={key}>
-            <span className="figure-label">{labels[key]}</span>
-            <strong>{numberText(audit.figures[key].value)} units</strong>
+            <span className="figure-label">{t(labels[key])}</span>
+            <strong>{t(numberText(audit.figures[key].value))} {t("units")}</strong>
             <SourceTag source={audit.figures[key].source} />
           </div>
-        ))}
+        )))}
       </div>
     </section>
   );
@@ -173,6 +175,7 @@ export function ProductPurchaseDialog({
   onChange: (inputs: ProductPurchaseInputs) => void;
   onClose: () => void;
 }) {
+  useLanguage();
   const ref = useRef<HTMLDialogElement>(null);
   const sliderMaximum = useRef(purchaseSliderMaximum(product, plan, inputs)).current;
   useEffect(() => {
@@ -228,31 +231,31 @@ export function ProductPurchaseDialog({
       <header className="dialog-head">
         <div>
           <p className="eyebrow">
-            Purchase plan · SKU {product.sku || "Not available"}
+            {t("Purchase plan · SKU ")}{product.sku || "Not available"}
           </p>
           <h2 id="purchase-dialog-title">{product.name}</h2>
           <p>
-            Stock counted {stock?.stockAsOfDate || "date unavailable"}{" "}
+            {t("Stock counted ")}{stock?.stockAsOfDate || "date unavailable"}{t(" ")}
             {stock?.stockAsOfDate && <SourceTag source="from your file" />}
-            {stock?.freshness.ageDays !== undefined && (
+            {t(stock?.freshness.ageDays !== undefined && (
               <>
-                {" "}
-                · {stock.freshness.ageDays} days old{" "}
+                {t(" ")}
+                · {t(stock.freshness.ageDays)} {t("days old")}{t(" ")}
                 <SourceTag source="worked out by StockLess" />
               </>
-            )}
+            ))}
           </p>
           <div className="dialog-badges">
             <DataLabel product={product} />
-            {stock?.freshness.state === "limited" && (
-              <span className="pill pill--limited">Getting old</span>
-            )}
+            {t(stock?.freshness.state === "limited" && (
+              <span className="pill pill--limited">{t("Getting old")}</span>
+            ))}
           </div>
         </div>
         <button
           className="icon-btn"
           type="button"
-          aria-label="Close purchase plan"
+          aria-label={t("Close purchase plan")}
           onClick={onClose}
           autoFocus
         >
@@ -262,61 +265,56 @@ export function ProductPurchaseDialog({
       <div className="dialog-layout">
         <div className="dialog-column">
           <section className="estimate-hero">
-            <p className="eyebrow">Estimated restock</p>
-            {restock?.state === "available" && !cannotJudge ? (
+            <p className="eyebrow">{t("Estimated restock")}</p>
+            {t(restock?.state === "available" && !cannotJudge ? (
               <>
                 <div className="estimate-number">
-                  {numberText(restock.quantity.value)}
-                  <span>units</span>
+                  {t(numberText(restock.quantity.value))}
+                  <span>{t("units")}</span>
                 </div>
                 <p className="estimate-copy">
-                  A practical starting quantity for this product's next four
-                  weeks.
-                </p>
+                  {t("A practical starting quantity for this product's next four weeks.")}</p>
                 <div className="estimate-method">
-                  Midpoint of demand range − stock on hand − incoming stock
-                  <br />
+                  {t("Midpoint of demand range − stock on hand − incoming stock")}<br />
                   <SourceTag source={restock.quantity.source} />
                 </div>
               </>
             ) : (
               <>
                 <div className="estimate-number estimate-unavailable">
-                  No reliable estimate
-                </div>
-                {!cannotJudge && (
+                  {t("No reliable estimate")}</div>
+                {t(!cannotJudge && (
                   <p className="estimate-copy">
-                    {restock?.state === "unavailable" ? restock.reason : reason}
+                    {t(restock?.state === "unavailable" ? restock.reason : reason)}
                   </p>
-                )}
+                ))}
               </>
-            )}
+            ))}
           </section>
           <section className="panel">
             <div className="evidence-top">
               <div>
-                <p className="eyebrow">Demand evidence</p>
-                <h3 className="panel-title">Past sales and expected demand</h3>
+                <p className="eyebrow">{t("Demand evidence")}</p>
+                <h3 className="panel-title">{t("Past sales and expected demand")}</h3>
                 <p className="panel-sub">
-                  Missing weeks remain separate from recorded zero sales.
-                </p>
+                  {t("Missing weeks remain separate from recorded zero sales.")}</p>
               </div>
               <div className="range-callout">
-                <span>{range ? "Expected demand" : "Demand range"}</span>
+                <span>{t(range ? "Expected demand" : "Demand range")}</span>
                 <strong>
-                  {range
+                  {t(range
                     ? `${numberText(range.low)}–${numberText(range.high)} units`
-                    : "No range"}
+                    : "No range")}
                 </strong>
-                {pattern && <span className="pill pill--neutral range-pattern">{pattern}</span>}
-                {range ? (
+                {t(pattern && <span className="pill pill--neutral range-pattern">{t(pattern)}</span>)}
+                {t(range ? (
                   <>
-                    <span>total for the next 4 weeks</span>
+                    <span>{t("total for the next 4 weeks")}</span>
                     <SourceTag source="worked out by StockLess" />
                   </>
                 ) : (
-                  <span>{reason}</span>
-                )}
+                  <span>{t(reason)}</span>
+                ))}
               </div>
             </div>
             {range && (
@@ -331,12 +329,12 @@ export function ProductPurchaseDialog({
                   name={product.name}
                 />
                 <p className="basis">
-                  Range based on {range.basedOnWeekCount} weeks, from{" "}
-                  {range.firstWeekUsed} to {range.lastWeekUsed}.
-                  {" "}
+                  {t("Range based on ")}{t(range.basedOnWeekCount)} {t("weeks, from")}{t(" ")}
+                  {t(range.firstWeekUsed)} {t("to ")}{t(range.lastWeekUsed)}.
+                  {t(" ")}
                   <SourceTag source="worked out by StockLess" />
                 </p>
-                {reason && <p className="evidence-warning">{reason}</p>}
+                {t(reason && <p className="evidence-warning">{t(reason)}</p>)}
               </>
             )}
             <div className="evidence-metrics">
@@ -389,14 +387,12 @@ export function ProductPurchaseDialog({
         </div>
         <aside className="dialog-column">
           <section className="panel">
-            <p className="eyebrow">Your purchase</p>
-            <h3 className="panel-title">What are you planning to order?</h3>
+            <p className="eyebrow">{t("Your purchase")}</p>
+            <h3 className="panel-title">{t("What are you planning to order?")}</h3>
             <p className="panel-sub">
-              Both fields are optional. The purchase check updates as soon as a
-              valid figure changes.
-            </p>
+              {t("Both fields are optional. The purchase check updates as soon as a valid figure changes.")}</p>
             <div className="form-grid">
-              {(["plannedOrder", "incomingStock"] as const).map((field) => {
+              {t((["plannedOrder", "incomingStock"] as const).map((field) => {
                 const input = inputs[field];
                 const entered = input.state === "value";
                 const value = input.state === "value" ? input.value : 0;
@@ -404,20 +400,20 @@ export function ProductPurchaseDialog({
                 return (
                   <div className="quantity-slider" key={field}>
                     <div className="quantity-slider__head">
-                      <label htmlFor={`purchase-${field}`}>{label}</label>
+                      <label htmlFor={`purchase-${field}`}>{t(label)}</label>
                       <output
                         htmlFor={`purchase-${field}`}
                         className={entered ? undefined : "quantity-slider__empty"}
                         aria-live="polite"
                       >
-                        {entered ? (
-                          <>{numberText(value)}<small> units</small></>
+                        {t(entered ? (
+                          <>{t(numberText(value))}<small> {t("units")}</small></>
                         ) : (
                           "Not entered"
-                        )}
+                        ))}
                       </output>
                     </div>
-                    {input.state === "value" && <SourceTag source={input.source} />}
+                    {t(input.state === "value" && <SourceTag source={input.source} />)}
                     <input
                       className="quantity-slider__input"
                       id={`purchase-${field}`}
@@ -426,48 +422,45 @@ export function ProductPurchaseDialog({
                       max={sliderMaximum}
                       step="1"
                       value={value}
-                      aria-valuetext={entered ? `${numberText(value)} units` : "Not entered"}
+                      aria-valuetext={t(entered ? `${numberText(value)} units` : "Not entered")}
                       aria-describedby={`purchase-${field}-help`}
                       onChange={(event) => update(field, event.currentTarget.value)}
                     />
                     <div className="quantity-slider__ends" aria-hidden="true">
-                      <span>0 units</span>
-                      <span>{numberText(sliderMaximum)} units</span>
+                      <span>{t("0 units")}</span>
+                      <span>{t(numberText(sliderMaximum))} {t("units")}</span>
                     </div>
                     <div className="quantity-slider__footer">
                       <small id={`purchase-${field}-help`}>
-                        {field === "incomingStock"
+                        {t(field === "incomingStock"
                           ? "Not entered is treated as 0."
-                          : "Move the slider to check the plan instantly."}
+                          : "Move the slider to check the plan instantly.")}
                       </small>
-                      {entered && (
+                      {t(entered && (
                         <button
                           type="button"
                           className="quantity-slider__clear"
                           onClick={() => update(field, "")}
-                          aria-label={`Clear ${label.toLowerCase()}`}
+                          aria-label={t(`Clear ${label.toLowerCase()}`)}
                         >
-                          Clear
-                        </button>
-                      )}
+                          {t("Clear")}</button>
+                      ))}
                     </div>
                   </div>
                 );
-              })}
+              }))}
             </div>
             <p className="visit-note">
-              Figures you enter are marked “input by you” and last for this visit
-              only.
-            </p>
+              {t("Figures you enter are marked “input by you” and last for this visit only.")}</p>
           </section>
           <PurchaseVerdict audit={plan?.audit} />
           <div className="expiry">
             <span aria-hidden="true">◷</span>
             <div>
-              <strong>Expiry information</strong>
+              <strong>{t("Expiry information")}</strong>
               <br />
               <span>
-                {plan?.expiry.message ?? "Expiry not checked — evidence mismatch for this product"}
+                {t(plan?.expiry.message ?? "Expiry not checked — evidence mismatch for this product")}
               </span>
               {plan?.expiry &&
                 "earliestDate" in plan.expiry && (
@@ -475,7 +468,7 @@ export function ProductPurchaseDialog({
                     <br />
                     <SourceTag source="worked out by StockLess" />
                     <br />
-                    Earliest expiry: {plan.expiry.earliestDate}{" "}
+                    {t("Earliest expiry: ")}{plan.expiry.earliestDate}{t(" ")}
                     <SourceTag source="from your file" />
                   </>
                 )}
@@ -485,8 +478,7 @@ export function ProductPurchaseDialog({
       </div>
       <footer className="dialog-footer">
         <button className="btn btn--ghost" type="button" onClick={onClose}>
-          Done
-        </button>
+          {t("Done")}</button>
       </footer>
     </dialog>
   );

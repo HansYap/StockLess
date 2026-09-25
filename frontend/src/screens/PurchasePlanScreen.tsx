@@ -1,3 +1,4 @@
+import { t, useLanguage, getLocale } from "../i18n/index.ts";
 import { useMemo, useRef, useState } from "react";
 import {
   evaluateProductPurchasePlan,
@@ -56,6 +57,7 @@ export function PurchasePlanScreen({
   evaluatePurchase = evaluateProductPurchasePlan,
   expiryByProduct,
 }: Props) {
+  useLanguage();
   const [query, setQuery] = useState("");
   const [orderingOnly, setOrderingOnly] = useState(false);
   const products = useMemo(
@@ -179,9 +181,9 @@ export function PurchasePlanScreen({
       <section className="heading-row">
         <div>
           <p className="eyebrow">
-            Purchase plan ·{" "}
+            {t("Purchase plan ·")}{t(" ")}
             {new Date(`${snapshot.analysisDate}T00:00:00Z`).toLocaleDateString(
-              "en-GB",
+              getLocale(),
               {
                 day: "numeric",
                 month: "long",
@@ -191,68 +193,54 @@ export function PurchasePlanScreen({
             )}
           </p>
           <h1 className="page-title">
-            Plan what to restock, then check it before you order.
-          </h1>
+            {t("Plan what to restock, then check it before you order.")}</h1>
           <p className="lede">
-            Start with StockLess's estimated quantity, enter what you intend to
-            buy, and see whether the plan fits expected demand.
-          </p>
+            {t("Start with StockLess's estimated quantity, enter what you intend to buy, and see whether the plan fits expected demand.")}</p>
         </div>
         <button className="btn btn--ghost" type="button" onClick={download}>
-          ↓ Download purchase summary
-        </button>
+          {t("↓ Download purchase summary")}</button>
       </section>
       <p className="privacy-note">
         <span aria-hidden="true">▣</span>
         <span>
-          <strong>Your figures stay local.</strong> Typed order quantities last
-          for this visit only and are not sent to a supplier.
-        </span>
+          <strong>{t("Your figures stay local.")}</strong> {t("Typed order quantities last for this visit only and are not sent to a supplier.")}</span>
       </p>
-      <section className="summary" aria-label="Purchase planning instructions">
+      <section className="summary" aria-label={t("Purchase planning instructions")}>
         <article className="summary-main">
-          <p className="eyebrow">Instructions</p>
-          <h2>Select a product to plan its next order.</h2>
+          <p className="eyebrow">{t("Instructions")}</p>
+          <h2>{t("Select a product to plan its next order.")}</h2>
           <p>
-            Click any row below to review its forecast, enter incoming stock and
-            planned order, and receive a purchase check.
-          </p>
+            {t("Click any row below to review its forecast, enter incoming stock and planned order, and receive a purchase check.")}</p>
         </article>
       </section>
-      <div className="readiness-counts" aria-label="Product data labels">
-        <strong>All {products.length} products</strong>
-        {["Ready", "Limited", "Cannot assess"].map((label) => (
+      <div className="readiness-counts" aria-label={t("Product data labels")}>
+        <strong>{t("All ")}{t(products.length)} {t("products")}</strong>
+        {t(["Ready", "Limited", "Cannot assess"].map((label) => (
           <span key={label}>
-            <b>{counts(label)}</b> {label}
+            <b>{t(counts(label))}</b> {t(label)}
           </span>
-        ))}
+        )))}
       </div>
-      {mismatchCount > 0 && (
+      {t(mismatchCount > 0 && (
         <p className="evidence-warning" role="alert">
-          Evidence mismatch affects {mismatchCount}{" "}
-          {mismatchCount === 1 ? "product" : "products"}. These products remain
-          listed but cannot be evaluated. Return to readiness and refresh the
-          forecast.
-        </p>
-      )}
+          {t("Evidence mismatch affects ")}{t(mismatchCount)}{t(" ")}
+          {t(mismatchCount === 1 ? "product" : "products")}{t(". These products remain listed but cannot be evaluated. Return to readiness and refresh the forecast.")}</p>
+      ))}
       <section className="card list-card">
         <div className="card-head">
           <div>
-            <p className="eyebrow">All products</p>
-            <h2>Your purchase plan</h2>
+            <p className="eyebrow">{t("All products")}</p>
+            <h2>{t("Your purchase plan")}</h2>
             <p>
-              Select a product to enter quantities and see its evidence and full
-              calculation.
-            </p>
+              {t("Select a product to enter quantities and see its evidence and full calculation.")}</p>
           </div>
           <span className="pill pill--neutral">
-            {visible.length} {visible.length === 1 ? "product" : "products"}{" "}
-            shown
-          </span>
+            {t(visible.length)} {t(visible.length === 1 ? "product" : "products")}{t(" ")}
+            {t("shown")}</span>
         </div>
         <div className="toolbar">
           <label className="search">
-            <span className="visually-hidden">Search products</span>
+            <span className="visually-hidden">{t("Search products")}</span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle
                 cx="11"
@@ -272,7 +260,7 @@ export function PurchasePlanScreen({
             </svg>
             <input
               type="search"
-              placeholder="Search by product name or SKU"
+              placeholder={t("Search by product name or SKU")}
               autoComplete="off"
               value={query}
               onChange={(event) => setQuery(event.currentTarget.value)}
@@ -286,30 +274,29 @@ export function PurchasePlanScreen({
               onChange={(event) => setOrderingOnly(event.currentTarget.checked)}
             />
             <span className="switch-track" aria-hidden="true" />
-            <span>Only products I am ordering</span>
+            <span>{t("Only products I am ordering")}</span>
           </label>
         </div>
-        {!snapshot.purchaseFileEvidence?.expiryDateColumnConfirmed
+        {t(!snapshot.purchaseFileEvidence?.expiryDateColumnConfirmed
           && !Object.values(expiryByProduct ?? {}).some((input) => input?.columnConfirmed) && (
           <p className="expiry-note">
-            Expiry not checked — your file has no expiry dates
-          </p>
-        )}
+            {t("Expiry not checked — your file has no expiry dates")}</p>
+        ))}
         <div className="table-scroll">
           <table>
             <colgroup>
-              {["29%", "17%", "22%", "26%", "6%"].map((width) => (
+              {t(["29%", "17%", "22%", "26%", "6%"].map((width) => (
                 <col key={width} style={{ width }} />
-              ))}
+              )))}
             </colgroup>
             <thead>
               <tr>
-                <th scope="col">Product</th>
-                <th scope="col">Data label</th>
-                <th scope="col">4-week demand</th>
-                <th scope="col">Estimated restock</th>
+                <th scope="col">{t("Product")}</th>
+                <th scope="col">{t("Data label")}</th>
+                <th scope="col">{t("4-week demand")}</th>
+                <th scope="col">{t("Estimated restock")}</th>
                 <th scope="col">
-                  <span className="visually-hidden">Open action</span>
+                  <span className="visually-hidden">{t("Open action")}</span>
                 </th>
               </tr>
             </thead>
@@ -336,52 +323,52 @@ export function PurchasePlanScreen({
                         }}
                       >
                         {product.name}
-                        <small>SKU {product.sku || "Not available"}</small>
+                        <small>{t("SKU ")}{product.sku || "Not available"}</small>
                       </button>
                     </td>
                     <td>
                       <DataLabel product={product} />
-                      {(product.issue || product.demand?.labelReason) && (
+                      {t((product.issue || product.demand?.labelReason) && (
                         <small className="input-source">
-                          {product.issue ||
-                            product.demand?.labelReason?.message}
+                          {t(product.issue ||
+                            product.demand?.labelReason?.message)}
                         </small>
-                      )}
+                      ))}
                     </td>
                     <td>
                       <span className="range">
-                        {range
+                        {t(range
                           ? `${numberText(range.low)}–${numberText(range.high)} units`
-                          : "No range"}
-                        {range && product.demand?.pattern && (
+                          : "No range")}
+                        {t(range && product.demand?.pattern && (
                           <span className="pill pill--neutral range-pattern">
-                            {product.demand.pattern}
+                            {t(product.demand.pattern)}
                           </span>
-                        )}
+                        ))}
                         <small>
-                          {range
+                          {t(range
                             ? "for the next 4 weeks"
                             : product.issue ||
-                              product.demand?.labelReason?.message}
+                              product.demand?.labelReason?.message)}
                         </small>
-                        {range && (
+                        {t(range && (
                           <SourceTag source="worked out by StockLess" />
-                        )}
+                        ))}
                       </span>
                     </td>
                     <td>
                       <span
                         className={`estimate${restock?.state !== "available" ? " estimate--none" : ""}`}
                       >
-                        {restock?.state === "available"
+                        {t(restock?.state === "available"
                           ? `${numberText(restock.quantity.value)} units`
-                          : "No estimate"}
+                          : "No estimate")}
                         <small>
-                          {restock?.state === "available" ? (
+                          {t(restock?.state === "available" ? (
                             <SourceTag source={restock.quantity.source} />
                           ) : (
                             "Evidence not usable"
-                          )}
+                          ))}
                         </small>
                       </span>
                     </td>
@@ -389,7 +376,7 @@ export function PurchasePlanScreen({
                       <button
                         className="row-action"
                         type="button"
-                        aria-label={`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`}
+                        aria-label={t(`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`)}
                         onClick={(event) => {
                           event.stopPropagation();
                           onSelect(product.key);
@@ -401,30 +388,27 @@ export function PurchasePlanScreen({
                   </tr>
                 );
               })}
-              {!visible.length && (
+              {t(!visible.length && (
                 <tr>
                   <td colSpan={5} className="empty-row">
-                    {products.length
+                    {t(products.length
                       ? "No products match"
-                      : "No products are available. Return to readiness to review your data."}
+                      : "No products are available. Return to readiness to review your data.")}
                   </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
         <div className="list-footer">
           <span role="status">
-            Showing {visible.length} of {products.length} products. Counts above
-            do not change when filtering.
-          </span>
+            {t("Showing ")}{t(visible.length)} {t("of ")}{t(products.length)} {t("products. Counts above do not change when filtering.")}</span>
           <button
             className="btn btn--ghost btn--small"
             type="button"
             onClick={onBack}
           >
-            ← Back to readiness
-          </button>
+            {t("← Back to readiness")}</button>
         </div>
       </section>
       {selected && (

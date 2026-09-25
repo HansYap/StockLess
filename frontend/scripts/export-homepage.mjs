@@ -15,17 +15,21 @@ for (const file of ["food-waste.jpg", "retail-produce-2.jpg"]) {
 const result = await build({
   absWorkingDir: frontend,
   stdin: {
-    contents: `import {createRoot} from 'react-dom/client';
+    contents: `import '@fontsource-variable/inter';
+      import '@fontsource-variable/manrope';
+      import '@fontsource-variable/source-sans-3';
+      import './src/styles.css';
+      import {createRoot} from 'react-dom/client';
       import {HomePage} from './src/screens/HomePage.tsx';
       createRoot(document.getElementById('root')).render(<HomePage startHref={${JSON.stringify(workspaceUrl)}} imageSources={${JSON.stringify(imageSources)}}/>);`,
     loader: "tsx", resolveDir: frontend,
   },
-  bundle: true, write: false, format: "iife", jsx: "automatic", minify: true,
+  bundle: true, write: false, outfile: "homepage.js", format: "iife", jsx: "automatic", minify: true,
   define: { "process.env.NODE_ENV": '"production"' },
-  loader: { ".css": "empty" },
+  loader: { ".woff2": "dataurl", ".woff": "dataurl" },
 });
-const css = await readFile(path.join(frontend, "src/homepage.css"), "utf8");
-const js = result.outputFiles[0].text.replace(/<\/script/gi, "<\\/script");
+const css = result.outputFiles.find((file) => file.path.endsWith(".css")).text;
+const js = result.outputFiles.find((file) => file.path.endsWith(".js")).text.replace(/<\/script/gi, "<\\/script");
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Smarter restocking for small retailers. Reduce excess stock, control costs, and help prevent food waste.">

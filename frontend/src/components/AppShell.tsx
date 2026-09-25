@@ -1,3 +1,5 @@
+import { LanguageSwitcher } from "./LanguageSwitcher.tsx";
+import { t, useLanguage } from "../i18n/index.ts";
 import type { ReactNode } from "react";
 import type { SourceMode } from "../engine.ts";
 import { Logo } from "./Logo.tsx";
@@ -34,31 +36,32 @@ export function AppShell({
   onClear,
   children,
 }: AppShellProps) {
+  useLanguage();
   return (
     <div className="frame">
       <header className="topbar">
-        <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label="StockLess — upload">
+        <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label={t("StockLess — upload")}>
           <Logo />
         </button>
-        <a className="workspace-home-link" href="#home">← Homepage</a>
-        {sourceMode && (
-          <div className="session-status" aria-label="Active session">
+        <a className="workspace-home-link" href="#home">{t("← Homepage")}</a>
+        <LanguageSwitcher />
+        {t(sourceMode && (
+          <div className="session-status" aria-label={t("Active session")}>
             <span className={`pill ${sourceMode === "sample" ? "pill--amber" : "pill--teal"}`}>
-              {sourceMode === "sample" ? "Sample data" : "Retailer file"}
+              {t(sourceMode === "sample" ? "Sample data" : "Retailer file")}
             </span>
-            {sourceName && <span className="session-status__name">{sourceName}</span>}
-            {onClear && (
+            {t(sourceName && <span className="session-status__name">{sourceName}</span>)}
+            {t(onClear && (
               <button type="button" className="btn btn--small btn--ghost" onClick={onClear}>
-                Clear session
-              </button>
-            )}
+                {t("Clear session")}</button>
+            ))}
           </div>
-        )}
+        ))}
       </header>
 
-      <nav className="stepper" aria-label="Progress">
+      <nav className="stepper" aria-label={t("Progress")}>
         <ol className="stepper__inner">
-          {STEPS.map((step) => {
+          {t(STEPS.map((step) => {
             const done = step.id < current;
             const isCurrent = step.id === current;
             const reachable = step.id <= reached;
@@ -74,18 +77,18 @@ export function AppShell({
                   aria-current={isCurrent ? "step" : undefined}
                   onClick={() => onNavigate(step.id)}
                 >
-                  <span className="step__dot">{done ? "✓" : step.id}</span>
-                  <span className="step__label">{step.label}</span>
+                  <span className="step__dot">{t(done ? "✓" : step.id)}</span>
+                  <span className="step__label">{t(step.label)}</span>
                 </button>
                 <span className="step__line" aria-hidden="true" />
               </li>
             );
-          })}
+          }))}
         </ol>
       </nav>
 
       <div className="page">
-        {notice && <p className="notice notice--info" role="status">{notice}</p>}
+        {t(notice && <p className="notice notice--info" role="status">{t(notice)}</p>)}
         {children}
       </div>
     </div>

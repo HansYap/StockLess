@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import App from "../src/App.tsx";
 import { makeEvidence } from "./fixtures.ts";
 import { runDemandForecastInWorker } from "../src/workers/forecast-client.ts";
-import type { SessionEnvelope } from "../src/engine.ts";
+import { confirmIdentityMode, createMappingState, setMapping, type SessionEnvelope } from "../src/engine.ts";
 
 vi.mock("../src/engine.ts", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -25,6 +25,7 @@ vi.mock("../src/workers/import-session-client.ts", () => ({
     session: {
       ...envelope.session,
       sourceMode: "user",
+      mapping: testMapping(),
       dataset: {
         sourceMode: "user",
         sourceName: "test.csv",
@@ -70,6 +71,14 @@ vi.mock("../src/screens/ReadinessScreen.tsx", () => ({
     <button onClick={onContinue}>Run test forecast</button>
   ),
 }));
+
+function testMapping() {
+  let mapping = createMappingState();
+  mapping = setMapping(mapping, "transaction_date", "date", true);
+  mapping = setMapping(mapping, "quantity_sold", "quantity", true);
+  mapping = setMapping(mapping, "product_code", "sku", true);
+  return confirmIdentityMode(mapping, "stable");
+}
 
 async function reachPurchase() {
   fireEvent.click(screen.getByText("Load test file"));

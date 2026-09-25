@@ -1,3 +1,4 @@
+import { t, useLanguage } from "./i18n/index.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { SavedMatchingBar } from "./components/SavedMatchingBar.tsx";
@@ -9,6 +10,7 @@ import type { PurchaseDrafts } from "./purchase-plan/model.ts";
 import {
   MappingConflictError,
   FIELD_REGISTRY,
+  getReadinessBlockers,
   clearActiveSession,
   confirmIdentityMode,
   confirmMappingWithRelease,
@@ -38,6 +40,7 @@ import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
 import {
   confirmAllMatches,
+  confirmCurrentMapping,
   countSavedMatchings,
   deleteAllSavedMatchings,
   loadSavedMatching,
@@ -74,6 +77,7 @@ function mismatchNotice(differences: SavedMatchingDifferences): string {
 }
 
 export default function App() {
+  useLanguage();
   const [envelope, setEnvelope] = useState<SessionEnvelope>(() => createEmptySession());
   const [proposals, setProposals] = useState<MappingProposalResult | null>(null);
   const [step, setStep] = useState<StepId>(1);
@@ -152,6 +156,7 @@ export default function App() {
     confirmations: readonly DateFormatConfirmation[] = dateConfirmations,
     decisions: Readonly<Record<string, DuplicateDecision>> = duplicateDecisions,
     navigate = false,
+    activeEnvelope = envelope,
   ) => {
     if (!dataset) return;
     readinessAbort.current?.abort();
@@ -162,7 +167,7 @@ export default function App() {
     setReadinessLoading(true);
     setReadinessError(null);
     try {
-      const snapshot = await runReadinessCheckInWorker(dataset, envelope.session.mapping, {
+      const snapshot = await runReadinessCheckInWorker(dataset, activeEnvelope.session.mapping, {
         analysisDate,
         dateConfirmations: confirmations,
         duplicateDecisions: decisions,
@@ -178,7 +183,7 @@ export default function App() {
       if (readinessAbort.current === controller) readinessAbort.current = null;
       if (readinessRun.current === runId) setReadinessLoading(false);
     }
-  }, [analysisDate, dataset, dateConfirmations, duplicateDecisions, envelope.session.mapping, goTo, resetForecastEvidence]);
+  }, [analysisDate, dataset, dateConfirmations, duplicateDecisions, envelope, goTo, resetForecastEvidence]);
 
   const executeForecast = useCallback(async () => {
     if (!readiness) return;
@@ -341,17 +346,36 @@ export default function App() {
     setSessionNotice(cleared.message);
   }, [envelope, resetReadinessEvidence]);
 
-  const handleMappingContinue = useCallback(async () => {
-    const shouldSave = envelope.session.dataset?.sourceMode === "user";
-    const saved = await saveMatching(envelope);
+  const mappingSubmit = useRef(false);
+  const [mappingSubmitting, setMappingSubmitting] = useState(false);
+  const handleMappingContinue = useCallback(async (activeEnvelope = envelope) => {
+    if (mappingSubmit.current || getReadinessBlockers(activeEnvelope.session.mapping).length > 0) return;
+    mappingSubmit.current = true;
+    setMappingSubmitting(true);
+    try {
+    const shouldSave = activeEnvelope.session.dataset?.sourceMode === "user";
+    const saved = await saveMatching(activeEnvelope);
     if (saved) {
       setSessionNotice("Matching saved for next time");
       setSavedMatchingCount(await countSavedMatchings());
     } else if (shouldSave) {
       setSessionNotice("Matching could not be saved in this browser. You can still continue.");
     }
-    await executeReadiness(dateConfirmations, duplicateDecisions, true);
+    await executeReadiness(dateConfirmations, duplicateDecisions, true, activeEnvelope);
+    } finally { mappingSubmit.current = false; setMappingSubmitting(false); }
   }, [dateConfirmations, duplicateDecisions, envelope, executeReadiness]);
+
+  const handleConfirmAllAndContinue = useCallback(async () => {
+    if (mappingSubmit.current) return;
+    const mapping = confirmCurrentMapping(envelope.session.mapping);
+    if (!mapping || getReadinessBlockers(mapping).length > 0) return;
+    let next = updateSessionMapping(envelope, mapping);
+    if (!envelope.session.mapping.identityConfirmed) next = recordConfirmedIdentity(next);
+    setEnvelope(next);
+    setMappingError(null);
+    setMappingNotice(null);
+    await handleMappingContinue(next);
+  }, [envelope, handleMappingContinue]);
 
   const reportMetadata = correctionReportMetadata(envelope.session, analysisDate);
 
@@ -365,7 +389,7 @@ export default function App() {
       notice={step === 4 ? null : sessionNotice}
       onClear={dataset ? handleClearSession : undefined}
     >
-      {step === 1 && (
+      {t(step === 1 && (
         <UploadScreen
           onSource={handleSource}
           onCancel={handleClearSession}
@@ -373,16 +397,16 @@ export default function App() {
           deletingSavedMatchings={deletingSavedMatchings}
           onDeleteSavedMatchings={() => void handleDeleteSavedMatchings()}
         />
-      )}
+      ))}
 
-      {step === 2 && dataset && savedMatchingOffered && (
+      {t(step === 2 && dataset && savedMatchingOffered && (
         <SavedMatchingBar
           mapping={envelope.session.mapping}
           onConfirmAll={() => setEnvelope((current) => confirmAllMatches(current))}
         />
-      )}
+      ))}
 
-      {step === 2 && dataset && (
+      {t(step === 2 && dataset && (
         <MappingScreen
           dataset={dataset}
           mapping={envelope.session.mapping}
@@ -394,11 +418,12 @@ export default function App() {
           onConfirmIdentity={handleConfirmIdentity}
           onBack={() => setStep(1)}
           onContinue={() => void handleMappingContinue()}
-          checking={readinessLoading}
+          checking={readinessLoading || mappingSubmitting}
+          onConfirmAllAndContinue={() => void handleConfirmAllAndContinue()}
         />
-      )}
+      ))}
 
-      {step === 3 && dataset && readiness && (
+      {t(step === 3 && dataset && readiness && (
         <ReadinessScreen
           dataset={dataset}
           mapping={envelope.session.mapping}
@@ -416,13 +441,13 @@ export default function App() {
           onContinue={() => void executeForecast()}
           reportFilename={reportMetadata.filename}
         />
-      )}
+      ))}
 
-      {step === 3 && dataset && !readiness && (
+      {t(step === 3 && dataset && !readiness && (
         <section className="card pending">
-          <h1 className="card-title">Readiness evidence needs to be refreshed</h1>
-          <p className="card-sub">Run the check again after confirming the current mappings.</p>
-          {readinessError && <p className="notice notice--error" role="alert">{readinessError}</p>}
+          <h1 className="card-title">{t("Readiness evidence needs to be refreshed")}</h1>
+          <p className="card-sub">{t("Run the check again after confirming the current mappings.")}</p>
+          {t(readinessError && <p className="notice notice--error" role="alert">{t(readinessError)}</p>)}
           <button
             type="button"
             className="btn btn--primary"
@@ -430,13 +455,13 @@ export default function App() {
             onClick={() => void executeReadiness(dateConfirmations, duplicateDecisions)}
             aria-busy={readinessLoading}
           >
-            {readinessLoading && <span className="btn__spinner" aria-hidden="true" />}
-            {readinessLoading ? "Checking locally…" : "Run readiness check"}
+            {t(readinessLoading && <span className="btn__spinner" aria-hidden="true" />)}
+            {t(readinessLoading ? "Checking locally…" : "Run readiness check")}
           </button>
         </section>
-      )}
+      ))}
 
-      {step === 4 && readiness && forecast && (
+      {t(step === 4 && readiness && forecast && (
         <PurchasePlanScreen
           snapshot={readiness}
           forecast={forecast}
@@ -446,7 +471,7 @@ export default function App() {
           onSelect={setProductKey}
           onBack={() => setStep(3)}
         />
-      )}
+      ))}
     </AppShell>
   );
 }

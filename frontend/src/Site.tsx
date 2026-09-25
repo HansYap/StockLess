@@ -1,3 +1,4 @@
+import { t, useLanguage } from "./i18n/index.ts";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { HomePage } from "./screens/HomePage.tsx";
 
@@ -6,6 +7,7 @@ const isWorkspace = () => window.location.hash === "#workspace";
 
 /** Hash navigation works on static hosting; the mounted workspace retains its session. */
 export default function Site() {
+  const language = useLanguage();
   const [workspace, setWorkspace] = useState(isWorkspace);
   const [opened, setOpened] = useState(isWorkspace);
   useEffect(() => {
@@ -18,7 +20,6 @@ export default function Site() {
     return () => window.removeEventListener("hashchange", navigate);
   }, []);
   useEffect(() => {
-    document.title = workspace ? "StockLess | Your restocking workspace" : "StockLess | Less food waste. Smarter restocking.";
     const frame = requestAnimationFrame(() => {
       if (workspace || !window.location.hash || window.location.hash === "#home") window.scrollTo(0, 0);
       else document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
@@ -27,5 +28,8 @@ export default function Site() {
     });
     return () => cancelAnimationFrame(frame);
   }, [workspace]);
-  return <>{!workspace && <HomePage />}{opened && <div className="workspace-view" hidden={!workspace}><Suspense fallback={<p className="notice" role="status">Opening your workspace…</p>}><Workspace /></Suspense></div>}</>;
+  useEffect(() => {
+    document.title = t(workspace ? "StockLess | Your restocking workspace" : "StockLess | Less food waste. Smarter restocking.");
+  }, [workspace, language]);
+  return <>{t(!workspace && <HomePage />)}{t(opened && <div className="workspace-view" hidden={!workspace}><Suspense fallback={<p className="notice" role="status">{t("Opening your workspace…")}</p>}><Workspace /></Suspense></div>)}</>;
 }

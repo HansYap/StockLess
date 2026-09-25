@@ -1,3 +1,4 @@
+import { t, useLanguage } from "../i18n/index.ts";
 import { useEffect, useMemo, useState } from "react";
 import {
   CAPABILITY_LABELS,
@@ -108,6 +109,7 @@ function stockFreshnessLabel(freshness: StockFreshness): string {
 
 /** Screen 03. Renders the domain engine's immutable Epic 2 evidence snapshot. */
 export function ReadinessScreen(props: ReadinessScreenProps) {
+  useLanguage();
   const [problemPage, setProblemPage] = useState(0);
   const [tidyUpPage, setTidyUpPage] = useState(0);
   const timelines = useMemo(() => buildProductTimelines(props.snapshot), [props.snapshot]);
@@ -162,39 +164,36 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
 
   return (
     <>
-      <p className="eyebrow">Data readiness · snapshot {props.snapshot.analysisDate}</p>
+      <p className="eyebrow">{t("Data readiness · snapshot ")}{props.snapshot.analysisDate}</p>
       <h1 className="title">
-        {clean ? "Your file is ready to review." : "Your file is usable, with evidence to review."}
+        {t(clean ? "Your file is ready to review." : "Your file is usable, with evidence to review.")}
       </h1>
       <p className="lede">
-        Every result below comes from one local readiness snapshot. Original cells remain unchanged,
-        missing weeks stay distinct from zero sales, and rows left out remain traceable.
-      </p>
+        {t("Every result below comes from one local readiness snapshot. Original cells remain unchanged, missing weeks stay distinct from zero sales, and rows left out remain traceable.")}</p>
 
-      {props.checking && <p className="notice notice--info" role="status">Refreshing the readiness evidence locally…</p>}
-      {props.error && <p className="notice notice--error" role="alert">{props.error}</p>}
+      {t(props.checking && <p className="notice notice--info" role="status">{t("Refreshing the readiness evidence locally…")}</p>)}
+      {t(props.error && <p className="notice notice--error" role="alert">{t(props.error)}</p>)}
 
       <div className="ready">
         <div className="ready__left">
           <span className="ready__tick" aria-hidden="true">✓</span>
           <div>
-            <h2>Exact row reconciliation</h2>
+            <h2>{t("Exact row reconciliation")}</h2>
             <p>
-              {props.snapshot.reconciliation.rowsIn.toLocaleString("en")} rows in ={" "}
-              {props.snapshot.reconciliation.rowsUsed.toLocaleString("en")} used +{" "}
-              {leftOut.toLocaleString("en")} left out. {props.snapshot.reconciliation.rowsSafelyNormalized.toLocaleString("en")}{" "}
-              used rows had safe representation-only normalization.
-            </p>
+              {t(props.snapshot.reconciliation.rowsIn.toLocaleString("en"))} {t("rows in =")}{t(" ")}
+              {t(props.snapshot.reconciliation.rowsUsed.toLocaleString("en"))} {t("used +")}{t(" ")}
+              {t(leftOut.toLocaleString("en"))} {t("left out. ")}{t(props.snapshot.reconciliation.rowsSafelyNormalized.toLocaleString("en"))}{t(" ")}
+              {t("used rows had safe representation-only normalization.")}</p>
           </div>
         </div>
         <div>
-          <div className="ready__count">{props.snapshot.reconciliation.rowsUsed.toLocaleString("en")}</div>
-          <div className="ready__unit">usable rows of {props.snapshot.reconciliation.rowsIn.toLocaleString("en")}</div>
+          <div className="ready__count">{t(props.snapshot.reconciliation.rowsUsed.toLocaleString("en"))}</div>
+          <div className="ready__unit">{t("usable rows of ")}{t(props.snapshot.reconciliation.rowsIn.toLocaleString("en"))}</div>
         </div>
       </div>
 
       <div className="issues issues--five">
-        {(Object.keys(FILTER_META) as ReadinessIssueFilter[]).map((kind) => {
+        {t((Object.keys(FILTER_META) as ReadinessIssueFilter[]).map((kind) => {
           const meta = FILTER_META[kind];
           const count = props.snapshot.issues.filter((issue) => issueMatches(issue, kind)).length;
           const active = props.filter === kind;
@@ -208,33 +207,33 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
               onClick={() => props.onFilter(active ? null : kind)}
             >
               <span className="issue__head">
-                <span className="issue__label">{meta.label}</span>
+                <span className="issue__label">{t(meta.label)}</span>
                 <span className={`pill ${meta.severity === "fix" ? "pill--red" : "pill--amber"}`}>
-                  {meta.severity === "fix" ? "Fix" : "Review"}
+                  {t(meta.severity === "fix" ? "Fix" : "Review")}
                 </span>
               </span>
-              <span className="issue__value">{count}</span>
-              <span className="issue__hint">{meta.hint}</span>
+              <span className="issue__value">{t(count)}</span>
+              <span className="issue__hint">{t(meta.hint)}</span>
             </button>
           );
-        })}
+        }))}
       </div>
 
       {(dateEvidence.length > 0 || props.snapshot.duplicateGroups.length > 0) && (
-        <section className="decision-grid" aria-label="Readiness decisions">
+        <section className="decision-grid" aria-label={t("Readiness decisions")}>
           {dateEvidence.map(({ column, detection, confirmation }) => (
             <article className="decision-card" key={column.id}>
-              <span className="pill pill--amber">Date format</span>
+              <span className="pill pill--amber">{t("Date format")}</span>
               <h2>{column.header}</h2>
               <p>
-                {confirmation
+                {t(confirmation
                   ? `${confirmation.format} is explicitly confirmed for this column.`
                   : detection.state === "ambiguous"
                     ? "These values match more than one format. Choose the format used by the whole column."
-                    : "Confirm the one detected non-ISO format before these dates are used."}
+                    : "Confirm the one detected non-ISO format before these dates are used.")}
               </p>
               <div className="decision-card__actions">
-                {detection.candidates.map((format) => (
+                {t(detection.candidates.map((format) => (
                   <button
                     type="button"
                     className={`btn btn--small ${confirmation?.format === format ? "btn--primary" : "btn--ghost"}`}
@@ -242,9 +241,9 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                     onClick={() => props.onConfirmDateFormat(column.id, format)}
                     key={format}
                   >
-                    {confirmation?.format === format ? `${format} confirmed` : `Confirm ${format}`}
+                    {t(confirmation?.format === format ? `${format} confirmed` : `Confirm ${format}`)}
                   </button>
-                ))}
+                )))}
               </div>
             </article>
           ))}
@@ -252,20 +251,19 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
           {props.snapshot.duplicateGroups.map((group, index) => (
             <article className="decision-card" key={group.fingerprint}>
               <span className={`pill ${group.decision === "unresolved" ? "pill--amber" : "pill--teal"}`}>
-                Exact duplicate {index + 1}
+                {t("Exact duplicate ")}{t(index + 1)}
               </span>
-              <h2>Rows {group.sourceRows.join(", ")}</h2>
+              <h2>{t("Rows ")}{group.sourceRows.join(", ")}</h2>
               <p>
-                {group.decision === "unresolved"
+                {t(group.decision === "unresolved"
                   ? "These rows are identical. Your row count is unchanged and every row remains in use until you decide."
                   : group.decision === "keep_both"
                     ? "You chose “keep both”. Every row remains in use and your row count is unchanged."
-                    : `You chose “these are duplicates”. Row ${group.sourceRows[0]} remains in use; rows ${group.sourceRows.slice(1).join(", ")} are left out and marked as duplicates you confirmed.`}
+                    : `You chose “these are duplicates”. Row ${group.sourceRows[0]} remains in use; rows ${group.sourceRows.slice(1).join(", ")} are left out and marked as duplicates you confirmed.`)}
               </p>
               {group.decision === "unresolved" && group.productKeys.length > 0 && (
                 <p className="notice notice--info" role="status">
-                  Warning for {group.productKeys.join(", ")}: these products cannot pass the order check until you decide.
-                </p>
+                  {t("Warning for ")}{group.productKeys.join(", ")}{t(": these products cannot pass the order check until you decide.")}</p>
               )}
               <div className="decision-card__actions">
                 <button
@@ -274,16 +272,14 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                   disabled={props.checking || group.decision === "keep_both"}
                   onClick={() => props.onDuplicateDecision(group.fingerprint, "keep_both")}
                 >
-                  keep both
-                </button>
+                  {t("keep both")}</button>
                 <button
                   type="button"
                   className={`btn btn--small ${group.decision === "treat_as_duplicate" ? "btn--primary" : "btn--ghost"}`}
                   disabled={props.checking || group.decision === "treat_as_duplicate"}
                   onClick={() => props.onDuplicateDecision(group.fingerprint, "treat_as_duplicate")}
                 >
-                  these are duplicates
-                </button>
+                  {t("these are duplicates")}</button>
               </div>
             </article>
           ))}
@@ -293,29 +289,29 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       <section className="card evidence-section">
         <div className="card__head">
           <div>
-            <h2 className="card-title">Problems and tidy-ups</h2>
+            <h2 className="card-title">{t("Problems and tidy-ups")}</h2>
             <p className="card-sub">
-              {props.filter ? "Problems are filtered by the selected card." : "Problems and permitted tidy-ups from this same local snapshot."}
+              {t(props.filter ? "Problems are filtered by the selected card." : "Problems and permitted tidy-ups from this same local snapshot.")}
             </p>
           </div>
           <span className="pill pill--grey">
-            {shown.length === 0 ? "0 problems" : `Showing ${problemStart + 1}–${problemStart + visibleProblems.length} of ${shown.length}`}
+            {t(shown.length === 0 ? "0 problems" : `Showing ${problemStart + 1}–${problemStart + visibleProblems.length} of ${shown.length}`)}
           </span>
         </div>
 
         {visibleProblems.length === 0 ? (
-          <p className="empty">Nothing to correct in this selection.</p>
+          <p className="empty">{t("Nothing to correct in this selection.")}</p>
         ) : (
           <div className="table-scroll">
             <table className="dtable dtable--readiness">
               <thead>
                 <tr>
-                  <th>Row</th>
-                  <th>Product</th>
-                  <th>Issue</th>
-                  <th>Observed value</th>
-                  <th>Reason and action</th>
-                  <th>Use</th>
+                  <th>{t("Row")}</th>
+                  <th>{t("Product")}</th>
+                  <th>{t("Issue")}</th>
+                  <th>{t("Observed value")}</th>
+                  <th>{t("Reason and action")}</th>
+                  <th>{t("Use")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -329,12 +325,12 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                     ?? "Unknown";
                   return (
                     <tr key={issue.id}>
-                      <td><b>#{issue.sourceRow.toLocaleString("en")}</b></td>
+                      <td><b>#{t(issue.sourceRow.toLocaleString("en"))}</b></td>
                       <td className="num">{product}</td>
-                      <td><span className={`tag ${useState === "excluded" ? "tag--red" : "tag--amber"}`}>{humanize(issue.issueCode)}</span></td>
+                      <td><span className={`tag ${useState === "excluded" ? "tag--red" : "tag--amber"}`}>{t(humanize(issue.issueCode))}</span></td>
                       <td className="num">{issue.observedValue || "blank"}</td>
-                      <td><b>{issue.reason}</b><span className="cell-detail">{issue.correctiveAction}</span></td>
-                      <td><span className={`pill ${useState === "excluded" ? "pill--red" : "pill--amber"}`}>{useState === "excluded" ? "Left out" : "Used"}</span></td>
+                      <td><b>{t(issue.reason)}</b><span className="cell-detail">{t(issue.correctiveAction)}</span></td>
+                      <td><span className={`pill ${useState === "excluded" ? "pill--red" : "pill--amber"}`}>{t(useState === "excluded" ? "Left out" : "Used")}</span></td>
                     </tr>
                   );
                 })}
@@ -343,9 +339,9 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
           </div>
         )}
 
-        {shown.length > 0 && (
-          <div className="table-pager" aria-label="Problem pages">
-            <span>Every problem is included in the download.</span>
+        {t(shown.length > 0 && (
+          <div className="table-pager" aria-label={t("Problem pages")}>
+            <span>{t("Every problem is included in the download.")}</span>
             <div className="table-pager__actions">
               <button
                 type="button"
@@ -353,59 +349,56 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                 disabled={currentProblemPage === 0}
                 onClick={() => setProblemPage((page) => Math.max(0, page - 1))}
               >
-                ← Previous
-              </button>
-              <span>Page {currentProblemPage + 1} of {problemPageCount}</span>
+                {t("← Previous")}</button>
+              <span>{t("Page ")}{t(currentProblemPage + 1)} {t("of ")}{t(problemPageCount)}</span>
               <button
                 type="button"
                 className="btn btn--small btn--ghost"
                 disabled={currentProblemPage >= problemPageCount - 1}
                 onClick={() => setProblemPage((page) => Math.min(problemPageCount - 1, page + 1))}
               >
-                Next →
-              </button>
+                {t("Next →")}</button>
             </div>
           </div>
-        )}
+        ))}
 
         {props.snapshot.normalizations.length > 0 && (
           <div className="tidy-up-list">
             <div className="card__head">
               <div>
-                <h3 className="card-title">Every tidy-up</h3>
+                <h3 className="card-title">{t("Every tidy-up")}</h3>
                 <p className="card-sub">
-                  Each event shows its source row, exact before-and-after value, and the tidy-up.
-                </p>
+                  {t("Each event shows its source row, exact before-and-after value, and the tidy-up.")}</p>
               </div>
-              <span className="pill pill--grey">{props.snapshot.normalizations.length} events</span>
+              <span className="pill pill--grey">{t(props.snapshot.normalizations.length)} {t("events")}</span>
             </div>
             <div className="table-scroll">
               <table className="dtable dtable--tidy-ups">
                 <thead>
                   <tr>
-                    <th>Row number</th>
-                    <th>Column</th>
-                    <th>What was there before</th>
-                    <th>What it is now</th>
-                    <th>Tidy-up applied</th>
+                    <th>{t("Row number")}</th>
+                    <th>{t("Column")}</th>
+                    <th>{t("What was there before")}</th>
+                    <th>{t("What it is now")}</th>
+                    <th>{t("Tidy-up applied")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleTidyUps.map((event, index) => (
                     <tr key={`${event.sourceRow}-${event.sourceColumn}-${tidyUpStart + index}`}>
-                      <td><b>#{event.sourceRow.toLocaleString("en")}</b></td>
+                      <td><b>#{t(event.sourceRow.toLocaleString("en"))}</b></td>
                       <td>{props.dataset.columns.find((column) => column.id === event.sourceColumn)?.header ?? event.sourceColumn}</td>
                       <td><code className="trace-value">{JSON.stringify(event.originalValue)}</code></td>
                       <td><code className="trace-value">{JSON.stringify(event.resultingValue)}</code></td>
-                      <td>{TIDY_UP_LABEL[event.normalizationType]}</td>
+                      <td>{t(TIDY_UP_LABEL[event.normalizationType])}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="table-pager" aria-label="Tidy-up pages">
+            <div className="table-pager" aria-label={t("Tidy-up pages")}>
               <span>
-                Showing {tidyUpStart + 1}–{tidyUpStart + visibleTidyUps.length} of {props.snapshot.normalizations.length}
+                {t("Showing ")}{t(tidyUpStart + 1)}–{t(tidyUpStart + visibleTidyUps.length)} {t("of ")}{t(props.snapshot.normalizations.length)}
               </span>
               <div className="table-pager__actions">
                 <button
@@ -414,17 +407,15 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
                   disabled={currentTidyUpPage === 0}
                   onClick={() => setTidyUpPage((page) => Math.max(0, page - 1))}
                 >
-                  ← Previous
-                </button>
-                <span>Page {currentTidyUpPage + 1} of {tidyUpPageCount}</span>
+                  {t("← Previous")}</button>
+                <span>{t("Page ")}{t(currentTidyUpPage + 1)} {t("of ")}{t(tidyUpPageCount)}</span>
                 <button
                   type="button"
                   className="btn btn--small btn--ghost"
                   disabled={currentTidyUpPage >= tidyUpPageCount - 1}
                   onClick={() => setTidyUpPage((page) => Math.min(tidyUpPageCount - 1, page + 1))}
                 >
-                  Next →
-                </button>
+                  {t("Next →")}</button>
               </div>
             </div>
           </div>
@@ -434,32 +425,32 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       <section className="card evidence-section">
         <div className="card__head">
           <div>
-            <h2 className="card-title">{CAPABILITY_LABELS.weekly_history}</h2>
-            <p className="card-sub"><b>{CAPABILITY_LABELS.timeline_gap_evidence}</b> · Each product starts at its own first observed week and ends at its own last observed week.</p>
+            <h2 className="card-title">{t(CAPABILITY_LABELS.weekly_history)}</h2>
+            <p className="card-sub"><b>{t(CAPABILITY_LABELS.timeline_gap_evidence)}</b> {t("· Each product starts at its own first observed week and ends at its own last observed week.")}</p>
           </div>
-          <span className="pill pill--grey">{timelines.length} products</span>
+          <span className="pill pill--grey">{t(timelines.length)} {t("products")}</span>
         </div>
-        {timelines.length === 0 ? <p className="empty">No valid demand rows are available.</p> : (
+        {timelines.length === 0 ? <p className="empty">{t("No valid demand rows are available.")}</p> : (
           <div className="timeline-list">
             {timelines.map((timeline) => (
               <article className="timeline-row" key={timeline.productKey}>
                 <div className="timeline-row__summary">
                   <b className="num">{timeline.productKey}</b>
-                  <span>{timeline.summary.observedWeekCount} observed · {timeline.summary.weeksInSpan} in span · {timeline.summary.missingWeekCount} missing</span>
-                  <span>{timeline.summary.dateRangeStart} to {timeline.summary.dateRangeEnd}</span>
+                  <span>{t(timeline.summary.observedWeekCount)} {t("observed · ")}{t(timeline.summary.weeksInSpan)} {t("in span · ")}{t(timeline.summary.missingWeekCount)} {t("missing")}</span>
+                  <span>{timeline.summary.dateRangeStart} {t("to ")}{timeline.summary.dateRangeEnd}</span>
                   <span className={`pill ${timeline.recentWindow.state === "standard" ? "pill--teal" : "pill--amber"}`}>
-                    {CAPABILITY_LABELS.recent_weekly_average}: {humanize(timeline.recentWindow.state)}
+                    {t(CAPABILITY_LABELS.recent_weekly_average)}: {t(humanize(timeline.recentWindow.state))}
                   </span>
                 </div>
-                <div className="week-strip" aria-label={`${CAPABILITY_LABELS.weekly_history} for ${timeline.productKey}`}>
+                <div className="week-strip" aria-label={t(`${CAPABILITY_LABELS.weekly_history} for ${timeline.productKey}`)}>
                   {timeline.weeks.map((week) => (
                     <span
                       className={`week-chip week-chip--${week.state}`}
-                      title={`${week.weekStart}: ${WEEK_LABEL[week.state]}${week.netQuantity === null ? "" : `, net ${week.netQuantity}`}`}
+                      title={t(`${week.weekStart}: ${WEEK_LABEL[week.state]}${week.netQuantity === null ? "" : `, net ${week.netQuantity}`}`)}
                       key={week.weekStart}
                     >
                       <b>{week.weekStart.slice(5)}</b>
-                      {WEEK_LABEL[week.state]}
+                      {t(WEEK_LABEL[week.state])}
                     </span>
                   ))}
                 </div>
@@ -473,36 +464,36 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         <section className="card evidence-section">
           <div className="card__head">
             <div>
-              <h2 className="card-title">{CAPABILITY_LABELS.stock_freshness}</h2>
-              <p className="card-sub">Age is measured in calendar days at Asia/Kuala_Lumpur midnight.</p>
+              <h2 className="card-title">{t(CAPABILITY_LABELS.stock_freshness)}</h2>
+              <p className="card-sub">{t("Age is measured in calendar days at Asia/Kuala_Lumpur midnight.")}</p>
             </div>
-            <span className="pill pill--grey">As at {props.snapshot.analysisDate}</span>
+            <span className="pill pill--grey">{t("As at ")}{props.snapshot.analysisDate}</span>
           </div>
           <div className="freshness-grid">
             {props.snapshot.productStock.map((stock) => (
               <article className={`freshness-card freshness-card--${stock.freshness.state}`} key={stock.productKey}>
                 <b className="num">{stock.productKey}</b>
-                <span>Snapshot: {stock.stockAsOfDate ?? "missing"}</span>
-                <span>Age: {stock.freshness.ageDays === undefined ? "not available" : `${stock.freshness.ageDays} days`}</span>
-                <strong>{stockFreshnessLabel(stock.freshness)}</strong>
-                {!stock.usableForCover && <small>Cover unavailable: {stock.reasonCodes.map(humanize).join(" · ") || "stock evidence incomplete"}</small>}
+                <span>{t("Snapshot: ")}{stock.stockAsOfDate ?? "missing"}</span>
+                <span>{t("Age: ")}{t(stock.freshness.ageDays === undefined ? "not available" : `${stock.freshness.ageDays} days`)}</span>
+                <strong>{t(stockFreshnessLabel(stock.freshness))}</strong>
+                {t(!stock.usableForCover && <small>{t("Cover unavailable: ")}{t(stock.reasonCodes.map(humanize).join(" · ") || "stock evidence incomplete")}</small>)}
               </article>
             ))}
           </div>
         </section>
       )}
 
-      {props.forecastError && <p className="notice notice--error" role="alert">{props.forecastError}</p>}
+      {t(props.forecastError && <p className="notice notice--error" role="alert">{t(props.forecastError)}</p>)}
 
       <div className="footer-row">
         <p className="validity">
           <i aria-hidden="true">✓</i>
-          {unresolvedDuplicates > 0
+          {t(unresolvedDuplicates > 0
             ? `${unresolvedDuplicates} duplicate decision${unresolvedDuplicates === 1 ? "" : "s"} remain; affected products have Limited data.`
-            : `Calculations use ${props.snapshot.reconciliation.rowsUsed.toLocaleString("en")} valid rows only.`}
+            : `Calculations use ${props.snapshot.reconciliation.rowsUsed.toLocaleString("en")} valid rows only.`)}
         </p>
         <div className="footer-row__right">
-          <button type="button" className="btn btn--ghost" onClick={download}>↓ Download problems</button>
+          <button type="button" className="btn btn--ghost" onClick={download}>{t("↓ Download problems")}</button>
           <button
             type="button"
             className="btn btn--primary"
@@ -510,13 +501,13 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
             disabled={props.forecasting}
             aria-busy={props.forecasting}
           >
-            {props.forecasting && <span className="btn__spinner" aria-hidden="true" />}
-            {props.forecasting ? "Estimating demand locally…" : "Review demand →"}
+            {t(props.forecasting && <span className="btn__spinner" aria-hidden="true" />)}
+            {t(props.forecasting ? "Estimating demand locally…" : "Review demand →")}
           </button>
         </div>
       </div>
 
-      <button type="button" className="btn--link back-link" onClick={props.onBack}>← Back to mapping</button>
+      <button type="button" className="btn--link back-link" onClick={props.onBack}>{t("← Back to mapping")}</button>
     </>
   );
 }

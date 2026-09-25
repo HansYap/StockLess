@@ -159,3 +159,16 @@ export function confirmAllMatches(envelope: SessionEnvelope): SessionEnvelope {
   const next = updateSessionMapping(envelope, mapping);
   return mapping.identityConfirmed && !envelope.session.mapping.identityConfirmed ? recordConfirmedIdentity(next) : next;
 }
+
+/** Preview a bulk confirmation without mutating the session or silently resolving duplicate columns. */
+export function confirmCurrentMapping(mapping: MappingState): MappingState | null {
+  const matches = Object.values(mapping.mappings).filter((match) => match !== undefined);
+  if (new Set(matches.map((match) => match.sourceColumnId)).size !== matches.length) return null;
+  let next = confirmAll(mapping);
+  if (!next.identityConfirmed) {
+    const mode = next.mappings.product_code?.confirmed ? "stable"
+      : next.mappings.product_name?.confirmed && next.mappings.pack_variant?.confirmed ? "composite" : undefined;
+    if (mode) next = confirmIdentityMode(next, mode);
+  }
+  return next;
+}

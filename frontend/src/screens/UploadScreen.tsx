@@ -1,3 +1,4 @@
+import { t, useLanguage } from "../i18n/index.ts";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import {
@@ -92,6 +93,7 @@ export function UploadScreen({
   deletingSavedMatchings,
   onDeleteSavedMatchings,
 }: UploadScreenProps) {
+  useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
@@ -186,26 +188,25 @@ export function UploadScreen({
 
   return (
     <>
-      <p className="eyebrow">Start with what you already have</p>
-      <h1 className="title">Upload your existing sales file.</h1>
-      <p className="lede">{UPLOAD_REQUIREMENTS.coreDescription}</p>
+      <p className="eyebrow">{t("Start with what you already have")}</p>
+      <h1 className="title">{t("Upload your existing sales file.")}</h1>
+      <p className="lede">{t(UPLOAD_REQUIREMENTS.coreDescription)}</p>
 
       <div className="s1-grid">
         <div>
-          <h2 className="card-title">What data can StockLess use?</h2>
+          <h2 className="card-title">{t("What data can StockLess use?")}</h2>
           <p className="card-sub attribute-guide__intro">
-            Start with the three required attributes. The six optional attributes are not needed to continue.
-          </p>
+            {t("Start with the three required attributes. The six optional attributes are not needed to continue.")}</p>
 
           <AttributeSection
             id="required-data"
-            title="Required data"
+            title={t("Required data")}
             items={requiredAttributes}
             startIndex={0}
           />
           <AttributeSection
             id="optional-data"
-            title="Optional data"
+            title={t("Optional data")}
             items={optionalAttributes}
             startIndex={requiredAttributes.length}
           />
@@ -221,20 +222,20 @@ export function UploadScreen({
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
           >
-            <div className="csv-badge" aria-hidden="true"><span>CSV</span></div>
+            <div className="csv-badge" aria-hidden="true"><span>{t("CSV")}</span></div>
 
-            {busy ? (
+            {t(busy ? (
               <>
-                <h3>{progress ? PHASE_LABEL[progress.phase] : "Reading the file"}</h3>
+                <h3>{t(progress ? PHASE_LABEL[progress.phase] : "Reading the file")}</h3>
                 <p>
-                  {progress && progress.total > 0
+                  {t(progress && progress.total > 0
                     ? `${Math.min(100, Math.round((progress.processed / progress.total) * 100))}% complete${progress.phase === "complete" ? ` · still working (${finishingSeconds}s)` : ""}`
-                    : "Working in this browser…"}
+                    : "Working in this browser…")}
                 </p>
                 <div
                   className="progress"
                   role="progressbar"
-                  aria-label="Import progress"
+                  aria-label={t("Import progress")}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={progress && progress.total > 0
@@ -251,28 +252,22 @@ export function UploadScreen({
                   />
                 </div>
                 <button type="button" className="btn btn--ghost btn--small" onClick={cancelImport}>
-                  Cancel
-                </button>
+                  {t("Cancel")}</button>
               </>
             ) : (
               <>
-                <h3>Drop your CSV file here</h3>
-                <p>Use the export from your POS, marketplace or spreadsheet.</p>
+                <h3>{t("Drop your CSV file here")}</h3>
+                <p>{t("Use the export from your POS, marketplace or spreadsheet.")}</p>
                 <div className="dropzone__actions">
                   <button type="button" className="btn btn--primary" onClick={() => inputRef.current?.click()}>
-                    Choose CSV file
-                  </button>
+                    {t("Choose CSV file")}</button>
                   <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>
-                    Use sample file
-                  </button>
+                    {t("Use sample file")}</button>
                 </div>
                 <p className="dropzone__limits">
-                  {UPLOAD_REQUIREMENTS.supportedExtension} up to {megabyteLimit} MiB ·
-                  {" "}{UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en")} rows ·
-                  {" "}comma, semicolon or tab
-                </p>
+                  {t(UPLOAD_REQUIREMENTS.supportedExtension)} {t("up to ")}{t(megabyteLimit)} {t("MiB ·")}{t(" ")}{t(UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en"))} {t("rows ·")}{t(" ")}{t("comma, semicolon or tab")}</p>
               </>
-            )}
+            ))}
 
             <input
               ref={inputRef}
@@ -287,31 +282,31 @@ export function UploadScreen({
             />
           </div>
 
-          {failure && (
+          {t(failure && (
             <div className="alert alert--error" role="alert">
               <span className="alert__icon" aria-hidden="true">!</span>
               <div>
-                <p className="alert__title">{failure.message}</p>
-                <p className="alert__body">{failure.recovery}</p>
+                <p className="alert__title">{t(failure.message)}</p>
+                <p className="alert__body">{t(failure.recovery)}</p>
               </div>
             </div>
-          )}
+          ))}
 
           <div className="privacy">
             <span className="privacy__tick" aria-hidden="true">✓</span>
             <p>
-              <b>Your sales figures stay in this browser.</b>
-              <span>{PRIVACY_NOTICE.beforeUpload}</span>
+              <b>{t("Your sales figures stay in this browser.")}</b>
+              <span>{t(PRIVACY_NOTICE.beforeUpload)}</span>
             </p>
           </div>
 
-          {savedMatchingCount > 0 && (
-            <div className="saved-setup" aria-label="Saved column matching">
+          {t(savedMatchingCount > 0 && (
+            <div className="saved-setup" aria-label={t("Saved column matching")}>
               <div>
                 <b>
-                  {savedMatchingCount} saved column {savedMatchingCount === 1 ? "matching" : "matchings"}
+                  {t(savedMatchingCount)} {t("saved column ")}{t(savedMatchingCount === 1 ? "matching" : "matchings")}
                 </b>
-                <span>Only column headings and matching rules are stored for returning use.</span>
+                <span>{t("Only column headings and matching rules are stored for returning use.")}</span>
               </div>
               <button
                 type="button"
@@ -319,10 +314,10 @@ export function UploadScreen({
                 disabled={deletingSavedMatchings}
                 onClick={onDeleteSavedMatchings}
               >
-                {deletingSavedMatchings ? "Deleting…" : "Delete saved matching"}
+                {t(deletingSavedMatchings ? "Deleting…" : "Delete saved matching")}
               </button>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </>
@@ -340,38 +335,39 @@ function AttributeSection({
   readonly items: typeof UPLOAD_ATTRIBUTE_GUIDE;
   readonly startIndex: number;
 }) {
+  useLanguage();
   return (
     <section className="attribute-section" aria-labelledby={id}>
       <div className="attribute-section__head">
-        <h3 id={id}>{title}</h3>
-        <span className="pill pill--grey">{items.length} attributes</span>
+        <h3 id={id}>{t(title)}</h3>
+        <span className="pill pill--grey">{t(items.length)} {t("attributes")}</span>
       </div>
       <div className="attribute-list">
-        {items.map((item, index) => (
+        {t(items.map((item, index) => (
           <article className="attribute-card" key={item.id}>
             <div className="attribute-card__head">
-              <span className="attribute-card__number">{String(startIndex + index + 1).padStart(2, "0")}</span>
-              <h4>{item.label}</h4>
+              <span className="attribute-card__number">{t(String(startIndex + index + 1).padStart(2, "0"))}</span>
+              <h4>{t(item.label)}</h4>
               <span className={`attribute-mark attribute-mark--${item.requirement}`}>
-                {item.requirement === "required" ? "Required" : "Optional"}
+                {t(item.requirement === "required" ? "Required" : "Optional")}
               </span>
             </div>
-            <p>{item.description}</p>
-            {item.acceptedForms && (
-              <ol className="accepted-forms" aria-label="Two accepted ways to name a product">
-                {item.acceptedForms.map((form) => <li key={form}>{form}</li>)}
+            <p>{t(item.description)}</p>
+            {t(item.acceptedForms && (
+              <ol className="accepted-forms" aria-label={t("Two accepted ways to name a product")}>
+                {t(item.acceptedForms.map((form) => <li key={form}>{t(form)}</li>))}
               </ol>
-            )}
+            ))}
             <div className="attribute-card__features">
-              <b>Unlocks</b>
+              <b>{t("Unlocks")}</b>
               <ul>
-                {item.capabilities.map((capability) => (
-                  <li key={capability}>{CAPABILITY_LABELS[capability]}</li>
-                ))}
+                {t(item.capabilities.map((capability) => (
+                  <li key={capability}>{t(CAPABILITY_LABELS[capability])}</li>
+                )))}
               </ul>
             </div>
           </article>
-        ))}
+        )))}
       </div>
     </section>
   );

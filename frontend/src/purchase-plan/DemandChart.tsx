@@ -1,3 +1,4 @@
+import { t, useLanguage } from "../i18n/index.ts";
 import type { DemandRangeEvidence, WeeklyEvidence } from "../engine.ts";
 import { SourceTag } from "./SourceTag.tsx";
 
@@ -11,6 +12,7 @@ export function DemandChart({
   range: DemandRangeEvidence;
   name: string;
 }) {
+  useLanguage();
   const left = 42,
     right = 622,
     top = 22,
@@ -64,7 +66,7 @@ export function DemandChart({
         <svg
           viewBox="0 0 640 235"
           role="img"
-          aria-label={`Observed sales and four-week expected demand range for ${name}`}
+          aria-label={t(`Observed sales and four-week expected demand range for ${name}`)}
         >
           <text
             x={left}
@@ -72,9 +74,8 @@ export function DemandChart({
             fill="#66767D"
             fontSize="9"
           >
-            Units per week
-          </text>
-          {[0, 0.5, 1].map((r) => (
+            {t("Units per week")}</text>
+          {t([0, 0.5, 1].map((r) => (
             <g key={r}>
               <line
                 x1={left}
@@ -90,10 +91,10 @@ export function DemandChart({
                 fill="#66767D"
                 fontSize="10"
               >
-                {Math.round(max * r)}
+                {t(Math.round(max * r))}
               </text>
             </g>
-          ))}
+          )))}
           <path
             data-testid="forecast-band"
             d={forecastFanPath}
@@ -115,8 +116,7 @@ export function DemandChart({
             fill="#66767D"
             fontSize="9"
           >
-            Today
-          </text>
+            {t("Today")}</text>
           <path
             data-testid="forecast-upper-bound"
             d={upperFanPath}
@@ -145,7 +145,7 @@ export function DemandChart({
             strokeWidth="2.5"
             strokeDasharray="7 6"
           />
-          {segments.map((points, i) =>
+          {t(segments.map((points, i) =>
             points.length === 1 ? (
               <line
                 key={i}
@@ -168,7 +168,7 @@ export function DemandChart({
                 strokeLinejoin="round"
               />
             ),
-          )}
+          ))}
           {weeks.map((week, i) => (
             <g key={week.weekStart}>
               {week.state === "missing" && (
@@ -184,7 +184,7 @@ export function DemandChart({
                     stroke="#86949A"
                     strokeDasharray="4 4"
                   >
-                    <title>{week.weekStart}: missing week</title>
+                    <title>{week.weekStart}{t(": missing week")}</title>
                   </rect>
                   <text
                     x={x(i)}
@@ -193,8 +193,7 @@ export function DemandChart({
                     fill="#66767D"
                     fontSize="9"
                   >
-                    Missing
-                  </text>
+                    {t("Missing")}</text>
                 </g>
               )}
               {week.state === "confirmed_zero_sales" && (
@@ -207,7 +206,7 @@ export function DemandChart({
                   stroke="#fff"
                   strokeWidth="2"
                 >
-                  <title>{week.weekStart}: 0 sales recorded</title>
+                  <title>{week.weekStart}{t(": 0 sales recorded")}</title>
                 </circle>
               )}
               <text
@@ -217,14 +216,14 @@ export function DemandChart({
                 fill="#66767D"
                 fontSize="9"
               >
-                W{i + 1}
+                {t("W")}{t(i + 1)}
                 <title>
-                  {week.weekStart} to {week.weekEnd}
+                  {week.weekStart} {t("to ")}{week.weekEnd}
                 </title>
               </text>
             </g>
           ))}
-          {[1, 2, 3, 4].map((i) => (
+          {t([1, 2, 3, 4].map((i) => (
             <text
               key={i}
               x={today + (i * (right - today)) / 4}
@@ -233,37 +232,36 @@ export function DemandChart({
               fill="#66767D"
               fontSize="9"
             >
-              F{i}
+              {t("F")}{t(i)}
             </text>
-          ))}
+          )))}
         </svg>
       </div>
       <div className="chart-legend">
         <span>
           <i className="legend-line" />
-          Observed weekly demand <SourceTag source="from your file" />
+          {t("Observed weekly demand ")}<SourceTag source="from your file" />
         </span>
         <span>
           <i className="legend-forecast" />
-          Expected weekly equivalent <SourceTag source="worked out by StockLess" />
+          {t("Expected weekly equivalent ")}<SourceTag source="worked out by StockLess" />
         </span>
-        {zero && (
+        {t(zero && (
           <span>
-            <i className="legend-dot" />0 sales recorded
-          </span>
-        )}
-        {missing && <span>Dashed column = missing week</span>}
+            <i className="legend-dot" />{t("0 sales recorded")}</span>
+        ))}
+        {t(missing && <span>{t("Dashed column = missing week")}</span>)}
       </div>
-      {(negative > 0 || cancelled > 0) && (
+      {t((negative > 0 || cancelled > 0) && (
         <p className="evidence-warning">
-          <strong>Data note:</strong>{" "}
-          {negative > 0 &&
-            `${negative} ${negative === 1 ? "week had" : "weeks had"} returns greater than sales. `}
-          {cancelled > 0 &&
-            `In ${cancelled} ${cancelled === 1 ? "week" : "weeks"}, sales and returns cancelled each other out. `}
+          <strong>{t("Data note:")}</strong>{t(" ")}
+          {t(negative > 0 &&
+            `${negative} ${negative === 1 ? "week had" : "weeks had"} returns greater than sales. `)}
+          {t(cancelled > 0 &&
+            `In ${cancelled} ${cancelled === 1 ? "week" : "weeks"}, sales and returns cancelled each other out. `)}
           <SourceTag source="worked out by StockLess" />
         </p>
-      )}
+      ))}
     </>
   );
 }
