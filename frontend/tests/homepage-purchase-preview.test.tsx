@@ -3,28 +3,20 @@ import { describe, expect, it } from "vitest";
 import { HomePage } from "../src/screens/HomePage.tsx";
 
 describe("homepage purchase-plan example", () => {
-  it("uses both current sliders and updates the estimate and verdict immediately", () => {
-    const { container } = render(<HomePage />);
-    const planned = screen.getByLabelText("Planned order") as HTMLInputElement;
-    const incoming = screen.getByLabelText("Incoming stock") as HTMLInputElement;
-    const estimate = container.querySelector(".sl-preview-estimate strong");
-
-    expect(planned.type).toBe("range");
-    expect(incoming.type).toBe("range");
-    expect(planned.value).toBe("20");
-    expect(incoming.value).toBe("0");
-    expect(estimate?.textContent).toContain("20 units");
-    expect(screen.getByText("Looks balanced")).toBeTruthy();
-    expect(screen.getAllByText("input by you")).toHaveLength(2);
-
-    fireEvent.change(incoming, { target: { value: "10" } });
-    expect(estimate?.textContent).toContain("10 units");
-    expect(screen.getByText("Overstock risk")).toBeTruthy();
-
-    fireEvent.change(planned, { target: { value: "0" } });
-    expect(screen.getByText("Needs review")).toBeTruthy();
-
-    fireEvent.change(planned, { target: { value: "10" } });
-    expect(screen.getByText("Looks balanced")).toBeTruthy();
-  });
+ it("retains the design's example and updates comparisons using both controls", () => {
+  render(<HomePage />);
+  const planned = screen.getByRole('slider', {name:'Your planned order'}) as HTMLInputElement;
+  const incoming = screen.getByRole('slider', {name:'Incoming stock'}) as HTMLInputElement;
+  expect(planned.value).toBe('9'); expect(incoming.value).toBe('2');
+  expect(screen.getByText('Looks balanced')).toBeTruthy();
+  fireEvent.change(incoming,{target:{value:'30'}});
+  expect(screen.getByText('This plan is above the range.')).toBeTruthy();
+  expect(screen.getByText(/You would have 46 units, above the 7–28/)).toBeTruthy();
+  fireEvent.change(incoming,{target:{value:'0'}});
+  fireEvent.change(planned,{target:{value:'0'}});
+  expect(screen.getByText('Looks balanced')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:'Use 10'}));
+  expect(planned.value).toBe('10');
+  expect((screen.getByRole('spinbutton',{name:'Your planned order'}) as HTMLInputElement).value).toBe('10');
+ });
 });

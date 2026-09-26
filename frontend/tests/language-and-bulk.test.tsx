@@ -47,28 +47,28 @@ describe("first-visit bulk confirmation", () => {
     const duplicate = { ...original, mappings: { ...original.mappings, quantity_sold: { ...original.mappings.quantity_sold!, sourceColumnId: "date" } } };
     expect(confirmCurrentMapping(duplicate)).toBeNull();
     render(mappingPage(partial));
-    expect((screen.getByRole("button", { name: "Looks well, next step" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Confirm all and continue →" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 
 describe("persistent language choice across the frontend", () => {
   it("updates homepage copy and dynamic results while retaining slider values", () => {
     const { unmount } = render(<HomePage />);
-    fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "44" } });
+    fireEvent.change(screen.getByRole("slider", {name:"Your planned order"}), { target: { value: "44" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "zh" } });
-    expect(screen.getByText("此计划的订购量偏高。")).toBeTruthy();
-    expect(screen.getByText("订购后的 56 件库存超过需求上限 36 件。")).toBeTruthy();
-    expect((screen.getByLabelText("计划订购量") as HTMLInputElement).value).toBe("44");
+    expect(screen.getByText("此计划高于范围。")).toBeTruthy();
+    expect(screen.getByText("您将拥有 53 个单位，高于 7–28 的四周范围。部分库存可能在变旧之前仍未售出。")).toBeTruthy();
+    expect((screen.getByRole("slider", {name:"您计划的订购量"}) as HTMLInputElement).value).toBe("44");
     expect(localStorage.getItem("stockless.language")).toBe("zh");
     expect(document.documentElement.lang).toBe("zh-Hans");
     unmount();
     render(mappingPage(suggested()));
-    expect(screen.getByText("确认无误，下一步")).toBeTruthy();
+    expect(screen.getByText("全部确认并继续 →")).toBeTruthy();
     expect(screen.getAllByRole("option", { name: "Ready" }).length).toBeGreaterThan(0);
     expect(screen.getByText("Ready.csv")).toBeTruthy();
     expect(screen.queryByText(/Unique approved/)).toBeNull();
     act(() => setLanguage("ms"));
-    expect(screen.getByText("Semuanya betul, langkah seterusnya")).toBeTruthy();
+    expect(screen.getByText("Sahkan semua dan teruskan →")).toBeTruthy();
     expect(screen.getByText("Padanan lajur")).toBeTruthy();
   });
   it("translates purchase results without translating retailer product names", () => {

@@ -9,8 +9,8 @@ const frontend = fileURLToPath(new URL("../", import.meta.url));
 const output = path.join(frontend, "../output/StockLess-Homepage.html");
 const workspaceUrl = process.env.STOCKLESS_WORKSPACE_URL || "http://localhost:5173/#workspace";
 const imageSources = {};
-for (const file of ["food-waste.jpg", "retail-produce-2.jpg"]) {
-  imageSources[file] = `data:image/jpeg;base64,${(await readFile(path.join(frontend, "public/homepage", file))).toString("base64")}`;
+for (const file of ["food-waste.jpg", "retail-produce-2.jpg", "design-basket.png"]) {
+  imageSources[file] = `data:image/${file.endsWith(".png") ? "png" : "jpeg"};base64,${(await readFile(path.join(frontend, "public/homepage", file))).toString("base64")}`;
 }
 const result = await build({
   absWorkingDir: frontend,

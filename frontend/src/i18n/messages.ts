@@ -2485,3 +2485,424 @@ export const messages: Record<string, readonly [string, string]> = {
     "Data stok terlalu lama"
   ]
 };
+
+// Copy confirmed by the supplied upload and mapping HTML designs.
+Object.assign(messages, {
+  "Start with what you already have": [
+    "从您现有的资料开始",
+    "Mulakan dengan apa yang anda sudah ada"
+  ],
+  "Upload your existing sales file.": [
+    "上传您现有的销售文件。",
+    "Muat naik fail jualan sedia ada anda."
+  ],
+  "Required data is enough to get started. Optional data unlocks deeper insights.": [
+    "必填数据已足以开始。选填数据可带来更深入的洞察。",
+    "Data yang diperlukan sudah cukup untuk bermula. Data pilihan membuka pandangan yang lebih mendalam."
+  ],
+  "What do you need to get started?": [
+    "开始前需要准备什么？",
+    "Apa yang anda perlukan untuk bermula?"
+  ],
+  "Start with the three required attributes. Optional attributes unlock additional insights.": [
+    "先准备三项必填属性。选填属性可解锁更多洞察。",
+    "Mulakan dengan tiga atribut yang diperlukan. Atribut pilihan membuka pandangan tambahan."
+  ],
+  "Required data": [
+    "必填数据",
+    "Data diperlukan"
+  ],
+  "3 attributes": [
+    "3 项属性",
+    "3 atribut"
+  ],
+  "Required": [
+    "必填",
+    "Diperlukan"
+  ],
+  "Sale date": [
+    "销售日期",
+    "Tarikh jualan"
+  ],
+  "The date each sale or return was recorded.": [
+    "每笔销售或退货记录的日期。",
+    "Tarikh setiap jualan atau pemulangan direkodkan."
+  ],
+  "Product identification": [
+    "产品识别",
+    "Pengenalan produk"
+  ],
+  "Choose one of the accepted formats to keep products and pack sizes separate.": [
+    "请选择一种可接受的格式，让产品与包装规格分开记录。",
+    "Pilih salah satu format yang diterima supaya produk dan saiz pek kekal berasingan."
+  ],
+  "SKU, barcode or product code": [
+    "SKU、条形码或产品编号",
+    "SKU, kod bar atau kod produk"
+  ],
+  "Product name + pack size": [
+    "产品名称 + 包装规格",
+    "Nama produk + saiz pek"
+  ],
+  "Quantity sold": [
+    "销售数量",
+    "Kuantiti dijual"
+  ],
+  "The quantity sold or returned in each record.": [
+    "每笔记录中售出或退回的数量。",
+    "Kuantiti yang dijual atau dipulangkan dalam setiap rekod."
+  ],
+  "Drop your CSV file here": [
+    "将 CSV 文件拖到这里",
+    "Lepaskan fail CSV anda di sini"
+  ],
+  "Use the export from your POS, marketplace or spreadsheet.": [
+    "使用您的收银系统、电商平台或表格导出的文件。",
+    "Guna eksport daripada POS, pasaran dalam talian atau hamparan anda."
+  ],
+  "Choose CSV file": [
+    "选择 CSV 文件",
+    "Pilih fail CSV"
+  ],
+  "Use sample file": [
+    "使用示例文件",
+    "Guna fail contoh"
+  ],
+  ".CSV · Up to 10 MiB · 100,000 rows · Comma, semicolon or tab separated": [
+    ".CSV · 最大 10 MiB · 100,000 行 · 逗号、分号或制表符分隔",
+    ".CSV · Sehingga 10 MiB · 100,000 baris · Dipisah koma, koma bertitik atau tab"
+  ],
+  "Your sales data": [
+    "您的销售数据",
+    "Data jualan anda"
+  ],
+  "Demand insights": [
+    "需求洞察",
+    "Pandangan permintaan"
+  ],
+  "Smarter restocking": [
+    "更聪明的补货",
+    "Belian lebih bijak"
+  ],
+  "Less waste": [
+    "减少浪费",
+    "Kurang pembaziran"
+  ],
+  "Your data stays on your device.": [
+    "您的数据保留在您的设备上。",
+    "Data anda kekal pada peranti anda."
+  ],
+  "Your CSV is processed directly in this browser. Your sales rows and product identifiers are not uploaded to an AI or API service.": [
+    "您的 CSV 文件直接在此浏览器中处理。您的销售记录和产品标识不会上传到任何 AI 或 API 服务。",
+    "Fail CSV anda diproses terus dalam pelayar ini. Baris jualan dan pengenalan produk anda tidak dimuat naik ke mana-mana perkhidmatan AI atau API."
+  ],
+  "Back to the homepage": [
+    "返回首页",
+    "Kembali ke laman utama"
+  ],
+  "Continue to column matching": [
+    "继续进行列匹配",
+    "Teruskan ke padanan lajur"
+  ],
+  "Homepage": [
+    "首页",
+    "Laman utama"
+  ],
+  "Language": [
+    "语言",
+    "Bahasa"
+  ],
+  "Upload": [
+    "上传",
+    "Muat naik"
+  ],
+  "Map columns": [
+    "匹配列",
+    "Padan lajur"
+  ],
+  "Check readiness": [
+    "检查就绪",
+    "Semak kesediaan"
+  ],
+  "Plan purchases": [
+    "规划采购",
+    "Rancang belian"
+  ],
+  "Sales data": [
+    "销售数据",
+    "Data jualan"
+  ],
+  "Sample data loaded — review the mappings before continuing.": [
+    "示例数据已载入 — 请在继续前检查匹配结果。",
+    "Data contoh dimuatkan — semak padanan sebelum meneruskan."
+  ],
+  "Make sure StockLess understands your data": [
+    "确保 StockLess 正确理解您的数据",
+    "Pastikan StockLess memahami data anda"
+  ],
+  "We found your data. Let's make sure it's right.": [
+    "我们找到了您的数据。让我们确认无误。",
+    "Kami jumpa data anda. Mari pastikan ia betul."
+  ],
+  "Review the suggested column matches before continuing. Your original file won't be changed.": [
+    "请在继续前检查建议的列匹配。您的原始文件不会被更改。",
+    "Semak padanan lajur yang dicadangkan sebelum meneruskan. Fail asal anda tidak akan diubah."
+  ],
+  "Read successfully": [
+    "读取成功",
+    "Berjaya dibaca"
+  ],
+  "Column mapping": [
+    "列匹配",
+    "Padanan lajur"
+  ],
+  "Nothing is applied until you confirm it. Sale date, quantity sold and how your products are named or coded are required.": [
+    "在您确认之前不会应用任何内容。销售日期、销售数量以及产品的命名或编码方式为必填。",
+    "Tiada apa-apa digunakan sehingga anda sahkan. Tarikh jualan, kuantiti dijual dan cara produk anda dinamakan atau dikodkan adalah diperlukan."
+  ],
+  "of": [
+    "/",
+    "daripada"
+  ],
+  "confirmed": [
+    "已确认",
+    "disahkan"
+  ],
+  "All matches look right?": [
+    "所有匹配看起来都正确吗？",
+    "Semua padanan nampak betul?"
+  ],
+  "Confirm all selected columns and continue in one step.": [
+    "一次确认所有选定的列并继续。",
+    "Sahkan semua lajur terpilih dan teruskan dalam satu langkah."
+  ],
+  "Products will be kept separate using: One code column.": [
+    "产品将以「单一编码列」方式区分。",
+    "Produk akan diasingkan menggunakan: Satu lajur kod."
+  ],
+  "Confirm all and continue →": [
+    "全部确认并继续 →",
+    "Sahkan semua dan teruskan →"
+  ],
+  "StockLess field": [
+    "StockLess 字段",
+    "Medan StockLess"
+  ],
+  "Your column": [
+    "您的列",
+    "Lajur anda"
+  ],
+  "Preview": [
+    "预览",
+    "Pratonton"
+  ],
+  "Status": [
+    "状态",
+    "Status"
+  ],
+  "Please confirm": [
+    "请确认",
+    "Sila sahkan"
+  ],
+  "Confirm": [
+    "确认",
+    "Sahkan"
+  ],
+  "✓ Confirmed": [
+    "✓ 已确认",
+    "✓ Disahkan"
+  ],
+  "REQUIRED": [
+    "必填",
+    "DIPERLUKAN"
+  ],
+  "How should StockLess identify your products?": [
+    "StockLess 应如何识别您的产品？",
+    "Bagaimana StockLess patut mengenal pasti produk anda?"
+  ],
+  "Choose how each product should be identified in your sales data.": [
+    "请选择在销售数据中识别每件产品的方式。",
+    "Pilih cara setiap produk dikenal pasti dalam data jualan anda."
+  ],
+  "One code column": [
+    "单一编码列",
+    "Satu lajur kod"
+  ],
+  "Use a SKU, barcode, or product code to identify each product.": [
+    "使用 SKU、条形码或产品编号来识别每件产品。",
+    "Guna SKU, kod bar atau kod produk untuk mengenal pasti setiap produk."
+  ],
+  "Use the product name together with its pack size.": [
+    "使用产品名称连同其包装规格。",
+    "Guna nama produk bersama saiz peknya."
+  ],
+  "✓ Selected": [
+    "✓ 已选择",
+    "✓ Dipilih"
+  ],
+  "Use this option": [
+    "使用此选项",
+    "Guna pilihan ini"
+  ],
+  "Check your data": [
+    "检查您的数据",
+    "Semak data anda"
+  ],
+  "Review your columns and make sure StockLess has the information it needs.": [
+    "检查您的列，确保 StockLess 获得所需的信息。",
+    "Semak lajur anda dan pastikan StockLess mempunyai maklumat yang diperlukan."
+  ],
+  "Read your column names": [
+    "阅读您的列名称",
+    "Baca nama lajur anda"
+  ],
+  "Match each column to a StockLess field": [
+    "将每一列匹配到对应的 StockLess 字段",
+    "Padankan setiap lajur dengan medan StockLess"
+  ],
+  "Review the data preview": [
+    "查看数据预览",
+    "Semak pratonton data"
+  ],
+  "Confirm your column mappings": [
+    "确认您的列匹配",
+    "Sahkan padanan lajur anda"
+  ],
+  "Identify your products": [
+    "识别您的产品",
+    "Kenal pasti produk anda"
+  ],
+  "Choose how StockLess should tell your products apart.": [
+    "选择 StockLess 区分产品的方式。",
+    "Pilih cara StockLess membezakan produk anda."
+  ],
+  "Product name together with pack size": [
+    "产品名称连同包装规格",
+    "Nama produk bersama saiz pek"
+  ],
+  "Your file is processed directly in your browser. Your sales data and product information are not uploaded to an AI or API service.": [
+    "您的文件直接在您的浏览器中处理。您的销售数据和产品信息不会上传到任何 AI 或 API 服务。",
+    "Fail anda diproses terus dalam pelayar anda. Data jualan dan maklumat produk anda tidak dimuat naik ke mana-mana perkhidmatan AI atau API."
+  ],
+  "← Choose another file": [
+    "← 选择其他文件",
+    "← Pilih fail lain"
+  ],
+  "Still needed:": [
+    "仍需要：",
+    "Masih diperlukan:"
+  ],
+  "Check my data →": [
+    "检查我的数据 →",
+    "Semak data saya →"
+  ],
+  "Retailer file": [
+    "零售商文件",
+    "Fail peruncit"
+  ],
+  "Clear session": [
+    "清除会话",
+    "Kosongkan sesi"
+  ],
+  "When did each sale or return happen?": [
+    "每笔销售或退货发生在什么时候？",
+    "Bilakah setiap jualan atau pemulangan berlaku?"
+  ],
+  "Product code, SKU or barcode": [
+    "产品编号、SKU 或条形码",
+    "Kod produk, SKU atau kod bar"
+  ],
+  "A code that is unique to each product, so two products are never mixed up.": [
+    "每件产品唯一的编码，避免两件产品被混为一谈。",
+    "Kod yang unik untuk setiap produk, supaya dua produk tidak bercampur."
+  ],
+  "Product name": [
+    "产品名称",
+    "Nama produk"
+  ],
+  "The name you use for the product.": [
+    "您对该产品使用的名称。",
+    "Nama yang anda guna untuk produk itu."
+  ],
+  "Pack size": [
+    "包装规格",
+    "Saiz pek"
+  ],
+  "The pack size, so a 10-pack is never counted as the same thing as a 20-pack.": [
+    "包装规格，避免 10 包被当成 20 包计算。",
+    "Saiz pek, supaya pek 10 tidak dikira sama dengan pek 20."
+  ],
+  "How many units were sold or returned.": [
+    "售出或退回了多少单位。",
+    "Berapa unit dijual atau dipulangkan."
+  ],
+  "Stock on hand": [
+    "现有库存",
+    "Stok di tangan"
+  ],
+  "How much you have on the shelf right now.": [
+    "您货架上现在有多少。",
+    "Berapa banyak yang ada di rak anda sekarang."
+  ],
+  "Stock count date": [
+    "库存盘点日期",
+    "Tarikh kiraan stok"
+  ],
+  "When was your current stock counted?": [
+    "您的现有库存是什么时候盘点的？",
+    "Bilakah stok semasa anda dikira?"
+  ],
+  "Add more, see more": [
+    "补充更多，看到更多",
+    "Tambah lagi, lihat lagi"
+  ],
+  "Confirm these columns to unlock:": [
+    "确认这些列即可解锁：",
+    "Sahkan lajur ini untuk membuka:"
+  ],
+  "Stock freshness, weeks of cover, purchase audit": [
+    "库存新鲜度、可覆盖周数、采购审核",
+    "Kesegaran stok, minggu liputan, audit belian"
+  ],
+  "Expiry-aware notes": [
+    "到期提醒",
+    "Nota sedar luput"
+  ],
+  "Expiry date": [
+    "到期日期",
+    "Tarikh luput"
+  ],
+  "Stock on hand + stock count date": [
+    "现有库存 + 库存盘点日期",
+    "Stok di tangan + tarikh kiraan stok"
+  ],
+  "What your file turns into": [
+    "您的文件如何转化为结果",
+    "Hasil daripada fail anda"
+  ]
+});
+
+Object.assign(messages, {
+  "An order you have already planned but not yet placed.": ["计划已拟定但尚未下单的订单。", "Pesanan yang telah anda rancang tetapi belum dibuat."],
+  "Stock you have ordered that has not arrived yet.": ["已下单但尚未到货的库存。", "Stok yang telah dipesan tetapi belum tiba."],
+  "When a batch of the product expires.": ["这一批产品何时到期。", "Bila kelompok produk ini tamat tempoh."]
+});
+
+Object.assign(messages, {
+  "Plan your next order with confidence.": ["让下一次订购更有把握。", "Rancang pesanan seterusnya dengan yakin."],
+  "From sales data to your next order": ["从销售数据，到下一次订购", "Daripada data jualan kepada pesanan seterusnya"],
+  "Select a product below, then follow these three steps.": ["选择下方商品，再按这三个步骤规划采购。", "Pilih produk di bawah, kemudian ikuti tiga langkah ini."],
+  "Review demand": ["查看需求", "Semak permintaan"],
+  "See past sales and the four-week range.": ["查看过往销售与未来四周的需求区间。", "Lihat jualan lalu dan julat permintaan empat minggu."],
+  "Enter your quantities": ["输入数量", "Masukkan kuantiti anda"],
+  "Add your planned order and incoming stock.": ["填写计划订购量和在途库存。", "Tambah pesanan dirancang dan stok dalam perjalanan."],
+  "Check before ordering": ["下单前检查", "Semak sebelum membuat pesanan"],
+  "Compare the plan with expected demand.": ["比较采购计划与预期需求。", "Bandingkan rancangan dengan permintaan dijangka."]
+});
+
+Object.assign(messages, {
+  "In {0} week, sales and returns cancelled each other out.": ["其中 {0} 周的销售和退货相互抵消。", "Dalam {0} minggu, jualan dan pulangan mengimbangi satu sama lain."],
+  "In {0} weeks, sales and returns cancelled each other out.": ["其中 {0} 周的销售和退货相互抵消。", "Dalam {0} minggu, jualan dan pulangan mengimbangi satu sama lain."],
+  "{0} week had returns greater than sales.": ["有 {0} 周的退货量超过销售量。", "{0} minggu mempunyai pulangan melebihi jualan."],
+  "{0} weeks had returns greater than sales.": ["有 {0} 周的退货量超过销售量。", "{0} minggu mempunyai pulangan melebihi jualan."]
+});

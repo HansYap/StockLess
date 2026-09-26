@@ -12,8 +12,8 @@ import {
   type MappingProposalResult,
   type MappingState,
   type ParsedDataset,
-  type CapabilityResult,
 } from "../engine.ts";
+import { FieldHelp } from "../components/FieldHelp.tsx";
 import { confirmCurrentMapping } from "../storage/saved-matching.ts";
 
 interface MappingScreenProps {
@@ -41,7 +41,26 @@ export function MappingScreen(props: MappingScreenProps) {
     [],
   );
 
-  const capabilities = useMemo(() => partitionCapabilities(evaluateCapabilities(mapping)), [mapping]);
+  const missingInformation = useMemo(() => {
+    const grouped = new Map<string, { fields: string[]; analyses: string[] }>();
+    const byField = new Map<string, Set<string>>();
+    for (const item of partitionCapabilities(evaluateCapabilities(mapping)).needsMoreInformation) {
+      for (const reason of item.reasons) {
+        if (!reason.field) continue;
+        const labels = byField.get(reason.field) ?? new Set<string>();
+        labels.add(item.label);
+        byField.set(reason.field, labels);
+      }
+    }
+    for (const [field, labels] of byField) {
+      const analyses = [...labels].sort();
+      const key = analyses.join('|');
+      const entry = grouped.get(key) ?? { fields: [], analyses };
+      entry.fields.push(FIELD_REGISTRY[field as CanonicalField].label);
+      grouped.set(key, entry);
+    }
+    return [...grouped.values()];
+  }, [mapping]);
   const conflicts = useMemo(() => detectIdentityConflicts(dataset, mapping), [dataset, mapping]);
   const blockers = useMemo(() => getReadinessBlockers(mapping), [mapping]);
 
@@ -60,12 +79,11 @@ export function MappingScreen(props: MappingScreenProps) {
 
   return (
     <>
-      <p className="eyebrow">{t("Confirm what your columns mean")}</p>
+      <p className="eyebrow">{t("Make sure StockLess understands your data")}</p>
       <h1 className="title">
-        {t("We found likely matches.")}<br />
-        {t("Check them before continuing.")}</h1>
+        {t("We found your data. Let's make sure it's right.")}</h1>
       <p className="lede">
-        {t("Your original file is not changed. Mapping only tells StockLess how to interpret it during this session.")}</p>
+        {t("Review the suggested column matches before continuing. Your original file won't be changed.")}</p>
 
       <div className="filebar">
         <div className="filebar__left">
@@ -108,7 +126,7 @@ export function MappingScreen(props: MappingScreenProps) {
             <button type="button" className="btn btn--primary"
               disabled={bulkBlockers.length > 0 || props.checking}
               aria-busy={props.checking} onClick={props.onConfirmAllAndContinue}>
-              {t(props.checking ? "Checking locally…" : "Looks well, next step")}
+              {t(props.checking ? "Checking locally…" : "Confirm all and continue →")}
             </button>
           </div>
           <div className="table-scroll">
@@ -131,9 +149,9 @@ export function MappingScreen(props: MappingScreenProps) {
                   return (
                     <tr key={field}>
                       <td>
-                        <b className="dtable__label">{t(definition.label)}</b>
-                        {t(required && <span className="req">{t("Required")}</span>)}
-                        <div className="dtable__hint">{t(definition.description)}</div>
+                        <div className="field-head"><b className="dtable__label">{t(definition.label)}</b>
+                        <FieldHelp description={t(definition.description)} />
+                        {required && <span className="req">{t("Required")}</span>}</div>
                       </td>
                       <td>
                         <select
@@ -154,14 +172,14 @@ export function MappingScreen(props: MappingScreenProps) {
                         </select>
                       </td>
                       <td className="num">
-                        {column ? column.previewValues.slice(0, 5).join(" · ") || "—" : "—"}
+                        {column ? formatPreview(column.previewValues) : "—"}
                       </td>
                       <td>
                         {t(current?.confirmed ? (
-                          <span className="pill pill--teal">{t("Confirmed")}</span>
+                          <span className="pill pill--confirmed">{t("✓ Confirmed")}</span>
                         ) : current ? (
                           <div className="mapping-status">
-                            <span className="pill pill--amber">{t("Suggested — please check")}</span>
+                            <span className="pill pill--amber">{t("Please confirm")}</span>
                             <button
                               type="button"
                               className="btn btn--small btn--ghost"
@@ -182,31 +200,21 @@ export function MappingScreen(props: MappingScreenProps) {
           </div>
 
           <div className="identity">
-            <h3 className="identity__title">{t("How should products be kept separate?")}</h3>
+            <h3 className="identity__title">{t("How should StockLess identify your products?")}</h3>
             <p className="identity__lede">
-              {t("Pick one path and confirm it. This choice is recorded as evidence for the rest of the session.")}</p>
+              {t("Choose how each product should be identified in your sales data.")}</p>
             <div className="identity__paths">
               {t(CORE_COLUMN_PATHS.map((path) => {
                 const ready = identityPathReady(path.id);
                 const chosen = mapping.identityMode === path.id && mapping.identityConfirmed;
                 return (
-                  <div key={path.id} className={`identity__path${chosen ? " identity__path--on" : ""}`}>
-                    <div className="identity__path-name">{t(path.label)}</div>
-                    <div className="identity__path-fields">
-                      {t(path.requiredFields
-                        .filter((f) => f !== "transaction_date" && f !== "quantity_sold")
-                        .map((f) => t(FIELD_REGISTRY[f].label))
-                        .join(" + "))}
-                    </div>
-                    <button
-                      type="button"
-                      className={`btn btn--small ${chosen ? "btn--ghost" : "btn--primary"}`}
-                      disabled={!ready || chosen || props.checking}
-                      onClick={() => props.onConfirmIdentity(path.id)}
-                    >
-                      {t(chosen ? "Confirmed" : ready ? "Use this path" : "Confirm its columns first")}
-                    </button>
-                  </div>
+                  <button key={path.id} type="button" className={`identity__path${chosen ? " identity__path--on" : ""}`}
+                    aria-pressed={chosen} disabled={!ready || props.checking}
+                    onClick={() => props.onConfirmIdentity(path.id)}>
+                    <span className="identity__path-name"><span className="identity__path-number" aria-hidden="true">{path.id === 'stable' ? 1 : 2}</span>{t(path.label)}</span>
+                    <span className="identity__path-fields">{t(path.detail)}</span>
+                    <span className="identity__path-state">{t(chosen ? "✓ Selected" : ready ? "Use this option" : "Confirm its columns first")}</span>
+                  </button>
                 );
               }))}
             </div>
@@ -240,14 +248,19 @@ export function MappingScreen(props: MappingScreenProps) {
           {t(props.error && <p className="notice notice--error" role="alert">{t(props.error)}</p>)}
         </section>
 
-        <aside className="panel-dark">
-          <h2>{t("This file unlocks")}</h2>
-          <p className="panel-dark__lede">
-            {t("Capabilities follow the columns you confirmed, not the column names themselves.")}</p>
-
-          <CapabilityGroup title={t("You can do this now")} tone="on" items={capabilities.availableNow} />
-          <CapabilityGroup title={t("Needs more information")} tone="off" items={capabilities.needsMoreInformation} />
-          <CapabilityGroup title={t("Locked until iteration 3")} tone="locked" items={capabilities.locked} />
+        <aside className="panel-sage">
+          <h2 className="panel-sage__title"><span aria-hidden="true">🌱</span>{t("Check your data")}</h2>
+          <p className="panel-sage__lede">{t("Review your columns and make sure StockLess has the information it needs.")}</p>
+          <ol className="sage-steps">{["Read your column names", "Match each column to a StockLess field", "Review the data preview", "Confirm your column mappings"].map(label => <li key={label}>{t(label)}</li>)}</ol>
+          <h3 className="panel-sage__subtitle">{t("Identify your products")}</h3>
+          <p className="panel-sage__lede">{t("Choose how StockLess should tell your products apart.")}</p>
+          <ol className="sage-formats">{CORE_COLUMN_PATHS.map(path => <li key={path.id}><b>{t(path.label)}</b><span>{t(path.hint)}</span></li>)}</ol>
+          {missingInformation.length > 0 && <div className="unlocks">
+            <h3 className="unlocks__title">{t("Add more, see more")}</h3>
+            <p className="unlocks__lede">{t("Confirm these columns to unlock:")}</p>
+            <ul className="unlocks__list">{missingInformation.map(group => <li key={group.fields.join('|')}><b>{group.fields.map(t).join(' + ')}</b><span>{group.analyses.map(t).join(', ')}</span></li>)}</ul>
+          </div>}
+          <p className="panel-sage__privacy"><span className="panel-sage__lock" aria-hidden="true">🔒</span><span><b>{t("Your data stays on your device.")}</b>{t("Your file is processed directly in your browser. Your sales data and product information are not uploaded to an AI or API service.")}</span></p>
         </aside>
       </div>
 
@@ -266,7 +279,7 @@ export function MappingScreen(props: MappingScreenProps) {
             aria-busy={props.checking}
           >
             {t(props.checking && <span className="btn__spinner" aria-hidden="true" />)}
-            {t(props.checking ? "Checking locally…" : "Run readiness check →")}
+            {t(props.checking ? "Checking locally…" : "Check my data →")}
           </button>
         </div>
       </div>
@@ -274,35 +287,13 @@ export function MappingScreen(props: MappingScreenProps) {
   );
 }
 
-/** Renders one capability section with its engine-supplied reasons. */
-function CapabilityGroup({
-  title,
-  tone,
-  items,
-}: {
-  readonly title: string;
-  readonly tone: "on" | "off" | "locked";
-  readonly items: readonly CapabilityResult[];
-}) {
-  useLanguage();
-  if (items.length === 0) return null;
-  return (
-    <>
-      <p className="panel-dark__eyebrow">{t(title)}</p>
-      {t(items.map((item) => (
-        <div className="unlock" key={item.capability}>
-          <span className={`unlock__tick unlock__tick--${tone}`} aria-hidden="true">
-            {t(tone === "on" ? "✓" : tone === "locked" ? "‧" : "?")}
-          </span>
-          <span>
-            {t(item.label)}
-            {t(item.state === "limited" && <em className="unlock__state"> {t("· Limited data")}</em>)}
-            {t(item.reasons.length > 0 && tone !== "on" && (
-              <span className="unlock__reason">{t(item.reasons[0]?.message)}</span>
-            ))}
-          </span>
-        </div>
-      )))}
-    </>
-  );
+/** Preview only: this does not normalise or modify source records. */
+function formatPreview(values: readonly string[]): string {
+ const unique = [...new Set(values.map(value => value.trim()).filter(Boolean))].slice(0, 3);
+ const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+ return unique.map(value => {
+   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+   if (!match || Number(match[2]) < 1 || Number(match[2]) > 12) return value;
+   return `${Number(match[3])} ${months[Number(match[2]) - 1]} ${match[1]}`;
+ }).join(' · ') || '—';
 }

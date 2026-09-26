@@ -9,3 +9,13 @@ html[lang=zh-Hans] .sl-home h1,html[lang=zh-Hans] .sl-home h2,html[lang=zh-Hans]
 html[lang=ms] .sl-home h1{font-size:clamp(36px,5.8vw,76px);letter-spacing:-.045em}
 @media(max-width:900px){.topbar{height:auto;min-height:76px;padding:16px 20px;flex-wrap:wrap}.topbar .session-status{width:100%}.sl-nav-actions{gap:8px}.mapping-bulk{align-items:flex-start;flex-direction:column}}
 @media(max-width:600px){.sl-nav{flex-wrap:wrap;gap:12px}.sl-nav-actions{flex:1;justify-content:flex-end}.sl-nav-actions .sl-button--small{padding:10px 12px;font-size:12px}.language-switcher{padding:4px}.language-switcher svg{width:23px}.language-switcher select{max-width:102px}.mapping-bulk .btn{width:100%}.mapping-bulk{padding:18px}}
+
+/* One shared focus ring; suppress the native macOS inner frame. */
+.language-switcher select{
+ -webkit-appearance:none;appearance:none;outline:none!important;box-shadow:none!important;border:0;border-radius:0;
+ padding-right:22px;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%232f6c49' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+ background-repeat:no-repeat;background-position:right center;
+}
+.language-switcher select:focus,.language-switcher select:focus-visible{outline:none!important;box-shadow:none!important}
+.language-switcher:focus-within{outline:2px solid #167d74;outline-offset:3px}

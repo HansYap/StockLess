@@ -264,33 +264,6 @@ export function ProductPurchaseDialog({
       </header>
       <div className="dialog-layout">
         <div className="dialog-column">
-          <section className="estimate-hero">
-            <p className="eyebrow">{t("Estimated restock")}</p>
-            {t(restock?.state === "available" && !cannotJudge ? (
-              <>
-                <div className="estimate-number">
-                  {t(numberText(restock.quantity.value))}
-                  <span>{t("units")}</span>
-                </div>
-                <p className="estimate-copy">
-                  {t("A practical starting quantity for this product's next four weeks.")}</p>
-                <div className="estimate-method">
-                  {t("Midpoint of demand range − stock on hand − incoming stock")}<br />
-                  <SourceTag source={restock.quantity.source} />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="estimate-number estimate-unavailable">
-                  {t("No reliable estimate")}</div>
-                {t(!cannotJudge && (
-                  <p className="estimate-copy">
-                    {t(restock?.state === "unavailable" ? restock.reason : reason)}
-                  </p>
-                ))}
-              </>
-            ))}
-          </section>
           <section className="panel">
             <div className="evidence-top">
               <div>
@@ -386,7 +359,35 @@ export function ProductPurchaseDialog({
           </section>
         </div>
         <aside className="dialog-column">
-          <section className="panel">
+          <section className="estimate-hero">
+            <p className="eyebrow">{t("Estimated restock")}</p>
+            {t(restock?.state === "available" && !cannotJudge ? (
+              <>
+                <div className="estimate-number">
+                  {t(numberText(restock.quantity.value))}
+                  <span>{t("units")}</span>
+                </div>
+                <p className="estimate-copy">
+                  {t("A practical starting quantity for this product's next four weeks.")}</p>
+                <div className="estimate-method">
+                  {t("Midpoint of demand range − stock on hand − incoming stock")}<br />
+                  <SourceTag source={restock.quantity.source} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="estimate-number estimate-unavailable">
+                  {t("No reliable estimate")}</div>
+                {t(!cannotJudge && (
+                  <p className="estimate-copy">
+                    {t(restock?.state === "unavailable" ? restock.reason : reason)}
+                  </p>
+                ))}
+              </>
+            ))}
+          </section>
+
+          <section className="panel order-panel">
             <p className="eyebrow">{t("Your purchase")}</p>
             <h3 className="panel-title">{t("What are you planning to order?")}</h3>
             <p className="panel-sub">

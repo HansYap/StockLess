@@ -7,7 +7,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   transaction_date: {
     field: "transaction_date",
     label: "Sale date",
-    description: "The calendar date on which the sale or return was recorded.",
+    description: "When did each sale or return happen?",
     status: "core",
     valueKind: "date",
     grain: "transaction",
@@ -18,7 +18,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   product_code: {
     field: "product_code",
     label: "Product code, SKU or barcode",
-    description: "A stable identifier that keeps each product separate.",
+    description: "A code that is unique to each product, so two products are never mixed up.",
     status: "conditional_core",
     valueKind: "text",
     grain: "product",
@@ -29,7 +29,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   product_name: {
     field: "product_name",
     label: "Product name",
-    description: "A readable product label and one part of composite identity.",
+    description: "The name you use for the product.",
     status: "conditional_core",
     valueKind: "text",
     grain: "product",
@@ -40,7 +40,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   pack_variant: {
     field: "pack_variant",
     label: "Pack size",
-    description: "The pack size or unit needed to prevent unlike products being merged.",
+    description: "The pack size, so a 10-pack is never counted as the same thing as a 20-pack.",
     status: "conditional_core",
     valueKind: "text",
     grain: "product",
@@ -51,7 +51,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   quantity_sold: {
     field: "quantity_sold",
     label: "Quantity sold",
-    description: "The sale or return quantity recorded for the transaction.",
+    description: "How many units were sold or returned.",
     status: "core",
     valueKind: "decimal",
     grain: "transaction",
@@ -62,7 +62,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   current_stock: {
     field: "current_stock",
     label: "Stock on hand",
-    description: "The current product-level stock snapshot; repeated values are not summed.",
+    description: "How much you have on the shelf right now.",
     status: "feature_dependent",
     valueKind: "non_negative_decimal",
     grain: "product",
@@ -73,7 +73,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   stock_as_of_date: {
     field: "stock_as_of_date",
     label: "Stock count date",
-    description: "The date on which the current-stock snapshot was measured.",
+    description: "When was your current stock counted?",
     status: "feature_dependent",
     valueKind: "date",
     grain: "product",
@@ -84,7 +84,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   planned_order_quantity: {
     field: "planned_order_quantity",
     label: "Planned orders",
-    description: "A planned purchase quantity for Purchase audit.",
+    description: "An order you have already planned but not yet placed.",
     status: "feature_dependent",
     valueKind: "non_negative_integer",
     grain: "order",
@@ -95,7 +95,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   incoming_stock_quantity: {
     field: "incoming_stock_quantity",
     label: "Incoming stock",
-    description: "Stock already expected to arrive.",
+    description: "Stock you have ordered that has not arrived yet.",
     status: "feature_dependent",
     valueKind: "non_negative_integer",
     grain: "inbound",
@@ -117,7 +117,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   expiry_date: {
     field: "expiry_date",
     label: "Expiry date",
-    description: "The expiry date of a product lot.",
+    description: "When a batch of the product expires.",
     status: "feature_dependent",
     valueKind: "date",
     grain: "lot",
@@ -177,11 +177,15 @@ export const CORE_COLUMN_PATHS = Object.freeze([
   {
     id: "stable" as const,
     label: "One code column",
+    hint: "SKU, barcode or product code",
+    detail: "Use a SKU, barcode, or product code to identify each product.",
     requiredFields: ["transaction_date", "product_code", "quantity_sold"] as const,
   },
   {
     id: "composite" as const,
-    label: "Product name together with pack size",
+    label: "Product name + pack size",
+    hint: "Product name + pack size",
+    detail: "Use the product name together with its pack size.",
     requiredFields: ["transaction_date", "product_name", "pack_variant", "quantity_sold"] as const,
   },
 ]);
@@ -192,7 +196,7 @@ export const UPLOAD_REQUIREMENTS = Object.freeze({
   supportedExtension: ".csv",
   supportedDelimiters: [",", ";", "\t"] as const,
   coreDescription:
-    "Required data is enough to continue. Optional data unlocks more features when you have it.",
+    "Required data is enough to get started. Optional data unlocks deeper insights.",
 });
 
 export const PRIVACY_NOTICE = Object.freeze({

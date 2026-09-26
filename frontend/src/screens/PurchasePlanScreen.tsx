@@ -193,7 +193,7 @@ export function PurchasePlanScreen({
             )}
           </p>
           <h1 className="page-title">
-            {t("Plan what to restock, then check it before you order.")}</h1>
+            {t("Plan your next order with confidence.")}</h1>
           <p className="lede">
             {t("Start with StockLess's estimated quantity, enter what you intend to buy, and see whether the plan fits expected demand.")}</p>
         </div>
@@ -205,22 +205,24 @@ export function PurchasePlanScreen({
         <span>
           <strong>{t("Your figures stay local.")}</strong> {t("Typed order quantities last for this visit only and are not sent to a supplier.")}</span>
       </p>
-      <section className="summary" aria-label={t("Purchase planning instructions")}>
-        <article className="summary-main">
-          <p className="eyebrow">{t("Instructions")}</p>
-          <h2>{t("Select a product to plan its next order.")}</h2>
-          <p>
-            {t("Click any row below to review its forecast, enter incoming stock and planned order, and receive a purchase check.")}</p>
-        </article>
+      <section className="planning-guide" aria-label={t("Purchase planning instructions")}>
+        <div className="planning-guide__intro">
+          <span className="planning-guide__icon" aria-hidden="true">🌳</span>
+          <div>
+            <h2>{t("From sales data to your next order")}</h2>
+            <p>{t("Select a product below, then follow these three steps.")}</p>
+          </div>
+        </div>
+        <ol className="planning-steps">
+          {[
+            ["Review demand", "See past sales and the four-week range."],
+            ["Enter your quantities", "Add your planned order and incoming stock."],
+            ["Check before ordering", "Compare the plan with expected demand."],
+          ].map(([title, description]) => (
+            <li key={title}><b>{t(title)}</b><span>{t(description)}</span></li>
+          ))}
+        </ol>
       </section>
-      <div className="readiness-counts" aria-label={t("Product data labels")}>
-        <strong>{t("All ")}{t(products.length)} {t("products")}</strong>
-        {t(["Ready", "Limited", "Cannot assess"].map((label) => (
-          <span key={label}>
-            <b>{t(counts(label))}</b> {t(label)}
-          </span>
-        )))}
-      </div>
       {t(mismatchCount > 0 && (
         <p className="evidence-warning" role="alert">
           {t("Evidence mismatch affects ")}{t(mismatchCount)}{t(" ")}
@@ -235,8 +237,15 @@ export function PurchasePlanScreen({
               {t("Select a product to enter quantities and see its evidence and full calculation.")}</p>
           </div>
           <span className="pill pill--neutral">
-            {t(visible.length)} {t(visible.length === 1 ? "product" : "products")}{t(" ")}
-            {t("shown")}</span>
+            {t(products.length)} {t("products")}</span>
+        </div>
+        <div className="readiness-counts" aria-label={t("Product data labels")}>
+          <strong>{t("All ")}{t(products.length)} {t("products")}</strong>
+          {["Ready", "Limited", "Cannot assess"].map((label) => (
+            <span className={`pill pill--${label === "Ready" ? "ready" : label === "Limited" ? "limited" : "cannot"}`} key={label}>
+              <b>{t(counts(label))}</b> {t(label)}
+            </span>
+          ))}
         </div>
         <div className="toolbar">
           <label className="search">

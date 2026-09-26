@@ -194,9 +194,9 @@ export function UploadScreen({
 
       <div className="s1-grid">
         <div>
-          <h2 className="card-title">{t("What data can StockLess use?")}</h2>
+          <h2 className="card-title card-title--sprout">{t("What do you need to get started?")}</h2>
           <p className="card-sub attribute-guide__intro">
-            {t("Start with the three required attributes. The six optional attributes are not needed to continue.")}</p>
+            {t("Start with the three required attributes. Optional attributes unlock additional insights.")}</p>
 
           <AttributeSection
             id="required-data"
@@ -204,12 +204,12 @@ export function UploadScreen({
             items={requiredAttributes}
             startIndex={0}
           />
-          <AttributeSection
+          <details className="optional-fields"><summary>{t("Optional data")}</summary>          <AttributeSection
             id="optional-data"
             title={t("Optional data")}
             items={optionalAttributes}
             startIndex={requiredAttributes.length}
-          />
+          /></details>
         </div>
 
         <div className="card upload-card">
@@ -266,6 +266,7 @@ export function UploadScreen({
                 </div>
                 <p className="dropzone__limits">
                   {t(UPLOAD_REQUIREMENTS.supportedExtension)} {t("up to ")}{t(megabyteLimit)} {t("MiB ·")}{t(" ")}{t(UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en"))} {t("rows ·")}{t(" ")}{t("comma, semicolon or tab")}</p>
+<ol className="value-chain" aria-label={t("What your file turns into")}><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6ZM14 3v5h4M9 12h6M9 16h6"/></svg><span className="value-chain__label">{t("Your sales data")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 21h18M5 20V12h3v8M11 20V7h3v13M17 20V3h3v17"/></svg><span className="value-chain__label">{t("Demand insights")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 7 9-4 9 4v10l-9 4-9-4ZM3 7l9 4 9-4M12 11v10"/></svg><span className="value-chain__label">{t("Smarter restocking")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 4C5 3 2 9 5 16c7 8 15-2 15-12ZM4 21 16 8"/></svg><span className="value-chain__label">{t("Less waste")}</span></span></li></ol>
               </>
             ))}
 
@@ -295,7 +296,7 @@ export function UploadScreen({
           <div className="privacy">
             <span className="privacy__tick" aria-hidden="true">✓</span>
             <p>
-              <b>{t("Your sales figures stay in this browser.")}</b>
+              <b>{t("Your data stays on your device.")}</b>
               <span>{t(PRIVACY_NOTICE.beforeUpload)}</span>
             </p>
           </div>
@@ -358,14 +359,14 @@ function AttributeSection({
                 {t(item.acceptedForms.map((form) => <li key={form}>{t(form)}</li>))}
               </ol>
             ))}
-            <div className="attribute-card__features">
+            {item.requirement === "optional" && <div className="attribute-card__features">
               <b>{t("Unlocks")}</b>
               <ul>
                 {t(item.capabilities.map((capability) => (
                   <li key={capability}>{t(CAPABILITY_LABELS[capability])}</li>
                 )))}
               </ul>
-            </div>
+            </div>}
           </article>
         )))}
       </div>

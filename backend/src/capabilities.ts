@@ -61,12 +61,12 @@ export const UPLOAD_ATTRIBUTE_GUIDE: readonly UploadAttributeGuide[] = Object.fr
   }),
   Object.freeze({
     id: "product_identity",
-    label: "How your products are named or coded",
+    label: "Product identification",
     requirement: "required",
-    description: "Choose either accepted form. Both keep products and pack sizes separate.",
+    description: "Choose one of the accepted formats to keep products and pack sizes separate.",
     acceptedForms: Object.freeze([
-      "One code column: SKU, barcode or product code",
-      "Product name together with pack size",
+      "SKU, barcode or product code",
+      "Product name + pack size",
     ]),
     capabilities: featureList(
       "weekly_history",

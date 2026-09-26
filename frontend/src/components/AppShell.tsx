@@ -2,6 +2,7 @@ import { LanguageSwitcher } from "./LanguageSwitcher.tsx";
 import { t, useLanguage } from "../i18n/index.ts";
 import type { ReactNode } from "react";
 import type { SourceMode } from "../engine.ts";
+import { WorkspaceDecor } from "./WorkspaceDecor.tsx";
 import { Logo } from "./Logo.tsx";
 
 export type StepId = 1 | 2 | 3 | 4;
@@ -39,12 +40,11 @@ export function AppShell({
   useLanguage();
   return (
     <div className="frame">
+      <WorkspaceDecor />
       <header className="topbar">
         <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label={t("StockLess — upload")}>
           <Logo />
         </button>
-        <a className="workspace-home-link" href="#home">{t("← Homepage")}</a>
-        <LanguageSwitcher />
         {t(sourceMode && (
           <div className="session-status" aria-label={t("Active session")}>
             <span className={`pill ${sourceMode === "sample" ? "pill--amber" : "pill--teal"}`}>
@@ -57,6 +57,8 @@ export function AppShell({
             ))}
           </div>
         ))}
+        <a className="workspace-home-link" href="#home"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></svg>{t("Homepage")}</a>
+        <LanguageSwitcher />
       </header>
 
       <nav className="stepper" aria-label={t("Progress")}>
@@ -77,6 +79,7 @@ export function AppShell({
                   aria-current={isCurrent ? "step" : undefined}
                   onClick={() => onNavigate(step.id)}
                 >
+                  <span className="step__plant" aria-hidden="true">{["🌱","🌿","🍃","🌳"][step.id - 1]}</span>
                   <span className="step__dot">{t(done ? "✓" : step.id)}</span>
                   <span className="step__label">{t(step.label)}</span>
                 </button>
