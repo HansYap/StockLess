@@ -79,7 +79,7 @@ export function AppShell({
                   aria-current={isCurrent ? "step" : undefined}
                   onClick={() => onNavigate(step.id)}
                 >
-                  <span className="step__plant" aria-hidden="true">{["🌱","🌿","🍃","🌳"][step.id - 1]}</span>
+                  <span className="step__plant" aria-hidden="true">{["🌱","🌿","🪴","🌳"][step.id - 1]}</span>
                   <span className="step__dot">{t(done ? "✓" : step.id)}</span>
                   <span className="step__label">{t(step.label)}</span>
                 </button>
