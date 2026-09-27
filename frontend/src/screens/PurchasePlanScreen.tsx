@@ -60,6 +60,7 @@ export function PurchasePlanScreen({
   useLanguage();
   const [query, setQuery] = useState("");
   const [orderingOnly, setOrderingOnly] = useState(false);
+  const [view, setView] = useState<"all" | "plannable" | "unavailable">("all");
   const products = useMemo(
     () => joinPurchaseEvidence(snapshot, forecast),
     [snapshot, forecast],
@@ -118,11 +119,22 @@ export function PurchasePlanScreen({
     (product) =>
       `${product.name} ${product.sku ?? ""}`
         .toLowerCase()
-        .includes(query.trim().toLowerCase()) &&
+        .includes(query.trim().replace(/^sku\s*:?\s*/i, "").toLowerCase()) &&
+      (view === "all" || (view === "plannable" ? plans.get(product.key)?.estimatedRestock.state === "available" : plans.get(product.key)?.estimatedRestock.state !== "available")) &&
       (!orderingOnly ||
         !hasPlans ||
         inputsFor(product).plannedOrder.state === "value"),
   );
+  const plannableCount = products.filter(product => plans.get(product.key)?.estimatedRestock.state === "available").length;
+  const enteredCount = products.filter(product => inputsFor(product).plannedOrder.state === "value").length;
+  const priority = (product: PurchaseProduct) => {
+    const plan = plans.get(product.key);
+    return plan?.audit.state === "verdict" && plan.audit.verdict === "Overstock risk" ? 0
+      : plan?.expiry.state === "expires_within_four_weeks" ? 1
+      : plan?.audit.state === "verdict" && plan.audit.verdict === "Needs review" ? 2
+      : plan?.estimatedRestock.state === "available" ? 3 : 4;
+  };
+  const highlighted = [...visible].sort((a,b) => priority(a) - priority(b)).slice(0, 3);
   const selected = products.find((product) => product.key === selectedKey);
   const counts = (label: string) =>
     products.filter(
@@ -205,7 +217,7 @@ export function PurchasePlanScreen({
         <span>
           <strong>{t("Your figures stay local.")}</strong> {t("Typed order quantities last for this visit only and are not sent to a supplier.")}</span>
       </p>
-      <section className="planning-guide" aria-label={t("Purchase planning instructions")}>
+      <details className="planning-guide"><summary>{t("How to plan an order")}</summary><section className="planning-guide__body" aria-label={t("Purchase planning instructions")}>
         <div className="planning-guide__intro">
           <span className="planning-guide__icon" aria-hidden="true">🌳</span>
           <div>
@@ -222,6 +234,31 @@ export function PurchasePlanScreen({
             <li key={title}><b>{t(title)}</b><span>{t(description)}</span></li>
           ))}
         </ol>
+      </section></details>
+      <section className="plan-overview" aria-label={t("Purchase planning overview")}>
+        <div className="plan-overview__intro"><span className="plan-overview__icon" aria-hidden="true">🌳</span><div><h2>{t("Your next purchase, at a glance")}</h2><p>{products.length} {t("products")} · {t("for the next 4 weeks")}</p></div></div>
+        <div className="plan-overview__groups">
+          <button type="button" aria-pressed={view === "plannable"} onClick={() => setView(view === "plannable" ? "all" : "plannable")} className="plan-group plan-group--ready"><b>{plannableCount}</b><span>{t("Can plan")}</span><small>{t("Usable demand and stock evidence")}</small></button>
+          <button type="button" aria-pressed={view === "unavailable"} onClick={() => setView(view === "unavailable" ? "all" : "unavailable")} className="plan-group plan-group--missing"><b>{products.length - plannableCount}</b><span>{t("Need more data")}</span><small>{t("Open a product to see the next action")}</small></button>
+          <div className="plan-group plan-group--entered"><b>{enteredCount}</b><span>{t("Plans entered")}</span><small>{t("Included in the product totals")}</small></div>
+        </div>
+      </section>
+      <p className="plan-next"><b>{t("Next step:")}</b> {t("Open a product, review the estimate, and enter the quantity you intend to order.")}</p>
+      <section className="plan-highlights" aria-label={t("Suggested starting points")}>
+        <div className="plan-section-head"><h2>{t("Start with these products")}</h2><p>{t("Purchase concerns appear first. Each suggestion uses your current inputs.")}</p></div>
+        <div className="plan-cards">{highlighted.map(product => {
+          const plan = plans.get(product.key);
+          const restock = plan?.estimatedRestock;
+          const audit = plan?.audit;
+          const tone = audit?.state === "verdict" ? audit.verdict === "Overstock risk" ? "high" : audit.verdict === "Needs review" ? "review" : "balanced" : restock?.state === "available" ? "balanced" : "missing";
+          return <article className={`plan-card plan-card--${tone}`} key={product.key}>
+            <header><div><h3>{product.name}</h3><small>SKU {product.sku ?? "—"}</small></div><DataLabel product={product} /></header>
+            <div className="plan-card__action"><span>{t(audit?.state === "verdict" ? "Purchase check" : "Estimated restock")}</span><strong>{t(audit?.state === "verdict" ? audit.verdict : restock?.state === "available" ? `${numberText(restock.quantity.value)} units` : "No reliable estimate")}</strong></div>
+            <p>{t(audit?.state === "verdict" ? audit.reasonSentence : restock?.state === "unavailable" ? restock.reason : product.issue ?? "Review the estimate before entering your plan.")}</p>
+            {plan?.expiry.state === "expires_within_four_weeks" && <p className="plan-card__expiry">{t(plan.expiry.message)}</p>}
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => onSelect(product.key)}>{t(restock?.state === "available" ? "Review and plan →" : "See what is needed →")}</button>
+          </article>;
+        })}</div>
       </section>
       {t(mismatchCount > 0 && (
         <p className="evidence-warning" role="alert">
@@ -247,6 +284,7 @@ export function PurchasePlanScreen({
             </span>
           ))}
         </div>
+        <div className="plan-view"><span>{t("Show:")}</span>{(["all", "plannable", "unavailable"] as const).map(item => <button type="button" key={item} aria-pressed={view === item} onClick={() => setView(item)}>{t(item === "all" ? "All products" : item === "plannable" ? "Can plan" : "Need more data")}</button>)}</div>
         <div className="toolbar">
           <label className="search">
             <span className="visually-hidden">{t("Search products")}</span>
@@ -428,6 +466,7 @@ export function PurchasePlanScreen({
           inputs={inputsFor(selected)}
           analysisDate={snapshot.analysisDate}
           onChange={(inputs) => onDraftChange(selected.key, inputs)}
+          onReviewData={() => { onSelect(null); onBack(); }}
           onClose={() => onSelect(null)}
         />
       )}

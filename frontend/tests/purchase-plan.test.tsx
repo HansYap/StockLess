@@ -47,6 +47,32 @@ const open = (sku = "000101") =>
   );
 
 describe("purchase planning", () => {
+  it("routes a product needing more data back to readiness", () => {
+    const data = makeEvidence();
+    const onBack = vi.fn();
+    render(<PurchasePlanScreen {...data} drafts={{}} selectedKey="C" onSelect={() => {}} onDraftChange={() => {}} onBack={onBack} />);
+    const dialog = within(screen.getByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "Review data in Step 3 →" }));
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+  it("keeps invalid typed quantities visible without replacing the last valid quantity", () => {
+    render(<Harness />);
+    open();
+    const dialog = within(screen.getByRole("dialog"));
+    const exact = dialog.getByLabelText("Exact planned order quantity");
+    fireEvent.change(exact, { target: { value: "12" } });
+    expect((dialog.getByLabelText("Planned order") as HTMLInputElement).value).toBe("12");
+    fireEvent.change(exact, { target: { value: "-4" } });
+    expect(exact.getAttribute("aria-invalid")).toBe("true");
+    expect((exact as HTMLInputElement).value).toBe("-4");
+    expect((dialog.getByLabelText("Planned order") as HTMLInputElement).value).toBe("12");
+    expect(dialog.getByRole("alert").textContent).toContain("last valid quantity");
+    fireEvent.change(exact, { target: { value: "0" } });
+    expect(exact.getAttribute("aria-invalid")).toBe("false");
+    expect(dialog.getByLabelText("Planned order").getAttribute("aria-valuetext")).not.toBe("Not entered");
+    fireEvent.click(dialog.getByRole("button", { name: "Clear planned order" }));
+    expect(dialog.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
+  });
   it("has only five read-only columns, no verdict, no sample inputs and a disabled ordering filter initially", () => {
     render(<Harness />);
     expect(
@@ -86,7 +112,7 @@ describe("purchase planning", () => {
   it("opens the clicked row by product key even when display names are identical", () => {
     render(<Harness />);
     fireEvent.click(
-      screen.getByText("SKU 000202").closest("tr")!.querySelectorAll("td")[2],
+      within(screen.getByRole("table")).getByText("SKU 000202").closest("tr")!.querySelectorAll("td")[2],
     );
     expect(
       within(screen.getByRole("dialog")).getByText(
@@ -166,7 +192,7 @@ describe("purchase planning", () => {
     expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("20");
     expect((screen.getByLabelText("Incoming stock") as HTMLInputElement).value).toBe("3");
     expect(screen.getAllByText("from your file").length).toBeGreaterThan(2);
-    expect(screen.getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
+    expect(within(screen.getByRole("dialog")).getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "21" } });
     expect(screen.getAllByText("input by you").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Clear planned order" }));
@@ -231,7 +257,7 @@ describe("purchase planning", () => {
         }}
       />,
     );
-    expect(screen.getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
+    expect(within(screen.getByRole("dialog")).getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
     fireEvent(
       screen.getByRole("dialog"),
       new Event("cancel", { bubbles: false }),

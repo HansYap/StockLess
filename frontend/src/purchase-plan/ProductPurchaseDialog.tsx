@@ -1,5 +1,5 @@
 import { t, useLanguage } from "../i18n/index.ts";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   applyPurchaseQuantityEdit,
   type ProductPurchaseInputs,
@@ -147,7 +147,7 @@ function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
         {t(audit.reasonSentence)} <SourceTag source="worked out by StockLess" />
       </p>
       {t(audit.gettingOld && <p className="verdict-action">{t("Getting old")}</p>)}
-      <div className="figure-grid">
+      <details className="purchase-why"><summary>{t("Why this purchase check?")}</summary><div className="figure-grid">
         {t((Object.keys(labels) as (keyof typeof labels)[]).map((key) => (
           <div className="figure" key={key}>
             <span className="figure-label">{t(labels[key])}</span>
@@ -155,7 +155,7 @@ function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
             <SourceTag source={audit.figures[key].source} />
           </div>
         )))}
-      </div>
+      </div></details>
     </section>
   );
 }
@@ -167,6 +167,7 @@ export function ProductPurchaseDialog({
   analysisDate,
   onChange,
   onClose,
+  onReviewData,
 }: {
   product: PurchaseProduct;
   plan?: ProductPurchasePlan;
@@ -174,6 +175,7 @@ export function ProductPurchaseDialog({
   analysisDate: string;
   onChange: (inputs: ProductPurchaseInputs) => void;
   onClose: () => void;
+  onReviewData?: () => void;
 }) {
   useLanguage();
   const ref = useRef<HTMLDialogElement>(null);
@@ -193,8 +195,12 @@ export function ProductPurchaseDialog({
       previousFocus?.focus();
     };
   }, []);
+  const [quantityErrors, setQuantityErrors] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
+  const [typedValues, setTypedValues] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
   const update = (field: keyof ProductPurchaseInputs, raw: string) => {
     const result = applyPurchaseQuantityEdit(inputs[field], raw);
+    setTypedValues(previous => ({ ...previous, [field]: raw }));
+    setQuantityErrors(previous => ({ ...previous, [field]: result.accepted ? undefined : result.message }));
     if (result.accepted) onChange({ ...inputs, [field]: result.field });
   };
   const range =
@@ -262,9 +268,135 @@ export function ProductPurchaseDialog({
           ×
         </button>
       </header>
+      <div className="dialog-action-first">
+          <section className="estimate-hero">
+            {plan?.audit.state === "verdict" && <div className="hero-concern"><span className={`pill pill--${plan.audit.verdict === "Overstock risk" ? "high" : plan.audit.verdict === "Needs review" ? "review" : "balanced"}`}>{t(plan.audit.verdict)}</span><p>{t(plan.audit.reasonSentence)}</p></div>}
+            <p className="eyebrow">{t("Estimated restock")}</p>
+            {t(restock?.state === "available" && !cannotJudge ? (
+              <>
+                <div className="estimate-number">
+                  {t(numberText(restock.quantity.value))}
+                  <span>{t("units")}</span>
+                </div>
+                <p className="estimate-copy">
+                  {t("A practical starting quantity for this product's next four weeks.")}</p>
+                <div className="estimate-method">
+                  {t("Midpoint of demand range − stock on hand − incoming stock")}<br />
+                  <SourceTag source={restock.quantity.source} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="estimate-number estimate-unavailable">
+                  {t("No reliable estimate")}</div>
+                {t(!cannotJudge && (
+                  <p className="estimate-copy">
+                    {t(restock?.state === "unavailable" ? restock.reason : reason)}
+                  </p>
+                ))}
+              </>
+            ))}
+          </section>
+        {(!range || restock?.state !== "available") && <div className="correction-route"><p>{t(product.issue ?? (restock?.state === "unavailable" ? restock.reason : reason) ?? "Review the available evidence before planning.")}</p><button type="button" className="btn btn--ghost btn--small" onClick={onReviewData ?? onClose}>{t("Review data in Step 3 →")}</button></div>}
+      </div>
       <div className="dialog-layout">
         <div className="dialog-column">
-          <section className="panel">
+          <section className="panel order-panel">
+            <p className="eyebrow">{t("Your purchase")}</p>
+            <h3 className="panel-title">{t("What are you planning to order?")}</h3>
+            <p className="panel-sub">
+              {t("Both fields are optional. The purchase check updates as soon as a valid figure changes.")}</p>
+            <div className="form-grid">
+              {t((["plannedOrder", "incomingStock"] as const).map((field) => {
+                const input = inputs[field];
+                const entered = input.state === "value";
+                const value = input.state === "value" ? input.value : 0;
+                const label = field === "plannedOrder" ? "Planned order" : "Incoming stock";
+                return (
+                  <div className="quantity-slider" key={field}>
+                    <div className="quantity-slider__head">
+                      <label htmlFor={`purchase-${field}`}>{t(label)}</label>
+                      <output
+                        htmlFor={`purchase-${field}`}
+                        className={entered ? undefined : "quantity-slider__empty"}
+                        aria-live="polite"
+                      >
+                        {t(entered ? (
+                          <>{t(numberText(value))}<small> {t("units")}</small></>
+                        ) : (
+                          "Not entered"
+                        ))}
+                      </output>
+                    </div>
+                    {t(input.state === "value" && <SourceTag source={input.source} />)}
+                    <input
+                      className="quantity-slider__input"
+                      id={`purchase-${field}`}
+                      type="range"
+                      min="0"
+                      max={sliderMaximum}
+                      step="1"
+                      value={value}
+                      aria-valuetext={t(entered ? `${numberText(value)} units` : "Not entered")}
+                      aria-describedby={`purchase-${field}-help`}
+                      onChange={(event) => update(field, event.currentTarget.value)}
+                    />
+                    <label className="exact-quantity">{t(field === "plannedOrder" ? "Exact planned order quantity" : "Exact incoming stock quantity")}
+                      <input type="text" inputMode="numeric" value={typedValues[field] ?? (entered ? String(value) : "")} placeholder={t("Not entered")} aria-invalid={Boolean(quantityErrors[field])} aria-describedby={quantityErrors[field] ? `purchase-${field}-error` : `purchase-${field}-help`} onChange={event => update(field, event.currentTarget.value)} />
+                    </label>
+                    {quantityErrors[field] && <p id={`purchase-${field}-error`} className="quantity-error" role="alert">{t(quantityErrors[field])}. {t("The check still uses the last valid quantity. Correct this field to update it.")}</p>}
+                    <div className="quantity-slider__ends" aria-hidden="true">
+                      <span>{t("0 units")}</span>
+                      <span>{t(numberText(sliderMaximum))} {t("units")}</span>
+                    </div>
+                    <div className="quantity-slider__footer">
+                      <small id={`purchase-${field}-help`}>
+                        {t(field === "incomingStock"
+                          ? "Not entered is treated as 0."
+                          : "Move the slider to check the plan instantly.")}
+                      </small>
+                      {t(entered && (
+                        <button
+                          type="button"
+                          className="quantity-slider__clear"
+                          onClick={() => update(field, "")}
+                          aria-label={t(`Clear ${label.toLowerCase()}`)}
+                        >
+                          {t("Clear")}</button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }))}
+            </div>
+            <p className="visit-note">
+              {t("Figures you enter are marked “input by you” and last for this visit only.")}</p>
+          </section>
+          <PurchaseVerdict audit={plan?.audit} />
+          <div className="expiry">
+            <span aria-hidden="true">◷</span>
+            <div>
+              <strong>{t("Expiry information")}</strong>
+              <br />
+              <span>
+                {t(plan?.expiry.message ?? "Expiry not checked — evidence mismatch for this product")}
+              </span>
+              <p className="expiry-scope">{t("This estimate uses general stock and demand. Expiry is a separate check; affected batch quantities are not included in the adjustment.")}</p>
+              {plan?.expiry &&
+                "earliestDate" in plan.expiry && (
+                  <>
+                    <br />
+                    <SourceTag source="worked out by StockLess" />
+                    <br />
+                    {t("Earliest expiry: ")}{plan.expiry.earliestDate}{t(" ")}
+                    <SourceTag source="from your file" />
+                  </>
+                )}
+            </div>
+          </div>
+        </div>
+        <aside className="dialog-column">
+          <details className="panel supporting-evidence"><summary>{t("Why this estimate? See demand and stock")}</summary><div className="supporting-evidence__body">
             <div className="evidence-top">
               <div>
                 <p className="eyebrow">{t("Demand evidence")}</p>
@@ -356,125 +488,7 @@ export function ProductPurchaseDialog({
                 }
               />
             </div>
-          </section>
-        </div>
-        <aside className="dialog-column">
-          <section className="estimate-hero">
-            <p className="eyebrow">{t("Estimated restock")}</p>
-            {t(restock?.state === "available" && !cannotJudge ? (
-              <>
-                <div className="estimate-number">
-                  {t(numberText(restock.quantity.value))}
-                  <span>{t("units")}</span>
-                </div>
-                <p className="estimate-copy">
-                  {t("A practical starting quantity for this product's next four weeks.")}</p>
-                <div className="estimate-method">
-                  {t("Midpoint of demand range − stock on hand − incoming stock")}<br />
-                  <SourceTag source={restock.quantity.source} />
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="estimate-number estimate-unavailable">
-                  {t("No reliable estimate")}</div>
-                {t(!cannotJudge && (
-                  <p className="estimate-copy">
-                    {t(restock?.state === "unavailable" ? restock.reason : reason)}
-                  </p>
-                ))}
-              </>
-            ))}
-          </section>
-
-          <section className="panel order-panel">
-            <p className="eyebrow">{t("Your purchase")}</p>
-            <h3 className="panel-title">{t("What are you planning to order?")}</h3>
-            <p className="panel-sub">
-              {t("Both fields are optional. The purchase check updates as soon as a valid figure changes.")}</p>
-            <div className="form-grid">
-              {t((["plannedOrder", "incomingStock"] as const).map((field) => {
-                const input = inputs[field];
-                const entered = input.state === "value";
-                const value = input.state === "value" ? input.value : 0;
-                const label = field === "plannedOrder" ? "Planned order" : "Incoming stock";
-                return (
-                  <div className="quantity-slider" key={field}>
-                    <div className="quantity-slider__head">
-                      <label htmlFor={`purchase-${field}`}>{t(label)}</label>
-                      <output
-                        htmlFor={`purchase-${field}`}
-                        className={entered ? undefined : "quantity-slider__empty"}
-                        aria-live="polite"
-                      >
-                        {t(entered ? (
-                          <>{t(numberText(value))}<small> {t("units")}</small></>
-                        ) : (
-                          "Not entered"
-                        ))}
-                      </output>
-                    </div>
-                    {t(input.state === "value" && <SourceTag source={input.source} />)}
-                    <input
-                      className="quantity-slider__input"
-                      id={`purchase-${field}`}
-                      type="range"
-                      min="0"
-                      max={sliderMaximum}
-                      step="1"
-                      value={value}
-                      aria-valuetext={t(entered ? `${numberText(value)} units` : "Not entered")}
-                      aria-describedby={`purchase-${field}-help`}
-                      onChange={(event) => update(field, event.currentTarget.value)}
-                    />
-                    <div className="quantity-slider__ends" aria-hidden="true">
-                      <span>{t("0 units")}</span>
-                      <span>{t(numberText(sliderMaximum))} {t("units")}</span>
-                    </div>
-                    <div className="quantity-slider__footer">
-                      <small id={`purchase-${field}-help`}>
-                        {t(field === "incomingStock"
-                          ? "Not entered is treated as 0."
-                          : "Move the slider to check the plan instantly.")}
-                      </small>
-                      {t(entered && (
-                        <button
-                          type="button"
-                          className="quantity-slider__clear"
-                          onClick={() => update(field, "")}
-                          aria-label={t(`Clear ${label.toLowerCase()}`)}
-                        >
-                          {t("Clear")}</button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              }))}
-            </div>
-            <p className="visit-note">
-              {t("Figures you enter are marked “input by you” and last for this visit only.")}</p>
-          </section>
-          <PurchaseVerdict audit={plan?.audit} />
-          <div className="expiry">
-            <span aria-hidden="true">◷</span>
-            <div>
-              <strong>{t("Expiry information")}</strong>
-              <br />
-              <span>
-                {t(plan?.expiry.message ?? "Expiry not checked — evidence mismatch for this product")}
-              </span>
-              {plan?.expiry &&
-                "earliestDate" in plan.expiry && (
-                  <>
-                    <br />
-                    <SourceTag source="worked out by StockLess" />
-                    <br />
-                    {t("Earliest expiry: ")}{plan.expiry.earliestDate}{t(" ")}
-                    <SourceTag source="from your file" />
-                  </>
-                )}
-            </div>
-          </div>
+          </div></details>
         </aside>
       </div>
       <footer className="dialog-footer">
