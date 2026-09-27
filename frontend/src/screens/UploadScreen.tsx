@@ -1,4 +1,5 @@
 import { t, useLanguage } from "../i18n/index.ts";
+import { FinanceHint } from "../finance-preview/FinancePreview.tsx";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import {
@@ -209,7 +210,7 @@ export function UploadScreen({
             title={t("Optional data")}
             items={optionalAttributes}
             startIndex={requiredAttributes.length}
-          /></details>
+          /><FinanceHint step={1} /></details>
         </div>
 
         <div className="card upload-card">

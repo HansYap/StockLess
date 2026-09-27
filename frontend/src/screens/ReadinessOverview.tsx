@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { FinanceHint } from "../finance-preview/FinancePreview.tsx";
 import { t, useLanguage } from "../i18n/index.ts";
 import type { ProductTimeline, ReadinessSnapshot } from "../engine.ts";
 
@@ -80,6 +81,7 @@ export function ReadinessOverview({ snapshot, timelines }: { snapshot: Readiness
         <b>{counts[status]}</b><span className="summary__name">{t(LABELS[status])}</span><span className="summary__note">{t(status === "ready" ? "Complete data, no major issues" : status === "review" ? "Usable evidence with issues to review" : "Stock or sales evidence is incomplete")}</span>
       </li>)}</ul>
     </section>
+    <FinanceHint step={3} />
     <p className="nextstep"><b>{t("Next step:")}</b> {t("Continue with the usable rows, or download the problem list and correct your file first.")}</p>
     {counts.review + counts.missing > 0 && <section className="attention">
       <div className="attention__head"><span className="attention__icon" aria-hidden="true">!</span><div><h2>{counts.review + counts.missing} {t("products need your attention")}</h2><p>{t("Review data issues and stock age before continuing.")}</p></div>

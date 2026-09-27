@@ -1,4 +1,5 @@
 import { t, useLanguage } from "../i18n/index.ts";
+import { FinanceHint } from "../finance-preview/FinancePreview.tsx";
 import { useMemo } from "react";
 import {
   CANONICAL_FIELDS,
@@ -104,6 +105,7 @@ export function MappingScreen(props: MappingScreenProps) {
         <p className="notice notice--info">{t(proposals.fallbackNotice)}</p>
       ))}
 
+      <FinanceHint step={2} />
       <div className="split">
         <section className="card split__main">
           <div className="card__head">

@@ -24,6 +24,7 @@ import {
   serializePurchasePlanCsv,
 } from "../purchase-plan/purchase-plan-export.ts";
 import "../purchase-plan/purchase-plan.css";
+import { FinancePreview } from "../finance-preview/FinancePreview.tsx";
 
 interface Props {
   snapshot: ReadinessSnapshot;
@@ -243,6 +244,7 @@ export function PurchasePlanScreen({
           <div className="plan-group plan-group--entered"><b>{enteredCount}</b><span>{t("Plans entered")}</span><small>{t("Included in the product totals")}</small></div>
         </div>
       </section>
+      <FinancePreview />
       <p className="plan-next"><b>{t("Next step:")}</b> {t("Open a product, review the estimate, and enter the quantity you intend to order.")}</p>
       <section className="plan-highlights" aria-label={t("Suggested starting points")}>
         <div className="plan-section-head"><h2>{t("Start with these products")}</h2><p>{t("Purchase concerns appear first. Each suggestion uses your current inputs.")}</p></div>
