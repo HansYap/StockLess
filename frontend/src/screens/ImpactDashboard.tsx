@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { getLocale, useLanguage } from "../i18n/index.ts";
 import { evaluateProductPurchasePlan, type DemandForecastReview, type ReadinessSnapshot } from "../engine.ts";
 import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from "../purchase-plan/model.ts";
@@ -27,6 +27,29 @@ export function ImpactDashboard({ snapshot, forecast, drafts, onBack }: Props) {
   const lines = useMemo(() => calculatePotentialExcess(snapshot, forecast, drafts), [snapshot, forecast, drafts]);
   const excess = lines.reduce((sum, item) => sum + item.units, 0);
   const positive = lines.filter(item => item.units > 0);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const impactFaqs = [
+    {
+      icon: "♻️",
+      question: copy("How is potential excess estimated?", "如何估算潜在过量库存？", "Bagaimanakah lebihan berpotensi dianggarkan?"),
+      answer: copy("For each product with a usable purchase check, StockLess subtracts the top of the expected four-week demand range from stock after the planned order. Negative results count as zero. Products without usable evidence are excluded.", "对每件可核对的商品，StockLess 用计划采购后的库存减去未来四周需求区间的上限。负值按零计算；证据不足的商品不计入。", "Bagi setiap produk dengan semakan belian yang boleh digunakan, StockLess menolak had atas permintaan empat minggu daripada stok selepas pesanan. Hasil negatif dikira sifar; produk tanpa bukti yang mencukupi dikecualikan."),
+    },
+    {
+      icon: "💰",
+      question: copy("How would cost saving be calculated?", "成本节省将如何计算？", "Bagaimanakah penjimatan kos akan dikira?"),
+      answer: copy("A money estimate needs the purchase cost for each unit and a currency. This file does not provide those connected figures, so StockLess leaves the amount blank instead of assuming a price.", "金额估算需要每件商品的采购单价和币种。当前文件尚未提供可用的成本数据，因此 StockLess 不会猜测金额。", "Anggaran wang memerlukan kos belian setiap unit dan mata wang. Fail ini belum mempunyai angka tersebut, jadi StockLess membiarkan jumlah kosong tanpa meneka harga."),
+    },
+    {
+      icon: "🌍",
+      question: copy("What does CO₂e mean, and why is it blank?", "CO₂e 是什么，为什么这里留空？", "Apakah maksud CO₂e, dan mengapa ia kosong?"),
+      answer: copy("CO₂e combines greenhouse gases into one comparable figure. A weight for each product and a suitable emissions factor are needed; unit counts alone cannot produce a reliable estimate.", "CO₂e 将不同温室气体换算为可比较的数值。计算还需要商品重量和适用的排放系数，仅凭件数无法可靠估算。", "CO₂e menggabungkan gas rumah hijau dalam satu angka yang boleh dibandingkan. Berat setiap produk dan faktor pelepasan yang sesuai diperlukan; bilangan unit sahaja tidak mencukupi."),
+    },
+    {
+      icon: "📈",
+      question: copy("Are these figures exact?", "这些数字准确吗？", "Adakah angka ini tepat?"),
+      answer: copy("No. They depend on the sales, stock, and planned order data in your file. A longer and cleaner sales history provides a steadier estimate.", "不是。估算取决于文件中的销售、库存和计划采购数据。更长、更完整的销售记录会让估算更稳定。", "Tidak. Angka ini bergantung pada data jualan, stok dan pesanan dalam fail anda. Sejarah jualan yang lebih panjang dan bersih memberikan anggaran yang lebih stabil."),
+    },
+  ];
   return <main className="impact" aria-labelledby="impact-title">
     <p className="eyebrow">{copy("IMPACT DASHBOARD", "影响仪表盘", "PAPAN IMPAK")}</p>
     <h1 className="impact__title" id="impact-title">{copy("Your impact", "您的影响", "Impak anda")}</h1>
@@ -41,7 +64,36 @@ export function ImpactDashboard({ snapshot, forecast, drafts, onBack }: Props) {
     <section className="impact__lines" aria-labelledby="impact-lines-title"><h2 id="impact-lines-title">{copy("Where the estimate comes from", "估算依据", "Asal anggaran")}</h2>{positive.length ? <ul>{positive.map(item => <li key={item.key}><span className="impact__lname"><b>{item.name}</b><span className="num">{item.sku}</span></span><span className="impact__lunits">{item.units.toLocaleString(getLocale())}{" "}<span>{copy("units above expected demand", "件超过预期需求", "unit melebihi permintaan dijangka")}</span></span></li>)}</ul> : <p className="impact__empty">{lines.length ? copy("No excess stock is indicated by the checked plans.", "已核对的计划未显示过量库存。", "Tiada stok berlebihan ditunjukkan oleh rancangan yang disemak.") : copy("No purchase plan has enough checked evidence yet.", "目前没有足够证据来计算采购计划。", "Belum ada rancangan belian dengan bukti semakan yang mencukupi.")}</p>}</section>
 
     <section className="impact__sdg"><span className="impact__sdg-mark" aria-hidden="true">12</span><div><h2>{copy("Your contribution to SDG 12.3", "您与可持续发展目标 12.3", "Sumbangan anda kepada SDG 12.3")}</h2><p>{copy("Reviewing possible excess before ordering can support food-waste reduction. This page does not claim a measured reduction.", "在下单前检查可能过量的库存，有助于减少食物浪费。此页面不宣称已经实现可测量的减排或减废。", "Menyemak kemungkinan lebihan sebelum memesan boleh menyokong pengurangan pembaziran makanan. Halaman ini tidak mendakwa pengurangan yang diukur.")}</p><a className="impact__sdg-link" href="https://sdgs.un.org/goals/goal12" target="_blank" rel="noreferrer noopener">{copy("Read about SDG 12 ↗", "了解可持续发展目标 12 ↗", "Baca tentang SDG 12 ↗")}</a></div></section>
-    <section className="learn learn--rows" aria-labelledby="impact-learn"><h2 className="learn__title" id="impact-learn">{copy("Understanding your impact", "了解影响数据", "Memahami impak anda")}</h2><p className="learn__lede">{copy("Learn how these numbers are calculated and what they mean.", "了解这些数字的计算方式及含义。", "Ketahui cara nombor ini dikira dan apa maksudnya.")}</p><div className="learn__list"><details className="learn__item"><summary className="learn__q"><span className="learn__icon" aria-hidden="true">♻️</span><span className="learn__qtext">{copy("How is potential excess estimated?", "如何估算潜在过量库存？", "Bagaimanakah lebihan berpotensi dianggarkan?")}</span><span className="learn__chevron" aria-hidden="true" /></summary><p className="learn__a">{copy("For each product with a usable purchase check, StockLess subtracts the top of the expected four-week demand range from stock after the planned order. Negative results count as zero. Products without usable evidence are excluded.", "对每件可核对的商品，StockLess 用计划采购后的库存减去未来四周需求区间的上限。负值按零计算；证据不足的商品不计入。", "Bagi setiap produk dengan semakan belian yang boleh digunakan, StockLess menolak had atas permintaan empat minggu daripada stok selepas pesanan. Hasil negatif dikira sifar; produk tanpa bukti yang mencukupi dikecualikan.")}</p></details><details className="learn__item"><summary className="learn__q"><span className="learn__icon" aria-hidden="true">💰</span><span className="learn__qtext">{copy("How would cost saving be calculated?", "成本节省将如何计算？", "Bagaimanakah penjimatan kos akan dikira?")}</span><span className="learn__chevron" aria-hidden="true" /></summary><p className="learn__a">{copy("A money estimate needs the purchase cost for each unit and a currency. This file does not provide those connected figures, so StockLess leaves the amount blank instead of assuming a price.", "金额估算需要每件商品的采购单价和币种。当前文件尚未提供可用的成本数据，因此 StockLess 不会猜测金额。", "Anggaran wang memerlukan kos belian setiap unit dan mata wang. Fail ini belum mempunyai angka tersebut, jadi StockLess membiarkan jumlah kosong tanpa meneka harga.")}</p></details><details className="learn__item"><summary className="learn__q"><span className="learn__icon" aria-hidden="true">🌍</span><span className="learn__qtext">{copy("What does CO₂e mean, and why is it blank?", "CO₂e 是什么，为什么这里留空？", "Apakah maksud CO₂e, dan mengapa ia kosong?")}</span><span className="learn__chevron" aria-hidden="true" /></summary><p className="learn__a">{copy("CO₂e combines greenhouse gases into one comparable figure. A weight for each product and a suitable emissions factor are needed; unit counts alone cannot produce a reliable estimate.", "CO₂e 将不同温室气体换算为可比较的数值。计算还需要商品重量和适用的排放系数，仅凭件数无法可靠估算。", "CO₂e menggabungkan gas rumah hijau dalam satu angka yang boleh dibandingkan. Berat setiap produk dan faktor pelepasan yang sesuai diperlukan; bilangan unit sahaja tidak mencukupi.")}</p></details><details className="learn__item"><summary className="learn__q"><span className="learn__icon" aria-hidden="true">📈</span><span className="learn__qtext">{copy("Are these figures exact?", "这些数字准确吗？", "Adakah angka ini tepat?")}</span><span className="learn__chevron" aria-hidden="true" /></summary><p className="learn__a">{copy("No. They depend on the sales, stock, and planned order data in your file. A longer and cleaner sales history provides a steadier estimate.", "不是。估算取决于文件中的销售、库存和计划采购数据。更长、更完整的销售记录会让估算更稳定。", "Tidak. Angka ini bergantung pada data jualan, stok dan pesanan dalam fail anda. Sejarah jualan yang lebih panjang dan bersih memberikan anggaran yang lebih stabil.")}</p></details></div></section>
+    <section className="impact-faq" aria-labelledby="impact-learn">
+      <h2 className="learn__title" id="impact-learn">{copy("Understanding your impact", "了解影响数据", "Memahami impak anda")}</h2>
+      <p className="learn__lede">{copy("Learn how these numbers are calculated and what they mean.", "了解这些数字的计算方式及含义。", "Ketahui cara nombor ini dikira dan apa maksudnya.")}</p>
+      <div className="impact-faq__list">
+        {impactFaqs.map((faq, index) => {
+          const expanded = openFaq === index;
+          const triggerId = `impact-faq-trigger-${index}`;
+          const panelId = `impact-faq-panel-${index}`;
+          return <div className={`impact-faq__item${expanded ? " impact-faq__item--open" : ""}`} key={index}>
+            <h3 className="impact-faq__heading">
+              <button
+                type="button"
+                id={triggerId}
+                className="impact-faq__trigger"
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                onClick={() => setOpenFaq(expanded ? null : index)}
+              >
+                <span className="impact-faq__icon" aria-hidden="true">{faq.icon}</span>
+                <span className="impact-faq__question">{faq.question}</span>
+                <span className="impact-faq__chevron" aria-hidden="true">⌄</span>
+              </button>
+            </h3>
+            <div className="impact-faq__panel" id={panelId} aria-labelledby={triggerId} aria-hidden={!expanded}>
+              <div className="impact-faq__panel-inner"><p>{faq.answer}</p></div>
+            </div>
+          </div>;
+        })}
+      </div>
+    </section>
     <p className="impact__method">{copy("Figures update when your planned orders change. Only products with a usable purchase check are included.", "计划采购量变化后，数字也会更新。仅计入可核对采购计划的商品。", "Angka berubah apabila pesanan yang dirancang berubah. Hanya produk dengan semakan belian yang boleh digunakan disertakan.")}</p>
     <div className="impact__actions"><button type="button" className="btn btn--ghost" onClick={onBack}>{copy("← Back to the purchase plan", "← 返回采购计划", "← Kembali ke rancangan belian")}</button></div>
   </main>;

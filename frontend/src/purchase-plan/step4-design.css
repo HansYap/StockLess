@@ -374,7 +374,9 @@
 .purchase-plan .purchase-detail .panel-title{font-size:var(--text-section-head)}
 .purchase-plan .purchase-detail .panel-sub,.purchase-plan .purchase-detail .visit-note{font-size:var(--text-description);line-height:1.5}
 .purchase-plan .purchase-detail .quantity-slider__footer small,.purchase-plan .purchase-detail .quantity-slider__ends,.purchase-plan .purchase-detail .source-tag{font-size:var(--text-description)}
-.purchase-plan .purchase-detail .verdict{margin:0;padding:18px;border:0;border-top:1px solid var(--line)}
+.purchase-plan .purchase-detail .verdict{display:block;min-width:0;margin:0;padding:18px;border:0;border-top:1px solid var(--line)}
+.purchase-plan .purchase-detail .verdict-label{flex-wrap:wrap}
+.purchase-plan .purchase-detail .verdict h3,.purchase-plan .purchase-detail .verdict p{overflow-wrap:anywhere}
 .purchase-plan .purchase-detail .expiry{padding:18px;border:0;border-top:1px solid var(--line);background:#fff}
 .purchase-plan .purchase-detail .supporting-evidence{border:0;border-top:1px solid var(--line);padding:18px}
 .purchase-plan .purchase-detail .supporting-evidence summary{cursor:pointer;font-family:var(--display);font-weight:700}

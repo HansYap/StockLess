@@ -1103,6 +1103,26 @@ a.btn,a.btn:hover{text-decoration:none}
   .learn__a{padding:18px 16px;font-size:var(--text-body)}
 }
 
+/* The dashboard uses a single-open accordion rather than homepage flip cards. */
+.impact-faq{margin-top:28px}
+.impact-faq__list{display:grid;gap:10px;margin-top:14px}
+.impact-faq__item{overflow:hidden;border:1px solid #D3E7E0;border-radius:16px;background:var(--teal-tint);transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease}
+.impact-faq__item:hover{border-color:#A9D4C8;background:#F2FAF7;box-shadow:0 4px 14px rgba(20,86,75,.08)}
+.impact-faq__item--open{background:#F6FBF9}
+.impact-faq__heading{margin:0}
+.impact-faq__trigger{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;padding:16px 18px;border:0;background:transparent;color:var(--ink);font-family:var(--display);font-size:var(--text-body);font-weight:700;text-align:left;cursor:pointer}
+.impact-faq__trigger:focus-visible{outline:2px solid var(--teal);outline-offset:-4px;border-radius:16px}
+.impact-faq__icon{flex:none;font-size:24px;line-height:1}
+.impact-faq__question{flex:1;min-width:0}
+.impact-faq__chevron{flex:none;font-size:24px;line-height:1;color:var(--teal-deep);transition:transform .28s ease}
+.impact-faq__item--open .impact-faq__chevron{transform:rotate(180deg)}
+.impact-faq__panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .28s ease,opacity .2s ease}
+.impact-faq__item--open .impact-faq__panel{grid-template-rows:1fr;opacity:1}
+.impact-faq__panel-inner{min-height:0;overflow:hidden}
+.impact-faq__panel p{margin:0;padding:0 18px 18px 54px;color:var(--ink-2);font-size:var(--text-secondary);line-height:1.6}
+@media(max-width:768px){.impact-faq__trigger{min-height:64px;padding:14px 16px}.impact-faq__panel p{padding:0 16px 16px}}
+@media(prefers-reduced-motion:reduce){.impact-faq__item,.impact-faq__chevron,.impact-faq__panel{transition:none}}
+
 /* ===== impact dashboard =====
    An impact story, not an analytics console: one figure per card, its unit
    next to it, and the basis for it underneath in plain words. Two of the
