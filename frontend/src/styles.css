@@ -595,18 +595,21 @@ a.btn,a.btn:hover{text-decoration:none}
 .nextstep b{color:var(--ink)}
 
 .attention{align-self:stretch;margin-top:16px}
-.attention__head{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;
+.attention__head{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:13px 16px;
   background:#FDF3F2;border:1px solid #F0D6D2;border-radius:14px}
+.attention__heading{display:flex;align-items:center;gap:12px;flex:1 1 430px;min-width:0}
+.attention__heading>div{min-width:0}
 .attention__icon{width:30px;height:30px;flex:none;border-radius:50%;background:#9B3939;color:#fff;
   display:flex;align-items:center;justify-content:center;font-weight:800}
 .attention__head h2{font-family:var(--display);font-size:17px;font-weight:700;margin:0;color:#7E2E2E}
 .attention__head p{font-size:var(--text-description);color:var(--muted);margin:3px 0 0}
-.attention__search{display:flex;align-items:center;gap:7px;margin-left:auto;flex:0 1 220px;min-width:0;
+.attention__filters{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1 1 600px;min-width:0}
+.attention__search{display:flex;align-items:center;gap:7px;flex:1 1 340px;min-width:min(100%,340px);max-width:420px;
   padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--muted)}
 .attention__search:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(22,125,116,.12)}
 .attention__search input{flex:1;min-width:0;border:0;outline:0;background:none;
   font-family:var(--body);font-size:var(--text-description);color:var(--ink)}
-.attention__sort{flex:none}
+.attention__sort{flex:0 0 auto}
 .attention__sort select{font-family:var(--body);font-size:var(--text-description);color:var(--ink-2);
   padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:#fff}
 
@@ -672,8 +675,8 @@ a.btn,a.btn:hover{text-decoration:none}
 
 @media (max-width:900px){
   .summary{grid-template-columns:1fr}
-  .attention__head{flex-wrap:wrap}
-  .attention__sort,.attention__search{margin-left:0;width:100%;flex:1 1 100%}
+  .attention__filters{flex-direction:column;align-items:stretch;flex-basis:100%}
+  .attention__sort,.attention__search{width:100%;max-width:none;min-width:0;flex:none}
   .attention__sort select{width:100%}
 }
 

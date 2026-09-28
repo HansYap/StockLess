@@ -43,7 +43,8 @@ const PHASE_LABEL: Readonly<Record<CsvProgress["phase"], string>> = {
   complete: "Finishing up",
 };
 
-const SAMPLE_REFERENCE_DATE = "2026-09-03";
+// The bundled sample marks 2026-09-15 as its analysis day (SMP-TODAY-001).
+const SAMPLE_REFERENCE_DATE = "2026-09-15";
 
 /** Keeps the built-in example useful without removing its intentional old/future-date cases. */
 export function rebaseSampleCsvDates(csv: string, targetAnalysisDate: string): string {
@@ -163,7 +164,7 @@ export function UploadScreen({
 
   async function handleSample() {
     await run("sample_with_issues.csv", "sample", "text/csv", 0, async (signal) => {
-      const response = await fetch("/samples/sample_with_issues.csv", { signal });
+      const response = await fetch("/samples/sample_with_issues.csv", { signal, cache: "no-store" });
       if (!response.ok) throw new Error("Sample unavailable");
       const csv = await response.text();
       const analysisDate = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });

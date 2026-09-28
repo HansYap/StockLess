@@ -82,9 +82,12 @@ export function ReadinessOverview({ snapshot, timelines }: { snapshot: Readiness
     </section>
     <p className="nextstep"><b>{t("Next step:")}</b> {t("Continue with the usable rows, or download the problem list and correct your file first.")}</p>
     {counts.review + counts.missing > 0 && <section className="attention">
-      <div className="attention__head"><span className="attention__icon" aria-hidden="true">!</span><div><h2>{counts.review + counts.missing} {t("products need your attention")}</h2><p>{t("Review data issues and stock age before continuing.")}</p></div>
-        <label className="attention__search"><input type="search" aria-label={t("Search by product name or code")} placeholder={t("Search by product name or code")} value={search} onChange={e => setSearch(e.target.value)} /></label>
-        <label className="attention__sort"><select aria-label={t("Sort products")} value={sort} onChange={e => setSort(e.target.value)}><option value="age">{t("Sort by: stock age (oldest)")}</option><option value="name">{t("Sort by: product name")}</option><option value="status">{t("Sort by: issue type")}</option></select></label>
+      <div className="attention__head">
+        <div className="attention__heading"><span className="attention__icon" aria-hidden="true">!</span><div><h2>{counts.review + counts.missing} {t("products need your attention")}</h2><p>{t("Review data issues and stock age before continuing.")}</p></div></div>
+        <div className="attention__filters">
+          <label className="attention__search"><input type="search" aria-label={t("Search by product name or code")} placeholder={t("Search by product name or code")} value={search} onChange={e => setSearch(e.target.value)} /></label>
+          <label className="attention__sort"><select aria-label={t("Sort products")} value={sort} onChange={e => setSort(e.target.value)}><option value="age">{t("Sort by: stock age (oldest)")}</option><option value="name">{t("Sort by: product name")}</option><option value="status">{t("Sort by: issue type")}</option></select></label>
+        </div>
       </div>
       <div className="pcards">{attention.map(p => <article className={`pcard pcard--${p.status}`} key={p.key}>
         <header className="pcard__head"><div><b className="pcard__name">{p.name}</b><span className="pcard__code">SKU: {p.code}{p.pack ? ` · ${p.pack}` : ""}</span></div><span className={`pill ${p.status === "missing" ? "pill--red" : "pill--amber"}`}>{t(LABELS[p.status])}</span></header>
