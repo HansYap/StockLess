@@ -243,8 +243,10 @@ async function sha256(bytes: Uint8Array): Promise<string> {
 }
 
 /** Validates the filename without rejecting browser-specific MIME guesses. */
-function assertSupportedFile(sourceName: string): void {
-  if (!sourceName.toLocaleLowerCase("en").endsWith(".csv")) {
+function assertSupportedFile(sourceName: string, mimeType?: string): void {
+  const isCsv = sourceName.toLocaleLowerCase("en").endsWith(".csv");
+  const convertedExcel = /\.(xlsx|xls)$/i.test(sourceName) && mimeType === "text/csv;converted-from=excel";
+  if (!isCsv && !convertedExcel) {
     throw createCsvImportError("UNSUPPORTED_FILE_TYPE", sourceName);
   }
 }
@@ -258,7 +260,7 @@ export async function parseCsvBytes(
   const maxRows = options.maxRows ?? UPLOAD_REQUIREMENTS.maxRows;
 
   assertNotAborted(options.signal);
-  assertSupportedFile(options.sourceName);
+  assertSupportedFile(options.sourceName, options.mimeType);
 
   if (sourceBytes.byteLength === 0) {
     throw createCsvImportError("INVALID_UTF8", options.sourceName);

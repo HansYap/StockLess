@@ -363,6 +363,14 @@
 .purchase-plan .purchase-detail .dialog-head p{font-family:var(--body);font-size:var(--text-description);line-height:1.5}
 .purchase-plan .purchase-detail .dialog-action-first{padding:0 18px 18px}
 .purchase-plan .purchase-detail .estimate-hero{padding:14px 16px;border:0;border-radius:12px;background:var(--teal-tint)}
+.purchase-plan .purchase-detail .hero-concern{margin:0 0 16px}
+.purchase-plan .purchase-detail .hero-concern strong{display:flex;align-items:center;gap:8px;color:var(--teal-deep);font-family:var(--display);font-size:var(--text-body)}
+.purchase-plan .purchase-detail .hero-concern strong span{font-size:15px}
+.purchase-plan .purchase-detail .hero-concern p{margin:10px 0 0;color:var(--ink);font-size:var(--text-body);line-height:1.55}
+.purchase-plan .purchase-detail .hero-concern--high strong{color:var(--red)}
+.purchase-plan .purchase-detail .hero-concern--review strong{color:var(--amber)}
+.purchase-plan .purchase-detail .estimate-hero .eyebrow{margin:0;color:var(--teal-deep)}
+.purchase-plan .purchase-detail .estimate-copy{max-width:none;margin-top:8px;color:var(--muted);font-size:var(--text-body)}
 .purchase-plan .purchase-detail .estimate-hero::after{display:none}
 .purchase-plan .purchase-detail .estimate-number{font-size:30px;color:var(--teal-deep)}
 .purchase-plan .purchase-detail .estimate-number span{font-size:var(--text-body)}

@@ -297,7 +297,10 @@ export function ProductPurchaseDialog({
       </header>
       <div className="dialog-action-first">
           <section className="estimate-hero">
-            {plan?.audit.state === "verdict" && <div className="hero-concern"><span className={`pill pill--${plan.audit.verdict === "Overstock risk" ? "high" : plan.audit.verdict === "Needs review" ? "review" : "balanced"}`}>{t(plan.audit.verdict)}</span><p>{t(plan.audit.reasonSentence)}</p></div>}
+            {plan?.audit.state === "verdict" && <div className={`hero-concern hero-concern--${plan.audit.verdict === "Overstock risk" ? "high" : plan.audit.verdict === "Needs review" ? "review" : "balanced"}`}>
+              <strong><span aria-hidden="true">●</span> {t(plan.audit.verdict === "Looks balanced" ? "Looks balanced" : plan.audit.verdict)}</strong>
+              <p>{t(plan.audit.reasonSentence)}</p>
+            </div>}
             <p className="eyebrow">{t("Estimated restock")}</p>
             {t(restock?.state === "available" && !cannotJudge ? (
               <>

@@ -1,5 +1,7 @@
 import "./readiness.css";
 import { ReadinessOverview } from "./ReadinessOverview.tsx";
+import { ReadinessCharts, FILTER_META, issueMatches, type ReadinessIssueFilter } from "./ReadinessCharts.tsx";
+export type { ReadinessIssueFilter } from "./ReadinessCharts.tsx";
 import { t, useLanguage } from "../i18n/index.ts";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -9,7 +11,6 @@ import {
   detectDateFormatCandidate,
   type ConfirmedDateFormat,
   type DataIssue,
-  type DataIssueCode,
   type DateFormatConfirmation,
   type DuplicateDecision,
   type MappingState,
@@ -19,8 +20,6 @@ import {
   type StockFreshness,
   type WeekState,
 } from "../engine.ts";
-
-export type ReadinessIssueFilter = "dates" | "quantities" | "identity" | "duplicates" | "stock";
 
 interface ReadinessScreenProps {
   readonly dataset: ParsedDataset;
@@ -40,40 +39,6 @@ interface ReadinessScreenProps {
   readonly reportFilename: string;
 }
 
-const FILTER_CODES: Readonly<Record<ReadinessIssueFilter, readonly DataIssueCode[]>> = Object.freeze({
-  dates: ["INVALID_DATE", "FUTURE_TRANSACTION_DATE", "DATE_FORMAT_CONFIRMATION_REQUIRED", "INVALID_EXPIRY_DATE"],
-  quantities: [
-    "INVALID_QUANTITY",
-    "INVALID_PLANNED_ORDER",
-    "INVALID_INCOMING_STOCK",
-    "CONFLICTING_PLANNED_ORDER",
-    "CONFLICTING_INCOMING_STOCK",
-  ],
-  identity: ["MISSING_IDENTITY"],
-  duplicates: ["DUPLICATE_CANDIDATE", "DUPLICATE_CONFIRMED"],
-  stock: [
-    "INVALID_CURRENT_STOCK",
-    "MISSING_CURRENT_STOCK",
-    "INVALID_STOCK_DATE",
-    "MISSING_STOCK_DATE",
-    "FUTURE_STOCK_DATE",
-    "CONFLICTING_CURRENT_STOCK",
-    "CONFLICTING_STOCK_DATE",
-  ],
-});
-
-const FILTER_META: Readonly<Record<ReadinessIssueFilter, Readonly<{
-  label: string;
-  hint: string;
-  severity: "fix" | "review";
-}>>> = Object.freeze({
-  dates: { label: "Date issues", hint: "Invalid or unconfirmed date values", severity: "fix" },
-  quantities: { label: "Quantity issues", hint: "Invalid or conflicting quantity values", severity: "fix" },
-  identity: { label: "Missing identity", hint: "Rows without the chosen product identity", severity: "fix" },
-  duplicates: { label: "Exact duplicates", hint: "Matching source rows needing a decision", severity: "review" },
-  stock: { label: "Stock evidence", hint: "Optional stock values that limit cover", severity: "review" },
-});
-
 const WEEK_LABEL: Readonly<Record<WeekState, string>> = Object.freeze({
   missing: "Missing",
   confirmed_zero_sales: "Confirmed zero",
@@ -89,10 +54,6 @@ const TIDY_UP_LABEL: Readonly<Record<NormalizationEvent["normalizationType"], st
 
 const TIDY_UPS_PER_PAGE = 25;
 const PROBLEMS_PER_PAGE = 25;
-
-function issueMatches(issue: DataIssue, filter: ReadinessIssueFilter): boolean {
-  return FILTER_CODES[filter].includes(issue.issueCode);
-}
 
 function humanize(value: string): string {
   return value.toLowerCase().replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase());
@@ -147,7 +108,6 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   const problemStart = currentProblemPage * PROBLEMS_PER_PAGE;
   const visibleProblems = shown.slice(problemStart, problemStart + PROBLEMS_PER_PAGE);
   const unresolvedDuplicates = props.snapshot.duplicateGroups.filter((group) => group.decision === "unresolved").length;
-  const leftOut = props.snapshot.reconciliation.rowsExcluded;
   const tidyUpPageCount = Math.max(1, Math.ceil(props.snapshot.normalizations.length / TIDY_UPS_PER_PAGE));
   const currentTidyUpPage = Math.min(tidyUpPage, tidyUpPageCount - 1);
   const tidyUpStart = currentTidyUpPage * TIDY_UPS_PER_PAGE;
@@ -272,55 +232,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       </section>
 
       <details className="deepdive"><summary>{t("Show the underlying numbers and charts")}</summary>
-      <div className="ready">
-        <div className="ready__left">
-          <span className="ready__tick" aria-hidden="true">✓</span>
-          <div>
-            <h2>{t("Exact row reconciliation")}</h2>
-            <p>
-              {t(props.snapshot.reconciliation.rowsIn.toLocaleString("en"))} {t("rows in =")}{t(" ")}
-              {t(props.snapshot.reconciliation.rowsUsed.toLocaleString("en"))} {t("used +")}{t(" ")}
-              {t(leftOut.toLocaleString("en"))} {t("left out. ")}{t(props.snapshot.reconciliation.rowsSafelyNormalized.toLocaleString("en"))}{t(" ")}
-              {t("used rows had safe representation-only normalization.")}</p>
-          </div>
-        </div>
-        <div>
-          <div className="ready__count">{t(props.snapshot.reconciliation.rowsUsed.toLocaleString("en"))}</div>
-          <div className="ready__unit">{t("usable rows of ")}{t(props.snapshot.reconciliation.rowsIn.toLocaleString("en"))}</div>
-        </div>
-      </div>
-
-      <div className="issues issues--five">
-        {t((Object.keys(FILTER_META) as ReadinessIssueFilter[]).map((kind) => {
-          const meta = FILTER_META[kind];
-          const count = props.snapshot.issues.filter((issue) => issueMatches(issue, kind)).length;
-          const active = props.filter === kind;
-          return (
-            <button
-              type="button"
-              key={kind}
-              className={`issue${active ? " issue--active" : ""}`}
-              disabled={count === 0}
-              aria-pressed={active}
-              onClick={() => props.onFilter(active ? null : kind)}
-            >
-              <span className="issue__head">
-                <span className="issue__label">{t(meta.label)}</span>
-                <span className={`pill ${meta.severity === "fix" ? "pill--red" : "pill--amber"}`}>
-                  {t(meta.severity === "fix" ? "Fix" : "Review")}
-                </span>
-              </span>
-              <span className="issue__value">{t(count)}</span>
-              <span className="issue__hint">{t(meta.hint)}</span>
-            </button>
-          );
-        }))}
-      </div>
-
-      <section className="card quality-chart" aria-label={t("Data quality by row")}>
-        <div className="quality-ring" style={{ background: `conic-gradient(var(--teal) 0 ${props.snapshot.reconciliation.rowsIn ? props.snapshot.reconciliation.rowsUsed / props.snapshot.reconciliation.rowsIn * 100 : 0}%, var(--red-tint) 0 100%)` }}><b>{props.snapshot.reconciliation.rowsUsed} / {props.snapshot.reconciliation.rowsIn}</b></div>
-        <div><h2 className="card-title">{t("Data quality by row")}</h2><p>{props.snapshot.reconciliation.rowsUsed} {t("Usable rows")} · {leftOut} {t("Rows left out")}</p><p>{t("Missing weeks are not treated as zero sales.")}</p></div>
-      </section>
+      <ReadinessCharts snapshot={props.snapshot} filter={props.filter} onFilter={props.onFilter} />
       <section className="card evidence-section">
         <div className="card__head">
           <div>

@@ -1,6 +1,7 @@
 import { t, useLanguage } from "../i18n/index.ts";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
+import { excelToCsvBytes } from "./excel-import.ts";
 import {
   CsvImportError,
   CAPABILITY_LABELS,
@@ -86,7 +87,7 @@ async function readFileBytes(
   return bytes;
 }
 
-/** Screen 01. Accepts a retailer CSV or the bundled sample and reports failures. */
+/** Screen 01. Accepts retailer CSV/Excel files or the bundled sample. */
 export function UploadScreen({
   onSource,
   onCancel,
@@ -154,11 +155,18 @@ export function UploadScreen({
   }
 
   async function handleFile(file: File) {
-    await run(file.name, "user", file.type || undefined, file.size, async (signal, onReadProgress) => {
+    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+    await run(file.name, "user", isExcel ? "text/csv;converted-from=excel" : file.type || undefined, file.size, async (signal, onReadProgress) => {
       if (file.size > UPLOAD_REQUIREMENTS.maxBytes) {
         throw createCsvImportError("FILE_TOO_LARGE", file.name);
       }
-      return readFileBytes(file, signal, onReadProgress);
+      const bytes = await readFileBytes(file, signal, onReadProgress);
+      if (signal.aborted) throw new DOMException("Import cancelled.", "AbortError");
+      if (!isExcel) return bytes;
+      setProgress({ phase: "decode", processed: file.size, total: file.size });
+      const csv = await excelToCsvBytes(bytes, file.name);
+      if (signal.aborted) throw new DOMException("Import cancelled.", "AbortError");
+      return csv;
     });
   }
 
@@ -225,7 +233,7 @@ export function UploadScreen({
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
           >
-            <div className="csv-badge" aria-hidden="true"><span>{t("CSV")}</span></div>
+            <div className="csv-badge" aria-hidden="true"><span>{t("CSV / XLS")}</span></div>
 
             {t(busy ? (
               <>
@@ -259,16 +267,16 @@ export function UploadScreen({
               </>
             ) : (
               <>
-                <h3>{t("Drop your CSV file here")}</h3>
+                <h3>{t("Drop your CSV or Excel file here")}</h3>
                 <p>{t("Use the export from your POS, marketplace or spreadsheet.")}</p>
                 <div className="dropzone__actions">
                   <button type="button" className="btn btn--primary" onClick={() => inputRef.current?.click()}>
-                    {t("Choose CSV file")}</button>
+                    {t("Choose CSV or Excel file")}</button>
                   <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>
                     {t("Use sample file")}</button>
                 </div>
                 <p className="dropzone__limits">
-                  {t(UPLOAD_REQUIREMENTS.supportedExtension)} {t("up to ")}{t(megabyteLimit)} {t("MiB ·")}{t(" ")}{t(UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en"))} {t("rows ·")}{t(" ")}{t("comma, semicolon or tab")}</p>
+                  {t(".csv, .xlsx or .xls")} {t("up to ")}{t(megabyteLimit)} {t("MiB ·")}{t(" ")}{t(UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en"))} {t("rows ·")}{t(" ")}{t("Excel uses the first worksheet with data")}</p>
 <ol className="value-chain" aria-label={t("What your file turns into")}><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6ZM14 3v5h4M9 12h6M9 16h6"/></svg><span className="value-chain__label">{t("Your sales data")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 21h18M5 20V12h3v8M11 20V7h3v13M17 20V3h3v17"/></svg><span className="value-chain__label">{t("Demand insights")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 7 9-4 9 4v10l-9 4-9-4ZM3 7l9 4 9-4M12 11v10"/></svg><span className="value-chain__label">{t("Smarter restocking")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 4C5 3 2 9 5 16c7 8 15-2 15-12ZM4 21 16 8"/></svg><span className="value-chain__label">{t("Less waste")}</span></span></li></ol>
               </>
             ))}
@@ -276,7 +284,7 @@ export function UploadScreen({
             <input
               ref={inputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
               hidden
               onChange={(event) => {
                 const file = event.target.files?.[0];

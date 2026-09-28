@@ -80,6 +80,16 @@ describe("purchase planning", () => {
     fireEvent.click(dialog.getByRole("button", { name: "Clear planned order" }));
     expect(dialog.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
   });
+  it("shows the live purchase check above the estimate in one detail card", () => {
+    render(<Harness />);
+    open();
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Planned order"), { target: { value: "4" } });
+    const hero = dialog.querySelector(".estimate-hero")!;
+    expect(hero.querySelector(".hero-concern")?.textContent).toMatch(/Looks balanced|Needs review|Overstock risk/);
+    expect(hero.textContent).toContain("Estimated restock");
+    expect(hero.compareDocumentPosition(dialog.querySelector(".order-panel")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
   it("shows the five planning columns and no entered order initially", () => {
     render(<Harness />);
     expect(
