@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { FinanceHint } from "../finance-preview/FinancePreview.tsx";
 import { t, useLanguage } from "../i18n/index.ts";
 import type { ProductTimeline, ReadinessSnapshot } from "../engine.ts";
 
@@ -81,7 +80,6 @@ export function ReadinessOverview({ snapshot, timelines }: { snapshot: Readiness
         <b>{counts[status]}</b><span className="summary__name">{t(LABELS[status])}</span><span className="summary__note">{t(status === "ready" ? "Complete data, no major issues" : status === "review" ? "Usable evidence with issues to review" : "Stock or sales evidence is incomplete")}</span>
       </li>)}</ul>
     </section>
-    <FinanceHint step={3} />
     <p className="nextstep"><b>{t("Next step:")}</b> {t("Continue with the usable rows, or download the problem list and correct your file first.")}</p>
     {counts.review + counts.missing > 0 && <section className="attention">
       <div className="attention__head"><span className="attention__icon" aria-hidden="true">!</span><div><h2>{counts.review + counts.missing} {t("products need your attention")}</h2><p>{t("Review data issues and stock age before continuing.")}</p></div>
@@ -97,7 +95,7 @@ export function ReadinessOverview({ snapshot, timelines }: { snapshot: Readiness
       </article>)}</div>
       {attention.length === 0 && <p className="empty" role="status">{t("No matching products.")}</p>}
     </section>}
-    {ready.length > 0 && <details className="readylist" open><summary><span className="readylist__tick" aria-hidden="true">✓</span><span><b>{ready.length} {t("products are ready")}</b><span className="readylist__note">{t("Complete data, no major issues")}</span></span></summary>
+    {ready.length > 0 && <details className="readylist" open><summary><span className="readylist__tick" aria-hidden="true">✓</span><span><b>{ready.length} {t(ready.length === 1 ? "product is ready" : "products are ready")}</b><span className="readylist__note">{t("Complete data, no major issues")}</span></span></summary>
       <div className="table-scroll"><table className="dtable dtable--ready"><thead><tr><th>{t("Product")}</th><th>{t("Last stock count")}</th><th>{t("Stock age")}</th><th>{t("Weekly sales")}</th><th>{t("Status")}</th></tr></thead><tbody>{ready.map(p => <tr key={p.key}><td><b>{p.name}</b><span className="cell-detail num">{p.code}{p.pack ? ` · ${p.pack}` : ""}</span></td><td>{p.stock?.stockAsOfDate ?? "—"}</td><td>{t(`${p.stock?.freshness.ageDays} days`)}</td><td><WeeklySales timeline={p.timeline} /></td><td><span className="pill pill--confirmed">{t("Ready")}</span></td></tr>)}</tbody></table></div>
     </details>}
   </>;

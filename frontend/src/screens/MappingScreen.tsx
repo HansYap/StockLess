@@ -1,5 +1,4 @@
 import { t, useLanguage } from "../i18n/index.ts";
-import { FinanceHint } from "../finance-preview/FinancePreview.tsx";
 import { useMemo } from "react";
 import {
   CANONICAL_FIELDS,
@@ -105,7 +104,6 @@ export function MappingScreen(props: MappingScreenProps) {
         <p className="notice notice--info">{t(proposals.fallbackNotice)}</p>
       ))}
 
-      <FinanceHint step={2} />
       <div className="split">
         <section className="card split__main">
           <div className="card__head">
@@ -132,7 +130,7 @@ export function MappingScreen(props: MappingScreenProps) {
             </button>
           </div>
           <div className="table-scroll">
-            <table className="dtable">
+            <table className="dtable dtable--cards">
               <thead>
                 <tr>
                   <th style={{ width: "28%" }}>{t("StockLess field")}</th>
@@ -150,12 +148,12 @@ export function MappingScreen(props: MappingScreenProps) {
 
                   return (
                     <tr key={field}>
-                      <td>
+                      <td className="dtable__title">
                         <div className="field-head"><b className="dtable__label">{t(definition.label)}</b>
                         <FieldHelp description={t(definition.description)} />
                         {required && <span className="req">{t("Required")}</span>}</div>
                       </td>
-                      <td>
+                      <td data-label={t("Your column")}>
                         <select
                           className="select"
                           disabled={props.checking}
@@ -173,10 +171,10 @@ export function MappingScreen(props: MappingScreenProps) {
                           ))}
                         </select>
                       </td>
-                      <td className="num">
+                      <td className="num" data-label={t("Preview")}>
                         {column ? formatPreview(column.previewValues) : "—"}
                       </td>
-                      <td>
+                      <td data-label={t("Status")}>
                         {t(current?.confirmed ? (
                           <span className="pill pill--confirmed">{t("✓ Confirmed")}</span>
                         ) : current ? (

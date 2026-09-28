@@ -177,6 +177,185 @@
   .sl-home .sl-topnav > div:nth-of-type(1) { order: 3; margin-right: auto; }
 }
 
+/* ===== thumb ergonomics on a phone =====
+   The prototype's controls are styled inline (Figma Make output), and an
+   inline style outranks a stylesheet, so the phone breakpoint has to say
+   !important to reach them. Everything standalone gets to 44px - Apple's and
+   Material's floor. Links sitting inside a sentence, like the source
+   citations, are left alone: WCAG 2.5.8 exempts them, and boxing them out
+   would break the paragraph they belong to. */
+.sl-home .sl-stepper-btn { width: 34px; height: 34px; }
+.sl-home .sl-stepper-input { width: 62px; height: 34px; }
+
+@media (max-width: 760px) {
+  .sl-home .sl-stepper-btn { width: 44px !important; height: 44px !important; }
+  .sl-home .sl-stepper-input { width: 68px !important; height: 44px !important; }
+  .sl-home .sl-range { min-height: 44px; }
+  .sl-home .language-switcher select { min-height: 44px !important; }
+
+  /* the top bar: brand, language, "How it works" */
+  .sl-home .sl-topnav > a,
+  .sl-home .sl-topnav > button { min-height: 44px !important; display: inline-flex !important;
+                        align-items: center !important; }
+
+  /* standalone links and buttons tagged in the markup */
+  .sl-home .sl-tap { min-height: 44px !important; display: inline-flex !important;
+            align-items: center !important; }
+}
+
+
+/* ===== learn more =====
+   Flashcards, matching the live homepage. Each card shows a question;
+   activating it turns it over to the answer.
+
+   Still <details>/<summary>, so the keyboard, the open state and the screen
+   reader announcement stay the browser's job. The summary never moves: it
+   stays flat, on top and full size, so it is always the click target
+   whichever face is showing. Only the answer swings in, and it takes no
+   pointer events. Rotating the whole card in 3-D looks tempting and breaks
+   both of those — a rotated, backface-hidden summary stops hit-testing, and
+   forcing the content to render while closed leaves an invisible face lying
+   over the page swallowing clicks. */
+.sl-home .learn__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0;
+}
+.sl-home .learn__lede {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-lead);
+  color: var(--muted);
+  line-height: 1.65;
+  max-width: 60ch;
+}
+.sl-home .learn__list { margin-top: var(--space-6); perspective: 1200px; }
+.sl-home .learn--cards .learn__list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* both faces share one grid cell, so the card is as tall as the taller of
+   them and an answer can never be clipped. Chrome puts the content in a UA
+   slot, so ::details-content is pinned to the cell too. */
+.sl-home .learn__item {
+  display: grid;
+  border-radius: 16px;
+  background: var(--teal-tint);
+}
+.sl-home .learn__item > * { grid-area: 1 / 1; min-width: 0; }
+.sl-home .learn__item::details-content { grid-area: 1 / 1; min-width: 0; }
+.sl-home .learn__item + .learn__item { margin-top: 0; }
+
+.sl-home .learn__q {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 22px 20px;
+  min-height: 116px;
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  z-index: 2;
+  border-radius: 16px;
+  background: var(--teal-tint);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-body);
+  color: var(--ink);
+  transition: background-color 200ms ease;
+}
+.sl-home .learn__q::-webkit-details-marker { display: none; }
+.sl-home .learn__q:hover { background: #DDEDE8; }
+.sl-home .learn__item:focus-within { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+/* Open: the question's contents fade out and its panel goes clear, so the
+   answer shows through — the summary is still on top and still clickable. */
+.sl-home .learn__icon, .sl-home .learn__qtext, .sl-home .learn__chevron { transition: opacity 180ms ease; }
+.sl-home .learn__item[open] .learn__q { background: transparent; }
+.sl-home .learn__item[open] .learn__q:hover { background: rgba(255,255,255,.06); }
+.sl-home .learn__item[open] .learn__icon,
+.sl-home .learn__item[open] .learn__qtext,
+.sl-home .learn__item[open] .learn__chevron { opacity: 0; }
+
+.sl-home .learn__icon { font-size: 26px; line-height: 1; flex: none; }
+.sl-home .learn__qtext { flex: 1; min-width: 0; }
+/* a folded page corner, to say there is a back to this */
+.sl-home .learn__chevron {
+  flex: none;
+  align-self: flex-end;
+  width: 16px; height: 16px;
+  border-radius: 3px 0 16px 0;
+  background: linear-gradient(135deg, transparent 48%, var(--mint) 50%);
+}
+
+.sl-home .learn__a {
+  margin: 0;
+  padding: 22px 20px;
+  border-radius: 16px;
+  background: var(--ink);
+  color: #EAF5F2;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-body);
+  font-size: var(--text-secondary);
+  line-height: 1.6;
+  pointer-events: none;                  /* every click belongs to the summary */
+  transform: rotateY(-92deg);
+  transform-origin: left center;
+  opacity: 0;
+  transition: transform 340ms cubic-bezier(.2,.7,.3,1), opacity 200ms ease;
+}
+.sl-home .learn__item[open] .learn__a { transform: none; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-home .learn__a { transform: none; transition: opacity 150ms ease; }
+  .sl-home .learn__icon, .sl-home .learn__qtext, .sl-home .learn__chevron, .sl-home .learn__q { transition: none; }
+}
+
+/* "Still have questions?" is a <details> too, so the extra questions open in
+   place — no second page and no JavaScript. */
+.sl-home .learn__all {
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-5);
+}
+.sl-home .learn__all-q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  cursor: pointer;
+  list-style: none;
+  min-height: 44px;
+  font-size: var(--text-body);
+}
+.sl-home .learn__all-q::-webkit-details-marker { display: none; }
+.sl-home .learn__all-cta {
+  color: var(--teal);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-secondary);
+  white-space: nowrap;
+}
+.sl-home .learn__all-q:hover .learn__all-cta,
+.sl-home .learn__all[open] .learn__all-cta { text-decoration: underline; }
+.sl-home .learn__all .learn__list { margin-top: var(--space-4); grid-template-columns: 1fr; }
+
+@media (max-width: 900px) {
+  .sl-home .learn--cards .learn__list { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .sl-home .learn__title { font-size: 24px; }
+  .sl-home .learn__lede { font-size: var(--text-body); }
+  .sl-home .learn__q { padding: 18px 16px; gap: var(--space-2); min-height: 104px; }
+  .sl-home .learn__a { padding: 18px 16px; }
+  .sl-home .learn__all-q { align-items: flex-start; flex-direction: column; gap: 6px; }
+}
+
 /* ─── StockLess design tokens ───────────────────────────────────────────────
    Edit this file to restyle the entire app.
    Every colour, font, size, and shadow used in components is a CSS variable.
@@ -229,18 +408,23 @@
   --weight-body:    400;
   --weight-bold:    700;
 
-  /* ── Typography: sizes ── */
-  --text-hero:          52px;
-  --text-page-title:    36px;
-  --text-lead:          18px;
-  --text-section-head:  20px;
-  --text-body:          15px;
-  --text-secondary:     13px;
-  --text-description:   12px;
-  --text-label:         10px;
-  --text-eyebrow:       11px;
+  /* ── Typography: sizes — I3-TYPO-01 (Iteration 3 V2) ──
+     Supersedes every earlier font-size requirement. Same values as the live
+     app's styles.css, so the prototype and the product read as one thing.
+     I3-UI AC1 forbids a smaller local override of any role, and no interface
+     text goes below label. hero and step-num are display type above
+     page-title, not roles. */
+  --text-hero:          46px;
+  --text-page-title:    40px;
+  --text-lead:          20px;
+  --text-section-head:  22px;
+  --text-body:          16px;
+  --text-secondary:     15px;
+  --text-description:   14px;
+  --text-eyebrow:       13px;
+  --text-label:         12px;
   --text-hand:          22px;
-  --text-step-num:      72px;
+  --text-step-num:      56px;
 
   /* ── Spacing ── */
   --space-1:    4px;
@@ -249,15 +433,15 @@
   --space-4:   16px;
   --space-5:   20px;
   --space-6:   24px;
-  --space-8:   32px;
-  --space-10:  40px;
-  --space-12:  48px;
-  --space-16:  64px;
-  --space-20:  80px;
-  --space-24:  96px;
+  --space-8:   26px;
+  --space-10:  30px;
+  --space-12:  36px;
+  --space-16:  46px;
+  --space-20:  56px;
+  --space-24:  66px;
 
   /* ── Layout ── */
-  --page-max-width: 1080px;
+  --page-max-width: min(1420px, 92vw);
   --content-width:   760px;
   --radius-sm:    6px;
   --radius:      10px;

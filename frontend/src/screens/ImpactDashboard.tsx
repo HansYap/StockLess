@@ -1,0 +1,48 @@
+import { useMemo } from "react";
+import { getLocale, useLanguage } from "../i18n/index.ts";
+import { evaluateProductPurchasePlan, type DemandForecastReview, type ReadinessSnapshot } from "../engine.ts";
+import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from "../purchase-plan/model.ts";
+
+interface Props {
+  snapshot: ReadinessSnapshot;
+  forecast: DemandForecastReview;
+  drafts: PurchaseDrafts;
+  onBack: () => void;
+}
+
+/** A plan can only have a quantified excess when its audit has usable stock and demand figures. */
+export function calculatePotentialExcess(snapshot: ReadinessSnapshot, forecast: DemandForecastReview, drafts: PurchaseDrafts) {
+  return joinPurchaseEvidence(snapshot, forecast).flatMap(product => {
+    const inputs = drafts[product.key] ?? product.fileInputs;
+    const plan = evaluatePurchaseProduct(product, snapshot.analysisDate, inputs, evaluateProductPurchasePlan, product.fileExpiry);
+    if (plan?.audit.state !== "verdict") return [];
+    const { availableAfterOrder, demandHigh } = plan.audit.figures;
+    return [{ key: product.key, name: product.name, sku: product.sku, units: Math.max(0, availableAfterOrder.value - demandHigh.value) }];
+  });
+}
+
+export function ImpactDashboard({ snapshot, forecast, drafts, onBack }: Props) {
+  const language = useLanguage();
+  const copy = (en: string, zh: string, ms: string) => language === "zh" ? zh : language === "ms" ? ms : en;
+  const lines = useMemo(() => calculatePotentialExcess(snapshot, forecast, drafts), [snapshot, forecast, drafts]);
+  const excess = lines.reduce((sum, item) => sum + item.units, 0);
+  const positive = lines.filter(item => item.units > 0);
+  return <main className="impact" aria-labelledby="impact-title">
+    <p className="eyebrow">{copy("Impact dashboard", "影响仪表盘", "Papan pemuka impak")}</p>
+    <h1 className="impact__title" id="impact-title">{copy("Your impact", "您的影响", "Impak anda")}</h1>
+    <p className="impact__lede">{copy("See what your current purchase plan could leave above expected demand. These are estimates from your file, not measured outcomes.", "查看当前采购计划中可能超过预期需求的库存。这些是根据文件得出的估算，并非实际测量结果。", "Lihat stok yang mungkin melebihi permintaan dijangka dalam rancangan belian anda. Ini anggaran daripada fail anda, bukan hasil yang diukur.")}</p>
+
+    <div className="impact__cards">
+      <article className="icard icard--figure"><span className="icard__icon" aria-hidden="true">♻️</span><span className="icard__label">{copy("Environmental impact", "环境影响", "Impak alam sekitar")}</span><p className="icard__value">{lines.length ? excess.toLocaleString(getLocale()) : "—"}<span className="icard__unit">{lines.length ? copy("units", "件", "unit") : ""}</span></p><p className="icard__caption">{copy("Potential excess stock", "潜在过量库存", "Stok berlebihan berpotensi")}</p><p className="icard__basis">{lines.length ? copy(`Across ${lines.length} ${lines.length === 1 ? "product" : "products"} with a usable purchase check.`, `基于 ${lines.length} 件可核对采购计划的商品。`, `Berdasarkan ${lines.length} produk dengan semakan belian yang boleh digunakan.`) : copy("Enter a planned order and check a product to see an estimate.", "输入计划采购量并完成商品检查后即可查看估算。", "Masukkan kuantiti pesanan dan semak produk untuk melihat anggaran.")}</p></article>
+      <article className="icard icard--locked"><span className="icard__icon" aria-hidden="true">💰</span><span className="icard__label">{copy("Business impact", "经营影响", "Impak perniagaan")}</span><p className="icard__value icard__value--locked">{copy("Not yet available", "暂不可用", "Belum tersedia")}</p><p className="icard__caption">{copy("Estimated cost of excess stock", "过量库存成本估算", "Anggaran kos stok berlebihan")}</p><p className="icard__basis">{copy("Purchase cost and currency are needed to calculate a money figure.", "计算金额需要采购单价和币种。", "Kos belian dan mata wang diperlukan untuk mengira nilai wang.")}</p></article>
+      <article className="icard icard--locked"><span className="icard__icon" aria-hidden="true">🌍</span><span className="icard__label">{copy("Emissions impact", "排放影响", "Impak pelepasan")}</span><p className="icard__value icard__value--locked">{copy("Not yet available", "暂不可用", "Belum tersedia")}</p><p className="icard__caption">{copy("Estimated emissions avoided", "避免排放估算", "Anggaran pelepasan dielakkan")}</p><p className="icard__basis">{copy("Your file records units without product weights, so emissions cannot be estimated.", "文件只有件数，没有商品重量，因此无法估算排放。", "Fail anda merekodkan unit tanpa berat produk, jadi pelepasan tidak dapat dianggarkan.")}</p></article>
+    </div>
+
+    <section className="impact__lines" aria-labelledby="impact-lines-title"><h2 id="impact-lines-title">{copy("Where the estimate comes from", "估算依据", "Asal anggaran")}</h2>{positive.length ? <ul>{positive.map(item => <li key={item.key}><span className="impact__lname"><b>{item.name}</b><span className="num">{item.sku}</span></span><span className="impact__lunits">{item.units.toLocaleString(getLocale())}{" "}<span>{copy("units above expected demand", "件超过预期需求", "unit melebihi permintaan dijangka")}</span></span></li>)}</ul> : <p className="impact__empty">{lines.length ? copy("No excess stock is indicated by the checked plans.", "已核对的计划未显示过量库存。", "Tiada stok berlebihan ditunjukkan oleh rancangan yang disemak.") : copy("No purchase plan has enough checked evidence yet.", "目前没有足够证据来计算采购计划。", "Belum ada rancangan belian dengan bukti semakan yang mencukupi.")}</p>}</section>
+
+    <section className="impact__sdg"><span className="impact__sdg-mark" aria-hidden="true">12</span><div><h2>{copy("Your contribution to SDG 12.3", "您与可持续发展目标 12.3", "Sumbangan anda kepada SDG 12.3")}</h2><p>{copy("Reviewing possible excess before ordering can support food-waste reduction. This page does not claim a measured reduction.", "在下单前检查可能过量的库存，有助于减少食物浪费。此页面不宣称已经实现可测量的减排或减废。", "Menyemak kemungkinan lebihan sebelum memesan boleh menyokong pengurangan pembaziran makanan. Halaman ini tidak mendakwa pengurangan yang diukur.")}</p><a className="impact__sdg-link" href="https://sdgs.un.org/goals/goal12" target="_blank" rel="noreferrer noopener">{copy("Read about SDG 12 ↗", "了解可持续发展目标 12 ↗", "Baca tentang SDG 12 ↗")}</a></div></section>
+    <section className="learn" aria-labelledby="impact-learn"><h2 className="learn__title" id="impact-learn">{copy("Understanding your impact", "了解影响数据", "Memahami impak anda")}</h2><p className="learn__lede">{copy("How these figures are calculated and what they mean.", "这些数字的计算方式及含义。", "Cara angka ini dikira dan maksudnya.")}</p><div className="learn__list"><details className="learn__item"><summary className="learn__q"><span className="learn__icon" aria-hidden="true">♻️</span><span className="learn__qtext">{copy("How is potential excess estimated?", "如何估算潜在过量库存？", "Bagaimanakah lebihan berpotensi dianggarkan?")}</span><span className="learn__chevron" aria-hidden="true" /></summary><p className="learn__a">{copy("For each product with a usable purchase check, StockLess subtracts the top of the expected four-week demand range from stock after the planned order. Negative results count as zero. Products without usable evidence are excluded.", "对每件可核对的商品，StockLess 用计划采购后的库存减去未来四周需求区间的上限。负值按零计算；证据不足的商品不计入。", "Bagi setiap produk dengan semakan belian yang boleh digunakan, StockLess menolak had atas permintaan empat minggu daripada stok selepas pesanan. Hasil negatif dikira sifar; produk tanpa bukti yang mencukupi dikecualikan.")}</p></details><details className="learn__item"><summary className="learn__q"><span className="learn__icon" aria-hidden="true">📈</span><span className="learn__qtext">{copy("Are these figures exact?", "这些数字准确吗？", "Adakah angka ini tepat?")}</span><span className="learn__chevron" aria-hidden="true" /></summary><p className="learn__a">{copy("No. They depend on the sales, stock, and planned order data in your file. A longer and cleaner sales history provides a steadier estimate.", "不是。估算取决于文件中的销售、库存和计划采购数据。更长、更完整的销售记录会让估算更稳定。", "Tidak. Angka ini bergantung pada data jualan, stok dan pesanan dalam fail anda. Sejarah jualan yang lebih panjang dan bersih memberikan anggaran yang lebih stabil.")}</p></details></div></section>
+    <p className="impact__method">{copy("Figures update when your planned orders change. Only products with a usable purchase check are included.", "计划采购量变化后，数字也会更新。仅计入可核对采购计划的商品。", "Angka berubah apabila pesanan yang dirancang berubah. Hanya produk dengan semakan belian yang boleh digunakan disertakan.")}</p>
+    <div className="impact__actions"><button type="button" className="btn btn--ghost" onClick={onBack}>{copy("← Back to the purchase plan", "← 返回采购计划", "← Kembali ke rancangan belian")}</button></div>
+  </main>;
+}

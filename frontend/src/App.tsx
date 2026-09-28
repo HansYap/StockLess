@@ -6,6 +6,7 @@ import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
 import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessScreen.tsx";
 import { PurchasePlanScreen } from "./screens/PurchasePlanScreen.tsx";
+import { ImpactDashboard } from "./screens/ImpactDashboard.tsx";
 import type { PurchaseDrafts } from "./purchase-plan/model.ts";
 import {
   MappingConflictError,
@@ -81,6 +82,7 @@ export default function App() {
   const [envelope, setEnvelope] = useState<SessionEnvelope>(() => createEmptySession());
   const [proposals, setProposals] = useState<MappingProposalResult | null>(null);
   const [step, setStep] = useState<StepId>(1);
+  const [showImpact, setShowImpact] = useState(false);
   const [reached, setReached] = useState<StepId>(1);
   const [mappingError, setMappingError] = useState<string | null>(null);
   const [mappingNotice, setMappingNotice] = useState<string | null>(null);
@@ -123,6 +125,7 @@ export default function App() {
   }, [step]);
 
   const goTo = useCallback((next: StepId) => {
+    setShowImpact(false);
     setStep(next);
     setReached((current) => (next > current ? next : current));
   }, []);
@@ -461,7 +464,16 @@ export default function App() {
         </section>
       ))}
 
-      {t(step === 4 && readiness && forecast && (
+      {t(step === 4 && readiness && forecast && showImpact && (
+        <ImpactDashboard
+          snapshot={readiness}
+          forecast={forecast}
+          drafts={purchaseDrafts}
+          onBack={() => setShowImpact(false)}
+        />
+      ))}
+
+      {t(step === 4 && readiness && forecast && !showImpact && (
         <PurchasePlanScreen
           snapshot={readiness}
           forecast={forecast}
@@ -470,6 +482,7 @@ export default function App() {
           selectedKey={productKey}
           onSelect={setProductKey}
           onBack={() => setStep(3)}
+          onImpact={() => { setProductKey(null); setShowImpact(true); }}
         />
       ))}
     </AppShell>

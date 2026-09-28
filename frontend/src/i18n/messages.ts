@@ -3060,3 +3060,13 @@ Object.assign(messages, {
   "{0} week had returns greater than sales.": ["有 {0} 周的退货量超过销售量。", "{0} minggu mempunyai pulangan melebihi jualan."],
   "{0} weeks had returns greater than sales.": ["有 {0} 周的退货量超过销售量。", "{0} minggu mempunyai pulangan melebihi jualan."]
 });
+
+Object.assign(messages, {
+  "In stock": ["现有库存", "Stok di tangan"],
+  "Your order": ["计划订购", "Pesanan anda"],
+  "Check": ["检查结果", "Semakan"],
+  "Review →": ["查看 →", "Semak →"],
+  "Suggested": ["建议", "Dicadangkan"],
+  "See your impact →": ["查看您的影响 →", "Lihat impak anda →"],
+  "product is ready": ["项产品已就绪", "produk sudah sedia"],
+});

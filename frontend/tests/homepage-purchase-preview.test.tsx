@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import { HomePage } from "../src/screens/HomePage.tsx";
 
 describe("homepage purchase-plan example", () => {
+ it("starts the workspace from the primary call to action", () => {
+  window.location.hash = "";
+  render(<HomePage />);
+  fireEvent.click(screen.getByRole("button", { name: "Start with your sales data" }));
+  expect(window.location.hash).toBe("#workspace");
+ });
  it("retains the design's example and updates comparisons using both controls", () => {
   render(<HomePage />);
   const planned = screen.getByRole('slider', {name:'Your planned order'}) as HTMLInputElement;

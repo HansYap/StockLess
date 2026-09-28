@@ -5,11 +5,20 @@
   --red:#9B3939; --red-tint:#FBE8E8;
   --amber:#8B5C10; --amber-tint:#FFF4DF; --amber-strong:#D99120;
   --page:#FFFFFF;
-  /* Type scale — the same tokens and values the homepage uses, so the app and
-     the marketing site read as one product. Sizes below are set from these. */
-  --text-page-title:36px; --text-lead:18px; --text-section-head:20px;
-  --text-body:15px; --text-secondary:13px; --text-description:12px;
-  --text-eyebrow:11px; --text-label:10px;
+  /* Type scale — I3-TYPO-01 (Iteration 3 V2), which supersedes every earlier
+     font-size requirement including US1.1 AC7's 36px page title. The same
+     tokens drive the homepage, so the app and the marketing site read as one
+     product. I3-UI AC1 forbids a smaller local override of any role, and the
+     standard sets a hard floor: no interface text below label.
+       page-title 40 Manrope 700     body        16 Source Sans 3 400
+       lead       20 Source Sans 3   secondary   15 Source Sans 3 400
+       section-head 22 Manrope 700   description 14 Source Sans 3 400
+                                     eyebrow     13 Source Sans 3 700
+                                     label       12 Source Sans 3 700
+     numeric-data inherits its role's size in Inter 600-700. */
+  --text-page-title:40px; --text-lead:20px; --text-section-head:22px;
+  --text-body:16px; --text-secondary:15px; --text-description:14px;
+  --text-eyebrow:13px; --text-label:12px;
   --shadow-card:0 10px 30px rgba(22,49,59,.05);
   --display:"Manrope",-apple-system,BlinkMacSystemFont,sans-serif;
   --body:"Source Sans 3",-apple-system,BlinkMacSystemFont,sans-serif;
@@ -21,17 +30,21 @@ body{background:var(--page);font-family:var(--body);color:var(--ink);-webkit-fon
 :focus,:focus-visible{outline:none}
 code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;border-radius:4px}
 
-.frame{min-height:100vh;display:flex;flex-direction:column;align-items:center;background:var(--page)}
+/* One token drives the content column and the gutter art. The pages read as
+   "too big" on a wide monitor because a 1180px column leaves ~400px of empty
+   gutter each side; widening it there fits more without shrinking any text. */
+.frame{min-height:100vh;display:flex;flex-direction:column;align-items:center;background:var(--page);
+  --shell:clamp(1180px, 92vw, 1420px)}
 
 /* topbar + stepper */
-.topbar{align-self:stretch;height:76px;padding:0 64px;background:rgba(255,255,255,.94);
+.topbar{align-self:stretch;height:66px;padding:0 40px;background:rgba(255,255,255,.94);
   border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
 .brand{display:flex;align-items:center;text-decoration:none;padding:4px;margin-left:-4px;border-radius:8px}
 .brand--button{background:none;border:0;cursor:pointer}
 .session-status{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}
 .session-status__name{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font-family:var(--data);font-size:var(--text-description);color:var(--muted)}
-.stepper{align-self:stretch;height:78px;padding:0 64px;background:#fff;
+.stepper{align-self:stretch;height:62px;padding:0 40px;background:#fff;
   border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center}
 .stepper__inner{width:790px;max-width:100%;display:flex;align-items:flex-start;list-style:none;margin:0;padding:0}
 .step{flex:1 1 0;position:relative;display:flex;flex-direction:column;align-items:center}
@@ -49,13 +62,13 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .step--done .step__line{background:var(--teal)}
 .step__button:not(:disabled):hover .step__dot{border-color:var(--teal)}
 
-.page{width:1180px;max-width:100%;padding:44px 0 64px;display:flex;flex-direction:column;align-items:flex-start}
+.page{width:var(--shell);max-width:100%;padding:36px 40px 44px;display:flex;flex-direction:column;align-items:flex-start}
 
 /* type */
 .eyebrow{font-family:var(--display);font-size:var(--text-secondary);font-weight:800;color:var(--teal);
   text-transform:uppercase;letter-spacing:1.32px;margin:0}
-.title{font-family:var(--display);font-size:var(--text-page-title);font-weight:700;line-height:1.1;margin:9px 0 0}
-.lede{font-size:var(--text-lead);line-height:1.3;color:var(--muted);margin:11px 0 0;max-width:680px}
+.title{font-family:var(--display);font-size:var(--text-page-title);font-weight:700;line-height:1.1;margin:6px 0 0}
+.lede{font-size:var(--text-lead);line-height:1.3;color:var(--muted);margin:8px 0 0;max-width:680px}
 .card-title{font-family:var(--display);font-size:var(--text-section-head);font-weight:700;margin:0}
 .card-sub{font-size:var(--text-body);color:var(--muted);margin:8px 0 0}
 
@@ -71,6 +84,9 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
   display:inline-flex;align-items:center;justify-content:center;
   transition:background-color .15s ease,border-color .15s ease,opacity .15s ease}
 .btn--small{min-height:32px;padding:6px 12px;font-size:var(--text-secondary);border-radius:8px}
+/* some buttons are links — navigating is a link's job, not a button's — and a
+   link wearing .btn must not also wear a link's underline */
+a.btn,a.btn:hover{text-decoration:none}
 .btn--primary{background:var(--teal);color:#fff}
 .btn--primary:hover:not(:disabled){background:var(--teal-deep)}
 .btn--ghost{background:#fff;color:var(--ink);border:1px solid var(--border-strong)}
@@ -83,7 +99,7 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
   font-size:16px;font-weight:700;cursor:pointer}
 .btn--link:hover{color:var(--ink)}
 
-.card{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-card)}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card)}
 .card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
 
 .select{width:100%;min-width:140px;padding:8px 30px 8px 10px;background:#fff;
@@ -93,9 +109,9 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
   background-repeat:no-repeat;background-position:right 11px center}
 
 .dtable{width:100%;border-collapse:collapse;table-layout:fixed}
-.dtable th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);
+.dtable th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);
   font-size:var(--text-description);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.55px}
-.dtable td{padding:14px 12px;border-bottom:1px solid var(--line-soft);font-size:var(--text-body);color:var(--ink-2);vertical-align:top}
+.dtable td{padding:10px 10px;border-bottom:1px solid var(--line-soft);font-size:var(--text-body);color:var(--ink-2);vertical-align:top}
 .dtable tr:last-child td{border-bottom:0}
 .dtable__label{font-weight:700}
 .dtable__hint{font-size:var(--text-description);line-height:1.45;color:var(--muted);margin-top:5px}
@@ -107,6 +123,9 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
    needs to scroll once the viewport is too narrow to hold four columns. */
 .table-scroll{margin-top:17px}
 @media (max-width:900px){ .table-scroll{overflow-x:auto} }
+/* the readiness problem table has many columns and no tooltips inside it, so
+   it scrolls at any width rather than pushing the page sideways */
+.table-scroll--x{overflow-x:auto}
 
 .notice{align-self:stretch;margin-top:14px;padding:11px 14px;border-radius:4px 12px 12px 4px;
   font-size:var(--text-body);line-height:1.35}
@@ -114,9 +133,9 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .notice--error{background:var(--red-tint);border-left:4px solid var(--red);color:var(--red);margin-top:16px}
 
 /* screen 01 */
-.s1-grid{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(390px,.82fr);gap:36px;align-items:start;margin-top:38px;align-self:stretch}
+.s1-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(390px,1fr);gap:32px;align-items:start;margin-top:26px;align-self:stretch}
 .attribute-guide__intro{margin-top:7px}
-.attribute-section{margin-top:22px}
+.attribute-section{margin-top:16px}
 .attribute-section__head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .attribute-section__head h3{font-family:var(--display);font-size:var(--text-body);margin:0}
 .attribute-list{display:flex;flex-direction:column;gap:9px}
@@ -135,8 +154,8 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .attribute-card__features>b{flex:none;font-size:var(--text-eyebrow);line-height:1.4;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .attribute-card__features ul{display:flex;flex-wrap:wrap;gap:5px;list-style:none;margin:0;padding:0}
 .attribute-card__features li{padding:3px 7px;border-radius:7px;background:#EDF6F4;color:var(--teal-deep);font-size:var(--text-eyebrow);font-weight:700;line-height:1.4}
-.upload-card{padding:30px;display:flex;flex-direction:column;gap:18px}
-.dropzone{min-height:294px;border-radius:18px;border:2px dashed #9BC8C1;
+.upload-card{padding:20px;display:flex;flex-direction:column;gap:14px}
+.dropzone{min-height:170px;border-radius:18px;border:2px dashed #9BC8C1;
   background:linear-gradient(180deg,#F8FCFB 0%,#EDF7F4 100%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:32px 24px;text-align:center;transition:border-color .15s ease,background .15s ease}
@@ -147,17 +166,17 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .csv-badge span{display:block;width:36px;padding:4px 0;background:var(--teal-tint);border-radius:5px;
   font-size:var(--text-eyebrow);font-weight:800;color:var(--teal-deep);text-align:center}
 .dropzone h3{font-family:var(--display);font-size:var(--text-section-head);font-weight:700;margin:0}
-.dropzone p{font-size:var(--text-body);color:var(--muted);margin:11px 0 0}
-.dropzone__actions{display:flex;gap:11px;margin-top:22px;flex-wrap:wrap;justify-content:center}
-.dropzone__limits{font-size:var(--text-secondary);color:var(--muted);margin-top:18px}
+.dropzone p{font-size:var(--text-body);color:var(--muted);margin:8px 0 0}
+.dropzone__actions{display:flex;gap:11px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.dropzone__limits{font-size:var(--text-secondary);color:var(--muted);margin-top:12px}
 .progress{width:220px;height:4px;border-radius:2px;background:#CFE0DC;margin-top:18px;overflow:hidden}
 .progress__fill{display:block;height:100%;background:var(--teal);transition:width .12s linear}
 
 /* A reassurance, not a warning — so it reads as a soft note rather than a
    black slab shouting at the end of the card. */
-.privacy{display:flex;align-items:flex-start;gap:13px;padding:16px 18px;
+.privacy{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;
   background:#F1F8F3;border:1px solid #D8E9DD;border-radius:16px}
-.privacy__tick{width:34px;height:34px;flex:none;border-radius:50%;background:#DCEEE2;color:var(--teal-deep);
+.privacy__tick{width:28px;height:28px;flex:none;border-radius:50%;background:#DCEEE2;color:var(--teal-deep);
   display:flex;align-items:center;justify-content:center}
 .privacy p{margin:0}
 .privacy b{display:block;color:var(--ink);font-size:var(--text-body);line-height:1.4;margin-bottom:3px}
@@ -181,7 +200,7 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .alert__list{margin:8px 0 0;padding-left:18px;font-size:var(--text-secondary);line-height:1.6;color:#765A2D}
 
 /* screen 02 */
-.filebar{align-self:stretch;margin-top:21px;padding:14px 18px;background:#fff;
+.filebar{align-self:stretch;margin-top:15px;padding:11px 15px;background:#fff;
   border:1px solid var(--line);border-radius:14px;
   display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .filebar__left{display:flex;align-items:center;gap:12px}
@@ -189,7 +208,7 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
   display:flex;align-items:center;justify-content:center;font-size:var(--text-description);font-weight:800;color:var(--teal-deep)}
 .filebar__name{font-size:var(--text-body);font-weight:700}
 .filebar__meta{font-size:var(--text-secondary);color:var(--muted);margin-top:1px}
-.split{align-self:stretch;display:flex;align-items:flex-start;gap:22px;margin-top:13px}
+.split{align-self:stretch;display:flex;align-items:flex-start;gap:16px;margin-top:10px}
 .split__main{flex:1 1 0;min-width:0;padding:24px}
 
 .identity{margin-top:26px;padding-top:22px;border-top:1px solid var(--line)}
@@ -249,26 +268,38 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 }
 
 /* ── screen 03 ──────────────────────────────────────────────────────────── */
-.ready{align-self:stretch;margin-top:22px;padding:20px 22px;background:var(--teal-tint);
+.ready{align-self:stretch;margin-top:16px;padding:15px 17px;background:var(--teal-tint);
   border:1px solid #B9DBD5;border-radius:18px;
   display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
 .ready__left{display:flex;align-items:center;gap:14px}
 .ready__tick{width:44px;height:44px;flex:none;border-radius:13px;background:var(--teal);color:#fff;
   display:flex;align-items:center;justify-content:center;font-size:var(--text-section-head);font-weight:800}
-.ready h2{font-family:var(--display);font-size:var(--text-section-head);font-weight:700;margin:0}
+.ready h2{font-family:var(--display);font-size:var(--text-section-head);font-weight:700;margin:0;
+  display:flex;align-items:center;gap:6px}
 .ready p{font-size:var(--text-body);color:var(--muted);margin:3px 0 0;max-width:560px}
 .ready__count{font-family:var(--display);font-size:22px;font-weight:700;text-align:right}
 .ready__unit{font-size:var(--text-secondary);color:var(--muted);text-align:right;margin-top:4px}
 
-.issues{align-self:stretch;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.issues{align-self:stretch;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
 .issues--five{grid-template-columns:repeat(5,1fr)}
-.issue{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;
+/* The card is a div with a full-bleed hit button behind its content, so the
+   ⓘ tooltip can sit on top of it without nesting one button inside another. */
+.issue{position:relative;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;
   padding:16px;background:#fff;border:1px solid var(--line);border-radius:14px;
   font-family:var(--body);cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
-.issue:hover:not(:disabled){border-color:#9FB4AF}
-.issue:disabled{cursor:default;opacity:.6}
+.issue:has(.issue__hit:hover:not(:disabled)){border-color:#9FB4AF}
+.issue:has(.issue__hit:focus-visible){outline:2px solid var(--teal);outline-offset:2px}
+.issue--empty{opacity:.6}
+.issue__hit{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;
+  border:0;background:none;border-radius:inherit;cursor:pointer}
+.issue__hit:disabled{cursor:default}
+.issue__hit:focus-visible{outline:none}
+/* content sits above the hit area; only the tooltip takes the pointer back */
+.issue__head,.issue__value,.issue__hint{position:relative;pointer-events:none}
+.issue .hint{pointer-events:auto;z-index:3}
 .issue--active{border-color:var(--teal);box-shadow:0 0 0 3px rgba(22,125,116,.12)}
-.issue__head{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
+.issue__head{display:flex;align-items:center;gap:6px;width:100%}
+.issue__head .pill{margin-left:auto}
 .issue__label{font-size:var(--text-secondary);font-weight:600;color:var(--muted)}
 .issue__value{font-family:var(--display);font-size:27px;font-weight:800;margin-top:6px;color:var(--ink)}
 .issue__hint{font-size:var(--text-description);color:var(--muted)}
@@ -302,8 +333,11 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .decision-card h2{font-family:var(--display);font-size:17px;margin:12px 0 0}
 .decision-card p{font-size:var(--text-secondary);line-height:1.55;color:var(--muted);margin:6px 0 0}
 .decision-card__actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+/* a duplicate group StockLess already settled: a record, not a question */
+.decision-card--settled{background:var(--teal-tint);border-color:#CFE3DE;box-shadow:none}
+.decision-card__scope{font-size:var(--text-description);color:var(--muted);margin:8px 0 0}
 
-.evidence-section{align-self:stretch;margin-top:18px;padding:22px}
+.evidence-section{align-self:stretch;margin-top:13px;padding:17px}
 .dtable--readiness{min-width:1040px}
 .dtable--readiness th:nth-child(1){width:7%}
 .dtable--readiness th:nth-child(2){width:15%}
@@ -393,7 +427,7 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .dtable--weeks th:nth-child(5){width:8%}
 .dtable--weeks th:nth-child(6){width:24%}
 .dtable--weeks th:nth-child(7){width:14%}
-.all-products{align-self:stretch;margin-top:12px;padding:26px 22px 12px}
+.all-products{align-self:stretch;margin-top:12px;padding:20px 18px 12px}
 .all-products tbody tr:hover td{background:#FAFCFB}
 .row--selected td{background:var(--teal-tint)}
 .all-products .dtable td{vertical-align:middle}
@@ -428,7 +462,8 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
    Below 1330px there is no gutter left, so it is dropped rather than allowed
    behind the text. Decorative only — never intercepts a click. */
 .ws-decor{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.ws-decor__side{position:absolute;top:0;bottom:0;width:calc((100% - 1180px) / 2);overflow:hidden}
+.ws-decor__side{position:absolute;top:0;bottom:0;width:calc((100% - var(--shell)) / 2);overflow:hidden}
+@media (max-width:1180px){ .page{padding-left:24px;padding-right:24px} }
 .ws-decor__side--left{left:0}
 .ws-decor__side--right{right:0;transform:scaleX(-1)}
 .ws-decor__side svg{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -531,6 +566,313 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
    mapping table it runs past the narrow status column, so let it wrap there. */
 .dtable .mapping-status .pill{white-space:normal;line-height:1.35;text-align:left}
 
+/* ===== product readiness =====
+   Step 3 leads with products, not charts: which product, what is wrong,
+   how bad, what now. The charts are still here, one fold down. */
+.summary{align-self:stretch;display:grid;grid-template-columns:minmax(230px,.9fr) minmax(0,2fr);
+  gap:18px;align-items:center;margin-top:16px;padding:16px 18px;
+  background:var(--teal-tint);border:1px solid #CFE3DE;border-radius:16px}
+.summary__verdict{display:flex;align-items:center;gap:13px}
+.summary__tick{width:40px;height:40px;flex:none;border-radius:50%;background:var(--teal);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:19px}
+.summary__verdict h2{font-family:var(--display);font-size:var(--text-section-head);font-weight:700;margin:0}
+.summary__verdict p{font-size:var(--text-secondary);color:var(--muted);margin:2px 0 0}
+.summary__groups{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.summary__group{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;
+  column-gap:10px;padding:10px 13px;border-radius:12px;background:#fff;border:1px solid var(--line)}
+.summary__group b{grid-row:1 / span 2;align-self:center;font-family:var(--display);font-size:25px;font-weight:800;line-height:1}
+.summary__name{font-size:var(--text-secondary);font-weight:700;color:var(--ink)}
+.summary__note{font-size:var(--text-label);color:var(--muted);line-height:1.35}
+.summary__group--ready{background:#F1F8F5;border-color:#CFE3DE}
+.summary__group--ready b{color:var(--teal-deep)}
+.summary__group--review{background:#FDF7EC;border-color:#EFE0C4}
+.summary__group--review b{color:#8A5A12}
+.summary__group--missing{background:#FDF3F2;border-color:#F0D6D2}
+.summary__group--missing b{color:#9B3939}
+
+.nextstep{align-self:stretch;margin:11px 0 0;font-size:var(--text-body);color:var(--ink-2)}
+.nextstep b{color:var(--ink)}
+
+.attention{align-self:stretch;margin-top:16px}
+.attention__head{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;
+  background:#FDF3F2;border:1px solid #F0D6D2;border-radius:14px}
+.attention__icon{width:30px;height:30px;flex:none;border-radius:50%;background:#9B3939;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:800}
+.attention__head h2{font-family:var(--display);font-size:17px;font-weight:700;margin:0;color:#7E2E2E}
+.attention__head p{font-size:var(--text-description);color:var(--muted);margin:3px 0 0}
+.attention__search{display:flex;align-items:center;gap:7px;margin-left:auto;flex:0 1 220px;min-width:0;
+  padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--muted)}
+.attention__search:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(22,125,116,.12)}
+.attention__search input{flex:1;min-width:0;border:0;outline:0;background:none;
+  font-family:var(--body);font-size:var(--text-description);color:var(--ink)}
+.attention__sort{flex:none}
+.attention__sort select{font-family:var(--body);font-size:var(--text-description);color:var(--ink-2);
+  padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:#fff}
+
+.pcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:12px;margin-top:12px}
+.pcard{display:flex;flex-direction:column;gap:10px;padding:15px;background:#fff;
+  border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-card)}
+/* US2.3 AC8 — the freshness state is carried on the card's left edge, in the
+   colours the spec fixes. The product card IS the freshness card now. */
+.pcard--ready{border-left:4px solid #167D74}
+.pcard--review{border-left:4px solid #D99120}
+.pcard--missing{border-left:4px solid #9B3939}
+.pcard__head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.pcard__name{display:block;font-family:var(--display);font-size:var(--text-body);font-weight:700;color:var(--ink)}
+.pcard__code{display:block;font-size:var(--text-description);color:var(--muted);margin-top:2px}
+.pcard__facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.pcard__facts>div{padding:9px 11px;background:#F7FAF9;border-radius:10px}
+.pcard__key{display:block;font-size:var(--text-label);color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.pcard__facts b{font-size:var(--text-secondary);color:var(--ink);font-family:var(--data)}
+.pcard__trend .pcard__key{margin-bottom:5px}
+.pcard__why{display:flex;align-items:flex-start;gap:8px;margin:0;padding:9px 11px;border-radius:10px;
+  font-size:var(--text-description);line-height:1.45}
+.pcard__why>span:first-child{width:15px;height:15px;flex:none;border-radius:50%;font-size:var(--text-label);
+  font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.pcard__why>span:not(:first-child){flex:1;min-width:0}
+.pcard__why--review{background:#FDF7EC;color:#7A5210}
+.pcard__why--review>span:first-child{background:#E8D4AC;color:#7A5210}
+.pcard__why--missing{background:#FDF3F2;color:#7E2E2E}
+.pcard__why--missing>span:first-child{background:#F0D0CC;color:#7E2E2E}
+.pcard__action{align-self:stretch;justify-content:center;margin-top:auto}
+
+/* weekly sales for one product — never called stock: the file carries one
+   stock count, not a weekly stock level */
+.spark{display:flex;align-items:flex-end;gap:3px;height:28px}
+.spark--labelled{height:52px}
+.spark--empty{font-size:var(--text-label);color:var(--muted);align-items:center}
+.spark__col{flex:1;min-width:5px;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-end;height:100%;gap:2px}
+.spark__value,.spark__day{font-size:var(--text-label);color:var(--muted);font-family:var(--data);line-height:1}
+.spark__bar{width:100%;max-width:18px;background:var(--mint);border-radius:3px 3px 0 0;min-height:3px}
+.spark--labelled .spark__bar{background:#B9DED4}
+.spark__bar--missing{height:7px;border:1px dashed #6E7B80;background:transparent;border-radius:3px}
+
+/* US2.3 AC8's "current" colour: the ready group is the products whose stock
+   count is still current, so it carries the same left edge as the cards. */
+.readylist{align-self:stretch;margin-top:16px;padding:13px 16px;background:#F1F8F5;
+  border:1px solid #CFE3DE;border-left:4px solid #167D74;border-radius:14px}
+.readylist>summary{display:flex;align-items:center;gap:11px;cursor:pointer;list-style:none}
+.readylist>summary::-webkit-details-marker{display:none}
+.readylist__tick{width:30px;height:30px;flex:none;border-radius:50%;background:var(--teal);color:#fff;
+  display:flex;align-items:center;justify-content:center}
+.readylist>summary b{font-family:var(--display);font-size:17px;color:var(--ink);display:block}
+.readylist__note{font-size:var(--text-description);color:var(--muted)}
+.readylist .table-scroll{margin-top:11px}
+.dtable--ready td{vertical-align:middle}
+
+.deepdive{align-self:stretch;margin-top:16px;border-top:1px solid var(--line-soft);padding-top:13px}
+.deepdive>summary{cursor:pointer;list-style:none;font-size:var(--text-secondary);font-weight:700;
+  color:var(--ink-2);display:flex;align-items:center;gap:9px}
+.deepdive>summary::-webkit-details-marker{display:none}
+.deepdive>summary::before{content:"";width:0;height:0;flex:none;
+  border:4px solid transparent;border-left-color:var(--muted);transition:transform .15s ease}
+.deepdive[open]>summary::before{transform:rotate(90deg) translateX(-1px)}
+
+@media (max-width:900px){
+  .summary{grid-template-columns:1fr}
+  .attention__head{flex-wrap:wrap}
+  .attention__sort,.attention__search{margin-left:0;width:100%;flex:1 1 100%}
+  .attention__sort select{width:100%}
+}
+
+/* ===== stock-age bands (US2.3) =====
+   Colours are fixed by AC8: #167D74 current, #D99120 getting old,
+   #9B3939 too old. Each band is named in words too, so the colour is
+   never the only signal. */
+.bands{align-self:stretch;margin-top:14px}
+.bands__bar{display:flex;gap:2px;height:14px;border-radius:7px;overflow:hidden;background:var(--line-soft)}
+.bands__seg{min-width:4px}
+.bands__legend{list-style:none;margin:11px 0 0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px 18px}
+.bands__legend li{display:grid;grid-template-columns:10px auto minmax(0,1fr) auto;align-items:center;
+  gap:7px;font-size:var(--text-description)}
+.bands__swatch{width:10px;height:10px;border-radius:3px}
+.bands__name{font-weight:700;color:var(--ink-2)}
+.bands__note{color:var(--muted)}
+.bands__count{font-family:var(--data);color:var(--ink-2)}
+
+/* AC2 — count date, age and label on one line */
+.freshness-card__line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.freshness-card__line i{font-style:normal;color:var(--line)}
+.freshness-card__line strong{font-weight:700;color:var(--ink)}
+
+/* what Used and Left out mean, said in the open rather than on hover */
+.use-key{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:12px 0 0;
+  font-size:var(--text-description);color:var(--muted)}
+
+/* the scope statement now leads the screen instead of closing it */
+.validity--top{align-self:stretch;margin-top:14px}
+.footer-row--actions{justify-content:flex-end}
+
+
+/* ===== problems to review =====
+   Grouped by what is wrong, in the retailer's words. The technical wording
+   lives in the tooltip and the download — secondary, not gone. */
+.problems{align-self:stretch;margin-top:16px;padding:16px 18px;background:#fff;
+  border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card)}
+.problems__head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.problems__head h2{font-family:var(--display);font-size:var(--text-section-head);font-weight:700;margin:0}
+.problems__head p{font-size:var(--text-description);color:var(--muted);margin:3px 0 0}
+.problems__counts{display:flex;gap:7px;flex-wrap:wrap}
+.problems__list{display:grid;gap:9px;margin-top:13px}
+.problems__download{margin-top:13px}
+
+.igroup{border:1px solid var(--line);border-radius:12px}
+.igroup>summary{display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer;list-style:none;border-radius:11px}
+.igroup[open]>summary{border-radius:11px 11px 0 0}
+.igroup>summary::-webkit-details-marker{display:none}
+.igroup__icon{width:22px;height:22px;flex:none;border-radius:50%;color:#fff;font-weight:800;
+  font-size:var(--text-description);display:flex;align-items:center;justify-content:center}
+.igroup--fix{background:#FDF7F6;border-color:#F0D6D2}
+.igroup--fix .igroup__icon{background:#9B3939}
+.igroup--review{background:#FDFAF4;border-color:#EFE0C4}
+.igroup--review .igroup__icon{background:#B0801E}
+.igroup__title{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;flex:1;min-width:0}
+.igroup__title b{font-size:var(--text-body);color:var(--ink)}
+.igroup__count{font-size:var(--text-description);color:var(--muted)}
+.igroup__rows{list-style:none;margin:0;padding:0 13px 12px;display:grid;gap:9px}
+.igroup__rows li{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.4fr) auto;
+  gap:12px;align-items:start;padding:11px 13px;background:#fff;border:1px solid var(--line-soft);border-radius:10px}
+.igroup__who b{display:block;font-size:var(--text-secondary);color:var(--ink)}
+.igroup__who .num,.igroup__key{display:block;font-size:var(--text-label);color:var(--muted)}
+.igroup__key{text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.igroup__found,.igroup__todo{font-size:var(--text-description);color:var(--ink-2);min-width:0}
+
+/* automatic tidy-ups are not errors, so they never look like one */
+.tidyups__tick{width:22px;height:22px;flex:none;border-radius:50%;background:var(--teal);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:var(--text-description)}
+.tidyups__note{font-size:var(--text-label);color:var(--muted);margin:9px 0 0}
+
+@media (max-width:900px){
+  .igroup__rows li{grid-template-columns:1fr}
+}
+
+/* ===== tidy-ups =====
+   Evidence, not work — one line each, folded away until asked for. */
+.tidyups{margin-top:13px;padding:11px 13px;background:#F1F8F5;border:1px solid #CFE3DE;border-radius:12px}
+.tidyups>summary{display:flex;align-items:center;gap:9px;cursor:pointer;list-style:none;
+  font-size:var(--text-secondary);font-weight:700;color:var(--ink-2)}
+.tidyups>summary::-webkit-details-marker{display:none}
+.tidyups__list{list-style:none;margin:11px 0 0;padding:0;display:grid;gap:7px}
+.tidyups__list li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  font-size:var(--text-description);color:var(--muted)}
+.tidyups__list b{font-family:var(--data);color:var(--ink-2)}
+.tidyups__where{font-weight:600;color:var(--ink-2)}
+.tidyups__what{color:var(--muted)}
+
+
+/* ===== charts =====================================================
+   Thin marks, hairline recessive axes, 4px rounded data-ends anchored to
+   the baseline, a 2px surface gap between touching fills. Text never wears
+   the data colour — the mark beside it carries identity. */
+
+/* sub-cause bars inside an issue card */
+.minibars{position:relative;display:flex;align-items:flex-end;gap:8px;width:100%;margin-top:10px;
+  padding-top:2px;pointer-events:none}
+.minibars__col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px}
+.minibars__value{font-family:var(--data);font-size:var(--text-label);color:var(--muted);line-height:1}
+.minibars__track{width:100%;max-width:24px;height:30px;display:flex;align-items:flex-end}
+.minibars__fill{width:100%;border-radius:4px 4px 0 0;min-height:2px}
+.minibars__label{font-size:var(--text-label);line-height:1.2;color:var(--muted);text-align:center;
+  overflow-wrap:anywhere}
+
+/* weekly sales columns */
+.chart__plot{display:flex;align-items:flex-end;gap:2px;height:140px;padding-top:18px;
+  border-bottom:1px solid var(--line)}
+.chart__col{position:relative;flex:1;min-width:0;max-width:24px;height:100%;
+  display:flex;align-items:flex-end;justify-content:center}
+.chart__bar{width:100%;background:var(--teal);border-radius:4px 4px 0 0}
+.chart__cap{position:absolute;top:-16px;left:50%;transform:translateX(-50%);
+  font-family:var(--data);font-size:var(--text-label);color:var(--muted);white-space:nowrap}
+.chart__axis{display:flex;justify-content:space-between;margin-top:6px;
+  font-size:var(--text-label);color:var(--muted);font-family:var(--data)}
+
+.chart-row{align-self:stretch;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
+  gap:10px;margin-top:13px}
+.chart-card{margin-top:0}
+.chart-card__body{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:18px;align-items:end}
+
+.statgrid{display:grid;gap:10px;margin:0}
+.statgrid div{display:flex;flex-direction:column;gap:1px}
+.statgrid dt{font-size:var(--text-label);color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.statgrid dd{margin:0;font-family:var(--display);font-size:19px;font-weight:800;color:var(--ink);line-height:1.1}
+
+/* part-to-whole; every exact count lives in the legend, not on the arc */
+.donut{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-top:14px}
+.donut__ring{position:relative;flex:none}
+.donut__centre{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px;pointer-events:none}
+.donut__centre b{font-family:var(--display);font-size:22px;font-weight:800;color:var(--ink);line-height:1}
+.donut__centre span{font-size:var(--text-label);color:var(--muted)}
+.donut__legend{flex:1;min-width:190px;list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.donut__legend li{display:grid;grid-template-columns:10px minmax(0,1fr) auto 38px;align-items:center;
+  gap:8px;font-size:var(--text-description)}
+.donut__swatch{width:10px;height:10px;border-radius:3px}
+.donut__name{color:var(--ink-2);overflow-wrap:anywhere}
+.donut__count,.donut__share{font-family:var(--data);color:var(--muted);text-align:right}
+
+/* one column per week; a missing week is a gap, never a zero-height bar */
+.weekchart{display:flex;align-items:flex-end;gap:3px;height:52px;margin-top:10px;
+  padding-bottom:5px;border-bottom:1px solid var(--line)}
+.weekchart__col{position:relative;flex:1;min-width:6px;max-width:22px;height:100%;
+  display:flex;align-items:flex-end}
+.weekchart__mark{width:100%;border-radius:4px 4px 0 0}
+.weekchart__col--observed_demand .weekchart__mark{background:var(--teal)}
+/* recorded a real zero: a solid baseline tick, so it is not mistaken for a gap */
+.weekchart__col--confirmed_zero_sales .weekchart__mark{height:3px;background:var(--teal-deep);border-radius:2px}
+/* activity that nets to zero: outlined, distinct from both zero and missing */
+.weekchart__col--net_zero_with_activity .weekchart__mark{height:9px;border:1.5px solid var(--teal);
+  background:#fff;border-radius:3px}
+/* no data at all: hatched, never a bar — "no data" is not "no sales" */
+.weekchart__col--missing .weekchart__mark{height:9px;border-radius:3px;
+  border:1px dashed #6E7B80;
+  background:repeating-linear-gradient(45deg,#C6D6D1 0 3px,#FFFFFF 3px 6px)}
+
+.weekchart-key{display:flex;flex-wrap:wrap;gap:12px;margin-top:9px;
+  font-size:var(--text-label);color:var(--muted)}
+.weekchart-key span{display:inline-flex;align-items:center;gap:5px}
+.weekchart-key i{width:12px;height:9px;border-radius:3px;display:inline-block}
+
+@media (max-width:1100px){
+  .chart-row{grid-template-columns:1fr}
+  .chart-card__body{grid-template-columns:1fr;align-items:stretch}
+  .statgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .minibars{gap:5px}
+  .minibars__label{display:none}
+}
+
+/* ===== readiness result (US2.1 AC1) =====
+   Can continue / Must fix / Next step, so the outcome is legible before the
+   table. The three cells read left to right as: what works, what does not,
+   what to do about it. */
+.verdict{align-self:stretch;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:11px}
+.verdict__cell{display:flex;flex-direction:column;gap:2px;padding:15px 17px;border-radius:14px;
+  border:1px solid var(--line);background:#fff}
+.verdict__cell--go{background:var(--teal-tint);border-color:#CFE3DE}
+.verdict__cell--fix{background:#FDF3F2;border-color:#F0D6D2}
+.verdict__label{font-size:var(--text-eyebrow);font-weight:800;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--muted)}
+.verdict__value{font-family:var(--display);font-size:27px;font-weight:800;color:var(--ink);line-height:1.1}
+.verdict__note,.verdict__next{font-size:var(--text-description);line-height:1.5;color:var(--muted);margin:0}
+.verdict__next{margin-top:5px}
+.verdict__cell--next .btn{margin-top:10px;align-self:flex-start}
+
+/* ===== find one product without reading the table (US2.1 AC2) ===== */
+.issue-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+.issue-search__field{display:flex;align-items:center;gap:8px;flex:1 1 240px;min-width:0;
+  padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted)}
+.issue-search__field:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(22,125,116,.12)}
+.issue-search__field input{flex:1;min-width:0;border:0;outline:0;background:none;
+  font-family:var(--body);font-size:var(--text-body);color:var(--ink)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+@media (max-width:900px){ .verdict{grid-template-columns:1fr} }
+
 /* ===== field help =====
    The attribute descriptions used to sit under every label, which made the
    mapping table a wall of prose. They are tooltips now: the table scans, and
@@ -556,6 +898,9 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 /* near the top of the table there is no room above, so it flips below */
 .dtable tbody tr:first-child .hint__bubble{bottom:auto;top:calc(100% + 9px)}
 .dtable tbody tr:first-child .hint__bubble::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--ink)}
+/* flipped when a left-anchored bubble would run off the right edge */
+.hint__bubble--end{left:auto;right:-10px}
+.hint__bubble--end::after{left:auto;right:19px}
 @media (max-width:760px){ .hint__bubble{width:210px} }
 
 /* ===== the workflow grows =====
@@ -601,6 +946,263 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .unlocks__list b{display:block;font-size:var(--text-secondary);color:var(--ink)}
 .unlocks__list span{color:var(--muted)}
 
+/* ===== thumb ergonomics on a phone =====
+   Everything above was sized for a mouse pointer. A finger is about 9mm
+   across, so on a touch-width screen the standalone controls grow to 44px —
+   Apple's and Material's floor — and the small text token goes up a step so
+   nothing sits at 10px in the hand.
+
+   The inline "i" dots are the deliberate exception. They live mid-sentence
+   next to a label; pushing them to 44px would either break the line box or
+   overlap the control beside them and steal its taps. They go to 28px, which
+   clears WCAG 2.5.8 Target Size (Minimum, 24x24) on its own, and the label
+   they belong to stays tappable too. */
+@media (max-width:768px){
+  /* standalone controls: full thumb target */
+  .btn--small{min-height:44px;padding:10px 16px}
+  .btn--link{min-height:44px;display:inline-flex;align-items:center;padding:1px 8px}
+  .topbar .workspace-home-link{min-height:44px;padding-top:12px;padding-bottom:12px}
+  .language-switcher select,
+  .frame .language-switcher select{min-height:44px}
+  .pcard__action{min-height:44px}
+
+  /* selects and search fields: the row height is the target */
+  .frame select,
+  .frame input[type="text"],
+  .frame input[type="search"]{min-height:44px}
+
+  /* inline help dots: 28px, still inside the line */
+  .hint__btn{width:28px;height:28px;font-size:13px}
+}
+
+/* ===== a table is not a phone layout =====
+   Step 2's mapping grid and Step 3's ready list are four and five columns
+   wide. On a 390px screen they either squeeze every column to nothing or
+   force the page sideways, and neither is readable. Below 768px each row
+   becomes its own card: the first cell is the card's title, and every other
+   cell states the column it came from, taken from its data-label.
+
+   The header row goes to screen readers only, because the labels now sit
+   inside each card and a visible header would just repeat them. */
+@media (max-width:768px){
+  .dtable--cards{display:block;min-width:0;table-layout:auto}
+
+  .dtable--cards thead{position:absolute;width:1px;height:1px;
+    overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+  .dtable--cards tbody{display:block}
+  .dtable--cards tbody tr{display:block;padding:15px 16px;margin-bottom:12px;
+    border:1px solid var(--line);border-radius:14px;background:#fff}
+  .dtable--cards tbody tr:last-child{margin-bottom:0}
+
+  /* label left, value right — the row reads as "Stock age … 12 days" */
+  .dtable--cards td{display:flex;gap:14px;align-items:baseline;
+    justify-content:space-between;text-align:right;
+    padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .dtable--cards td::before{content:attr(data-label);flex:none;text-align:left;
+    font-family:var(--body);font-size:var(--text-description);font-weight:700;
+    color:var(--muted);text-transform:uppercase;letter-spacing:.55px}
+  .dtable--cards tbody tr td:last-child{border-bottom:0;padding-bottom:0}
+
+  /* the first cell is the heading of the card, so it keeps the full width */
+  .dtable--cards td.dtable__title{display:block;text-align:left;
+    padding:0 0 11px;border-bottom:1px solid var(--line)}
+  .dtable--cards td.dtable__title::before{content:none}
+
+  /* controls inside a card take the room the value side has */
+  .dtable--cards td .select{flex:1;min-width:0;width:100%}
+  .dtable--cards td .mapping-status{align-items:flex-end}
+  .dtable--cards td .spark{justify-content:flex-end}
+
+  /* nothing to scroll sideways any more */
+  .table-scroll:has(.dtable--cards),
+  .table-scroll--x:has(.dtable--cards){overflow-x:visible}
+}
+
+/* ===== learn more =====
+   Flashcards. Each card shows a question; activating it turns it over to the
+   answer, and activating it again turns it back.
+
+   Still <details>/<summary>, so the keyboard, the open state and the screen
+   reader announcement stay the browser's job.
+
+   The first attempt rotated the whole card in 3-D, and that quietly broke it.
+   Two reasons, both worth remembering:
+     - Forcing the content to render while closed left the invisible back face
+       lying on top of the question, swallowing every click and covering the
+       page beneath it.
+     - A <summary> that has been rotated away from the viewer with
+       backface-visibility:hidden stops hit-testing, so once a card did flip
+       there was nothing left to click to flip it back.
+   So the summary never moves. It stays flat, on top, and full size — it is
+   always the click target, whichever face is showing. Only the answer swings
+   in, and it takes no pointer events, so a click anywhere on the card always
+   reaches the summary. */
+.learn{margin-top:28px}
+.learn__title{font-family:var(--display);font-size:var(--text-section-head);
+  font-weight:700;margin:0;letter-spacing:-.2px}
+.learn__lede{margin:7px 0 0;font-size:var(--text-body);color:var(--muted);max-width:56ch}
+.learn__list{margin-top:14px;perspective:1200px}
+
+/* both faces share one grid cell, so the card is as tall as the taller of
+   them and an answer can never be clipped (I3-UI AC2). Chrome puts the
+   content in a UA slot, so ::details-content is pinned to the cell too. */
+.learn__item{display:grid;border-radius:16px;background:var(--teal-tint)}
+.learn__item > *{grid-area:1/1;min-width:0}
+.learn__item::details-content{grid-area:1/1;min-width:0}
+.learn__item + .learn__item{margin-top:10px}
+
+.learn__q{display:flex;align-items:center;gap:12px;padding:20px 18px;cursor:pointer;
+  border-radius:16px;list-style:none;min-height:104px;position:relative;z-index:2;
+  background:var(--teal-tint);
+  font-family:var(--display);font-size:var(--text-body);font-weight:700;color:var(--ink);
+  transition:background-color .2s ease}
+.learn__q::-webkit-details-marker{display:none}
+.learn__q:hover{background:#DDEDE8}
+.learn__item:focus-within{outline:2px solid var(--teal);outline-offset:2px}
+
+/* Open: the question's own contents fade out and its panel goes clear, so the
+   answer shows through — but the summary itself is still there, still on top
+   and still clickable. */
+.learn__icon,.learn__qtext,.learn__chevron{transition:opacity .18s ease}
+.learn__item[open] .learn__q{background:transparent}
+.learn__item[open] .learn__q:hover{background:rgba(255,255,255,.06)}
+.learn__item[open] .learn__icon,
+.learn__item[open] .learn__qtext,
+.learn__item[open] .learn__chevron{opacity:0}
+
+.learn__icon{font-size:24px;line-height:1;flex:none}
+.learn__qtext{flex:1;min-width:0}
+/* a folded page corner, to say there is a back to this */
+.learn__chevron{flex:none;align-self:flex-end;width:16px;height:16px;
+  border-radius:3px 0 16px 0;background:linear-gradient(135deg,transparent 48%,var(--mint) 50%)}
+
+.learn__a{margin:0;padding:20px 18px;border-radius:16px;
+  background:var(--ink);color:#EAF5F2;
+  font-family:var(--body);font-size:var(--text-secondary);line-height:1.6;
+  display:flex;align-items:center;
+  pointer-events:none;                 /* every click belongs to the summary */
+  transform:rotateY(-92deg);opacity:0;transform-origin:left center;
+  transition:transform .34s cubic-bezier(.2,.7,.3,1),opacity .2s ease}
+.learn__item[open] .learn__a{transform:none;opacity:1}
+
+@media(prefers-reduced-motion:reduce){
+  .learn__a{transform:none;transition:opacity .15s ease}
+  .learn__icon,.learn__qtext,.learn__chevron,.learn__q{transition:none}
+}
+
+/* the homepage grid: four cards, two up */
+.learn--cards .learn__list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.learn--cards .learn__item + .learn__item{margin-top:0}
+
+@media (max-width:900px){
+  .learn--cards .learn__list{grid-template-columns:1fr}
+}
+@media (max-width:768px){
+  .learn__q{padding:18px 16px;gap:11px;min-height:96px}
+  .learn__a{padding:18px 16px;font-size:var(--text-body)}
+}
+
+/* ===== impact dashboard =====
+   An impact story, not an analytics console: one figure per card, its unit
+   next to it, and the basis for it underneath in plain words. Two of the
+   three cards carry no number, so they are styled as clearly unlocked-later
+   rather than as a zero or an error — a muted fill, no big figure, and the
+   sentence that says what would fill them. */
+/* The page shell already sets the width. Capping the section at 1000px left
+   a third of a 1440 screen empty, which §5 asks us to avoid — so the cards
+   and the SDG band use the full shell and only the prose is measured. */
+.impact{max-width:none}
+.impact__title{font-family:var(--display);font-size:var(--text-page-title);
+  font-weight:700;margin:6px 0 0;letter-spacing:-.8px}
+.impact__lede{margin:10px 0 0;font-size:var(--text-lead);line-height:1.55;
+  color:var(--muted);max-width:68ch}
+
+.impact__cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+.icard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;
+  box-shadow:var(--shadow-card);display:flex;flex-direction:column}
+.icard--figure{background:var(--teal-tint);border-color:#CFE4DE}
+.icard--locked{background:#F7FAF9}
+.icard__icon{font-size:22px;line-height:1}
+.icard__label{margin-top:12px;font-family:var(--display);font-size:var(--text-description);
+  font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+.icard__value{margin:7px 0 0;font-family:var(--display);font-size:38px;font-weight:700;
+  line-height:1.1;letter-spacing:-1.4px;color:var(--ink)}
+.icard__unit{margin-left:7px;font-size:var(--text-body);font-weight:600;color:var(--muted)}
+/* An unlocked-later card must not shout as loudly as the card that has a
+   real number — at 18px bold it out-weighed the one figure on the page. */
+.icard__value--locked{font-size:var(--text-body);font-weight:600;color:var(--muted-2);
+  letter-spacing:0;line-height:1.4}
+.icard__caption{margin:6px 0 0;font-size:var(--text-body);font-weight:600;color:var(--ink-2)}
+.icard__basis{margin:9px 0 0;font-size:var(--text-secondary);line-height:1.55;color:var(--muted)}
+
+/* the per-product working behind the one real figure */
+.impact__lines{margin-top:24px;border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.impact__lines h2{font-family:var(--display);font-size:var(--text-section-head);
+  font-weight:700;margin:0 0 4px}
+.impact__lines ul{list-style:none;margin:0;padding:0}
+.impact__lines li{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.impact__lines li:last-child{border-bottom:0;padding-bottom:0}
+.impact__lname{display:flex;align-items:baseline;gap:9px;min-width:0;flex-wrap:wrap}
+.impact__lname .num{font-size:var(--text-secondary);color:var(--muted)}
+.impact__lunits{flex:none;font-family:var(--display);font-weight:700;text-align:right}
+.impact__lunits span{font-family:var(--body);font-weight:400;font-size:var(--text-secondary);
+  color:var(--muted);margin-left:6px}
+
+.impact__sdg{display:flex;gap:18px;align-items:flex-start;margin-top:24px;padding:22px;
+  border-radius:18px;background:#BD8C2B;color:#fff}
+.impact__sdg-mark{flex:none;font-family:var(--display);font-size:46px;font-weight:800;
+  line-height:1;letter-spacing:-3px}
+.impact__sdg h2{font-family:var(--display);font-size:var(--text-section-head);
+  font-weight:700;margin:0}
+.impact__sdg p{margin:8px 0 0;font-size:var(--text-body);line-height:1.6;max-width:62ch}
+.impact__sdg-link{display:inline-flex;align-items:center;min-height:44px;margin-top:6px;
+  color:#fff;font-weight:700;font-size:var(--text-secondary);text-decoration:underline}
+
+.impact__method{margin:22px 0 0;padding-top:16px;border-top:1px solid var(--line);
+  font-size:var(--text-secondary);line-height:1.6;color:var(--muted);max-width:76ch}
+.impact__actions{margin-top:20px}
+
+@media (max-width:1100px){
+  .impact__cards{grid-template-columns:1fr 1fr}
+}
+@media (max-width:768px){
+  .impact__cards{grid-template-columns:1fr;gap:12px}
+  .impact__title{font-size:30px}
+  .impact__lede{font-size:var(--text-body)}
+  .icard__value{font-size:34px}
+  .impact__lines li{align-items:flex-start;flex-direction:column;gap:3px}
+  .impact__lunits{text-align:left}
+  .impact__sdg{gap:14px;padding:18px}
+  .impact__sdg-mark{font-size:38px}
+  .impact__actions .btn{width:100%}
+}
+
+/* ===== stepper on a phone =====
+   Four labels across 390px left "Check readiness" and "Plan purchases"
+   touching. The labels stay — they are how someone knows where they are —
+   but they wrap inside their own column and the columns get a gutter. */
+@media (max-width:560px){
+  .stepper__inner{gap:2px}
+  .step__label{font-size:var(--text-description);line-height:1.25;
+    text-align:center;padding-inline:3px;hyphens:auto}
+  .step__button{gap:5px}
+}
+.language-switcher{display:inline-flex;align-items:center;gap:5px;background:#edf7ef;border:1px solid #c3e2cc;border-radius:10px;padding:6px 8px;color:#2f6c49;flex-shrink:0;line-height:1.3}
+.language-switcher select{line-height:1.4;font-family:inherit;font-size:12px;font-weight:600;color:inherit;background:transparent;border:0;padding:4px 0;cursor:pointer;max-width:120px;min-height:28px}
+.language-switcher:focus-within{outline:2px solid #167d74;outline-offset:3px}
+.sl-nav-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.mapping-bulk{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 24px;background:#edf7ef;border-bottom:1px solid #c3e2cc}
+.mapping-bulk p{margin:4px 0;color:#456455}.mapping-bulk small{display:block;color:#456455;line-height:1.5}.mapping-bulk .btn{flex-shrink:0}
+.topbar{gap:16px}.topbar .session-status{flex-wrap:wrap}.topbar .workspace-home-link{margin-left:auto}
+html[lang=zh-Hans] .sl-home h1,html[lang=zh-Hans] .sl-home h2,html[lang=zh-Hans] .sl-home h3{letter-spacing:0;line-height:1.3}
+html[lang=ms] .sl-home h1{font-size:clamp(36px,5.8vw,76px);letter-spacing:-.045em}
+@media(max-width:900px){.topbar{height:auto;min-height:76px;padding:16px 20px;flex-wrap:wrap}.topbar .session-status{width:100%}.sl-nav-actions{gap:8px}.mapping-bulk{align-items:flex-start;flex-direction:column}}
+@media(max-width:600px){.sl-nav{flex-wrap:wrap;gap:12px}.sl-nav-actions{flex:1;justify-content:flex-end}.sl-nav-actions .sl-button--small{padding:10px 12px;font-size:12px}.language-switcher{padding:4px}.language-switcher svg{width:23px}.language-switcher select{max-width:102px}.mapping-bulk .btn{width:100%}.mapping-bulk{padding:18px}}
+
+body{margin:0}
+
 /* Touch opens field help; keyboard focus stays visible. */
 .hint--open .hint__bubble{opacity:1;visibility:visible}
 .frame :is(button,a,select):focus-visible{outline:2px solid var(--teal);outline-offset:3px}
@@ -616,3 +1218,11 @@ code{font-family:var(--data);font-size:.92em;background:#EEF3F1;padding:1px 5px;
 .frame .topbar .workspace-home-link{margin-left:auto}
 @media(max-width:1100px){.frame .topbar .session-status{order:4;width:100%;justify-content:flex-start;flex-wrap:wrap}}
 @media(max-width:560px){.frame .topbar .brand{flex:1 0 100%}.frame .topbar .workspace-home-link{margin-left:0}.frame .topbar .session-status__name{max-width:160px}}
+
+/* Shared accessible controls and constrained content. */
+:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+.page>*{max-width:100%;min-width:0}
+.frame button,.frame input,.frame select{font-family:var(--body)}
+@media(max-width:768px){.frame :is(button,select,summary){min-height:44px}.dtable td[data-label]::before{content:attr(data-label)}}
+.impact{width:100%;min-width:0}
+.impact__empty{margin:10px 0 0;color:var(--muted);font-size:var(--text-body)}

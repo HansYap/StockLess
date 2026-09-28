@@ -73,16 +73,16 @@ describe("purchase planning", () => {
     fireEvent.click(dialog.getByRole("button", { name: "Clear planned order" }));
     expect(dialog.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
   });
-  it("has only five read-only columns, no verdict, no sample inputs and a disabled ordering filter initially", () => {
+  it("shows the five planning columns and no entered order initially", () => {
     render(<Harness />);
     expect(
       screen.getAllByRole("columnheader").map((el) => el.textContent),
     ).toEqual([
       "Product",
-      "Data label",
-      "4-week demand",
-      "Estimated restock",
-      "Open action",
+      "Expected demand",
+      "In stock",
+      "Your order",
+      "Check",
     ]);
     expect(screen.queryByLabelText("Planned order")).toBeNull();
     expect(screen.queryByLabelText("Incoming stock")).toBeNull();
@@ -102,7 +102,7 @@ describe("purchase planning", () => {
     expect(incoming.type).toBe("range");
     expect(incoming.value).toBe("0");
     expect(incoming.getAttribute("aria-valuetext")).toBe("Not entered");
-    expect(within(screen.getByRole("table")).getAllByText("Steady seller")).toHaveLength(2);
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(4);
     expect(within(dialog).getAllByText("Steady seller")).toHaveLength(1);
     expect(
       within(dialog).queryByRole("button", { name: /Use .* as my planned order/ }),

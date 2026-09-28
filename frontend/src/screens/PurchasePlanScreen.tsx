@@ -18,7 +18,7 @@ import {
   DataLabel,
   ProductPurchaseDialog,
 } from "../purchase-plan/ProductPurchaseDialog.tsx";
-import { SourceTag, numberText } from "../purchase-plan/SourceTag.tsx";
+import { numberText } from "../purchase-plan/SourceTag.tsx";
 import {
   purchasePlanFilename,
   serializePurchasePlanCsv,
@@ -34,6 +34,7 @@ interface Props {
   onSelect: (key: string | null) => void;
   onDraftChange: (key: string, inputs: ProductPurchaseInputs) => void;
   onBack: () => void;
+  onImpact?: () => void;
   evaluatePurchase?: PurchaseEvaluator;
   expiryByProduct?: Readonly<Record<string, ExpiryCheckInput | undefined>>;
 }
@@ -55,6 +56,7 @@ export function PurchasePlanScreen({
   onSelect,
   onDraftChange,
   onBack,
+  onImpact,
   evaluatePurchase = evaluateProductPurchasePlan,
   expiryByProduct,
 }: Props) {
@@ -206,7 +208,7 @@ export function PurchasePlanScreen({
             )}
           </p>
           <h1 className="page-title">
-            {t("Plan your next order with confidence.")}</h1>
+            {t("Plan what to restock, then check it before you order.")}</h1>
           <p className="lede">
             {t("Start with StockLess's estimated quantity, enter what you intend to buy, and see whether the plan fits expected demand.")}</p>
         </div>
@@ -267,6 +269,7 @@ export function PurchasePlanScreen({
           {t("Evidence mismatch affects ")}{t(mismatchCount)}{t(" ")}
           {t(mismatchCount === 1 ? "product" : "products")}{t(". These products remain listed but cannot be evaluated. Return to readiness and refresh the forecast.")}</p>
       ))}
+      <div className={`purchase-layout${selected ? " purchase-layout--detail" : ""}`}>
       <section className="card list-card">
         <div className="card-head">
           <div>
@@ -334,24 +337,23 @@ export function PurchasePlanScreen({
         <div className="table-scroll">
           <table>
             <colgroup>
-              {t(["29%", "17%", "22%", "26%", "6%"].map((width) => (
-                <col key={width} style={{ width }} />
+              {t(["30%", "19%", "14%", "14%", "23%"].map((width, index) => (
+                <col key={index} style={{ width }} />
               )))}
             </colgroup>
             <thead>
               <tr>
                 <th scope="col">{t("Product")}</th>
-                <th scope="col">{t("Data label")}</th>
-                <th scope="col">{t("4-week demand")}</th>
-                <th scope="col">{t("Estimated restock")}</th>
-                <th scope="col">
-                  <span className="visually-hidden">{t("Open action")}</span>
-                </th>
+                <th scope="col">{t("Expected demand")}</th>
+                <th scope="col">{t("In stock")}</th>
+                <th scope="col">{t("Your order")}</th>
+                <th scope="col">{t("Check")}</th>
               </tr>
             </thead>
             <tbody>
               {visible.map((product) => {
-                const restock = plans.get(product.key)?.estimatedRestock;
+                const plan = plans.get(product.key);
+                const order = inputsFor(product).plannedOrder;
                 const range =
                   !product.issue && product.demand?.label !== "Cannot assess"
                     ? product.demand?.range
@@ -362,7 +364,7 @@ export function PurchasePlanScreen({
                     className={`clickable-row${selectedKey === product.key ? " selected" : ""}`}
                     onClick={() => onSelect(product.key)}
                   >
-                    <td>
+                    <td data-label={t("Product")}>
                       <button
                         className="product-button"
                         type="button"
@@ -373,65 +375,34 @@ export function PurchasePlanScreen({
                       >
                         {product.name}
                         <small>{t("SKU ")}{product.sku || "Not available"}</small>
+                        <DataLabel product={product} />
                       </button>
                     </td>
-                    <td>
-                      <DataLabel product={product} />
-                      {t((product.issue || product.demand?.labelReason) && (
-                        <small className="input-source">
-                          {t(product.issue ||
-                            product.demand?.labelReason?.message)}
-                        </small>
-                      ))}
-                    </td>
-                    <td>
+                    <td data-label={t("Expected demand")}>
                       <span className="range">
                         {t(range
                           ? `${numberText(range.low)}–${numberText(range.high)} units`
                           : "No range")}
-                        {t(range && product.demand?.pattern && (
-                          <span className="pill pill--neutral range-pattern">
-                            {t(product.demand.pattern)}
-                          </span>
-                        ))}
                         <small>
                           {t(range
                             ? "for the next 4 weeks"
                             : product.issue ||
                               product.demand?.labelReason?.message)}
                         </small>
-                        {t(range && (
-                          <SourceTag source="worked out by StockLess" />
-                        ))}
                       </span>
                     </td>
-                    <td>
-                      <span
-                        className={`estimate${restock?.state !== "available" ? " estimate--none" : ""}`}
-                      >
-                        {t(restock?.state === "available"
-                          ? `${numberText(restock.quantity.value)} units`
-                          : "No estimate")}
-                        <small>
-                          {t(restock?.state === "available" ? (
-                            <SourceTag source={restock.quantity.source} />
-                          ) : (
-                            "Evidence not usable"
-                          ))}
-                        </small>
-                      </span>
+                    <td data-label={t("In stock")}>
+                      {product.stock?.usableForCover && product.stock.currentStock !== undefined
+                        ? <span className="num">{numberText(product.stock.currentStock)}</span>
+                        : <span className="estimate estimate--none">—</span>}
                     </td>
-                    <td>
-                      <button
-                        className="row-action"
-                        type="button"
-                        aria-label={t(`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`)}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onSelect(product.key);
-                        }}
-                      >
-                        ›
+                    <td data-label={t("Your order")}>
+                      {order.state === "value" ? <span className="num">{numberText(order.value)}</span> : <span className="estimate estimate--none">—</span>}
+                      {plan?.estimatedRestock.state === "available" && <small className="input-source">{t("Suggested")}{" "}{numberText(plan.estimatedRestock.quantity.value)}</small>}
+                    </td>
+                    <td data-label={t("Check")}>
+                      <button className={`purchase-check purchase-check--${plan?.audit.state === "verdict" ? plan.audit.verdict === "Overstock risk" ? "risk" : "ready" : "pending"}`} type="button" aria-label={t(`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`)} onClick={(event) => { event.stopPropagation(); onSelect(product.key); }}>
+                        {t(plan?.audit.state === "verdict" ? plan.audit.verdict : plan?.audit.state === "cannot_judge" ? "Cannot judge" : "Review →")}
                       </button>
                     </td>
                   </tr>
@@ -462,6 +433,7 @@ export function PurchasePlanScreen({
       </section>
       {selected && (
         <ProductPurchaseDialog
+          inline
           key={selected.key}
           product={selected}
           plan={plans.get(selected.key)}
@@ -472,6 +444,8 @@ export function PurchasePlanScreen({
           onClose={() => onSelect(null)}
         />
       )}
+      </div>
+      {onImpact && <div className="purchase-impact-action"><button type="button" className="btn btn--primary" onClick={onImpact}>{t("See your impact →")}</button></div>}
     </main>
   );
 }

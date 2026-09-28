@@ -192,6 +192,48 @@
   .page:has(> .purchase-plan) { padding-top:32px;padding-bottom:44px; }
 }
 
+/* Step 4 follows the reference's product list and keeps the chosen product
+   beside it, so quantities can be compared without covering the list. */
+.purchase-plan .purchase-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-top:20px;align-items:start}
+.purchase-plan .purchase-layout--detail{grid-template-columns:minmax(0,1fr) minmax(380px,430px)}
+.purchase-plan .purchase-layout .list-card{margin-top:0;min-width:0}
+.purchase-plan .purchase-layout table{min-width:690px}
+.purchase-plan .purchase-layout .product-button .pill{margin-top:7px;max-width:max-content}
+.purchase-plan .purchase-layout .product-button small{font-size:var(--text-description)}
+.purchase-plan .purchase-layout .input-source{font-size:var(--text-description)}
+.purchase-plan .purchase-check{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;color:var(--teal-deep);font-size:var(--text-secondary);font-weight:700;text-align:left;line-height:1.3}
+.purchase-plan .purchase-check:hover{border-color:var(--teal);background:var(--teal-tint)}
+.purchase-plan .purchase-check--risk{color:var(--red);background:var(--red-tint)}
+.purchase-plan .purchase-check--pending{color:var(--muted)}
+.purchase-plan dialog.purchase-detail{position:sticky;top:14px;display:block;width:100%;max-width:100%;max-height:calc(100dvh - 28px);margin:0;overflow:auto;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card)}
+.purchase-plan .purchase-detail .dialog-layout{grid-template-columns:1fr;padding:18px;gap:14px}
+.purchase-plan .purchase-detail .dialog-head{padding:16px 18px}
+.purchase-plan .purchase-detail .dialog-head h2{font-size:var(--text-section-head)}
+.purchase-plan .purchase-detail .dialog-column{gap:14px}
+.purchase-plan .purchase-detail .figure-grid{grid-template-columns:1fr 1fr}
+.purchase-plan .purchase-impact-action{display:flex;justify-content:flex-end;margin-top:18px}
+@media(max-width:1180px){
+  .purchase-plan .purchase-layout--detail{grid-template-columns:1fr}
+  .purchase-plan dialog.purchase-detail{position:static;max-height:none}
+}
+@media(max-width:700px){
+  .purchase-plan .purchase-layout .table-scroll{overflow:visible}
+  .purchase-plan .purchase-layout table,.purchase-plan .purchase-layout tbody,.purchase-plan .purchase-layout tr{display:block;min-width:0;width:100%}
+  .purchase-plan .purchase-layout colgroup{display:none}
+  .purchase-plan .purchase-layout thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .purchase-plan .purchase-layout tbody tr{padding:14px 16px;border-bottom:1px solid var(--line-soft)}
+  .purchase-plan .purchase-layout tbody tr:last-child{border-bottom:0}
+  .purchase-plan .purchase-layout tbody td{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border:0;padding:7px 0;text-align:right;min-width:0}
+  .purchase-plan .purchase-layout tbody td::before{content:attr(data-label);flex:none;max-width:42%;color:var(--muted);font-size:var(--text-description);font-weight:700;text-align:left}
+  .purchase-plan .purchase-layout tbody td:first-child{display:block;text-align:left;padding-bottom:12px;border-bottom:1px solid var(--line-soft)}
+  .purchase-plan .purchase-layout tbody td:first-child::before{display:none}
+  .purchase-plan .purchase-layout .product-button{text-align:left}
+  .purchase-plan .purchase-layout .empty-row{display:block;text-align:center}
+  .purchase-plan .purchase-layout .empty-row::before{display:none}
+  .purchase-plan .purchase-detail .figure-grid{grid-template-columns:1fr}
+  .purchase-plan .purchase-impact-action .btn{width:100%}
+}
+
 /* Sage guidance, numbered in the same style as the mapping page. */
 .purchase-plan .planning-guide{margin-top:24px;padding:24px 26px;background:#F1F8F3;border:1px solid #D8E6DA;border-radius:22px}
 .purchase-plan .planning-guide__intro{display:flex;align-items:flex-start;gap:12px}

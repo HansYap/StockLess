@@ -168,6 +168,7 @@ export function ProductPurchaseDialog({
   onChange,
   onClose,
   onReviewData,
+  inline = false,
 }: {
   product: PurchaseProduct;
   plan?: ProductPurchasePlan;
@@ -176,11 +177,13 @@ export function ProductPurchaseDialog({
   onChange: (inputs: ProductPurchaseInputs) => void;
   onClose: () => void;
   onReviewData?: () => void;
+  inline?: boolean;
 }) {
   useLanguage();
   const ref = useRef<HTMLDialogElement>(null);
   const sliderMaximum = useRef(purchaseSliderMaximum(product, plan, inputs)).current;
   useEffect(() => {
+    if (inline) return;
     const dialog = ref.current!;
     const previousFocus =
       document.activeElement instanceof HTMLElement
@@ -194,7 +197,7 @@ export function ProductPurchaseDialog({
       document.body.style.overflow = overflow;
       previousFocus?.focus();
     };
-  }, []);
+  }, [inline]);
   const [quantityErrors, setQuantityErrors] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
   const [typedValues, setTypedValues] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
   const update = (field: keyof ProductPurchaseInputs, raw: string) => {
@@ -216,7 +219,10 @@ export function ProductPurchaseDialog({
   return (
     <dialog
       ref={ref}
+      open={inline || undefined}
+      className={inline ? "purchase-detail" : undefined}
       aria-labelledby="purchase-dialog-title"
+      onKeyDown={inline ? (event) => { if (event.key === "Escape") onClose(); } : undefined}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
