@@ -47,6 +47,13 @@ const open = (sku = "000101") =>
   );
 
 describe("purchase planning", () => {
+  it("opens the HTML-style impact dashboard from the money section", () => {
+    const onImpact = vi.fn();
+    render(<PurchasePlanScreen {...makeEvidence()} drafts={{}} selectedKey={null} onSelect={() => {}} onDraftChange={() => {}} onBack={() => {}} onImpact={onImpact} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open dashboard example →" }));
+    expect(onImpact).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
   it("routes a product needing more data back to readiness", () => {
     const data = makeEvidence();
     const onBack = vi.fn();
@@ -87,7 +94,7 @@ describe("purchase planning", () => {
     expect(screen.queryByLabelText("Planned order")).toBeNull();
     expect(screen.queryByLabelText("Incoming stock")).toBeNull();
     expect(
-      screen.queryByText(/Overstock risk|Needs review|Looks balanced|Cannot judge/),
+      within(screen.getByRole("table")).queryByText(/Overstock risk|Needs review|Looks balanced|Cannot judge/),
     ).toBeNull();
     expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
       true,
@@ -127,7 +134,8 @@ describe("purchase planning", () => {
   it("enables ordering after a plan, keeps totals unchanged, and restores disabled state after clearing the last plan", async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    const totals = screen.getByLabelText("Product data labels").textContent;
+    const totals = screen.getByRole("region", { name: "Your next purchase, at a glance" }).querySelectorAll(".pp-tile");
+    const evidenceTotals = Array.from(totals).slice(0, 2).map(tile => tile.textContent);
     open("000202");
     fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "1" } });
     expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
@@ -136,9 +144,7 @@ describe("purchase planning", () => {
     await user.click(screen.getByRole("button", { name: "Done" }));
     await user.click(screen.getByRole("checkbox"));
     expect(screen.getAllByRole("row")).toHaveLength(2);
-    expect(screen.getByLabelText("Product data labels").textContent).toBe(
-      totals,
-    );
+    expect(Array.from(screen.getByRole("region", { name: "Your next purchase, at a glance" }).querySelectorAll(".pp-tile")).slice(0, 2).map(tile => tile.textContent)).toEqual(evidenceTotals);
     open("000202");
     await user.click(screen.getByRole("button", { name: "Clear planned order" }));
     await user.click(screen.getByRole("button", { name: "Done" }));

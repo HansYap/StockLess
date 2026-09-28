@@ -76,7 +76,7 @@ describe("persistent language choice across the frontend", () => {
     const custom = { ...snapshot, rows: snapshot.rows.map(row => ({ ...row, interpretedValues: { ...row.interpretedValues, productName: "Ready" } })) };
     act(() => setLanguage("ms"));
     render(<PurchasePlanScreen snapshot={custom} forecast={forecast} drafts={{}} selectedKey={null} onSelect={vi.fn()} onDraftChange={vi.fn()} onBack={vi.fn()} />);
-    expect(screen.getByRole("heading", { name: "Pelan pembelian anda" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Rancang");
     expect(screen.getAllByText("Ready").length).toBeGreaterThan(0);
     expect(t("You would have 40 units, above the 36-unit four-week range, so the planned order looks too much.")).toContain("40 unit");
     expect(t("Open purchase plan for Ready, SKU 123")).toBe("Buka pelan pembelian untuk Ready, SKU 123");

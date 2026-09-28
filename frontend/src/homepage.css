@@ -568,6 +568,7 @@
 @media(max-width:420px){.sl-home .sl-workflow-grid{grid-template-columns:1fr!important}.sl-home .sl-topnav>a{flex:1}.sl-home .sl-nav-actions>a{font-size:12px}}
 
 .sl-home .sl-nav-actions a{color:var(--teal)}
+.sl-home #home-title:focus{outline:none}
 .sl-home .language-switcher select{outline:none!important;box-shadow:none!important;-webkit-appearance:none;appearance:none}
 .sl-home .language-switcher:focus-within{outline:2px solid var(--teal);outline-offset:3px}
 

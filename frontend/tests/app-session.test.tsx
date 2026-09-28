@@ -84,7 +84,7 @@ async function reachPurchase() {
   fireEvent.click(screen.getByText("Load test file"));
   fireEvent.click(await screen.findByText("Check test readiness"));
   fireEvent.click(await screen.findByText("Run test forecast"));
-  await screen.findByRole("heading", { name: "Your purchase plan" });
+  await screen.findByRole("heading", { name: "Plan what to restock, then check it before you order." });
 }
 const open = () =>
   fireEvent.click(

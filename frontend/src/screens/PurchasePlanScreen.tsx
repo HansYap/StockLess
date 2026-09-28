@@ -24,7 +24,8 @@ import {
   serializePurchasePlanCsv,
 } from "../purchase-plan/purchase-plan-export.ts";
 import "../purchase-plan/purchase-plan.css";
-import { FinancePreview } from "../finance-preview/FinancePreview.tsx";
+import "../purchase-plan/step4-design.css";
+import { calculatePotentialExcess } from "./ImpactDashboard.tsx";
 
 interface Props {
   snapshot: ReadinessSnapshot;
@@ -60,10 +61,11 @@ export function PurchasePlanScreen({
   evaluatePurchase = evaluateProductPurchasePlan,
   expiryByProduct,
 }: Props) {
-  useLanguage();
+  const language = useLanguage();
+  const copy = (en: string, zh: string, ms: string) => language === "zh" ? zh : language === "ms" ? ms : en;
   const [query, setQuery] = useState("");
   const [orderingOnly, setOrderingOnly] = useState(false);
-  const [view, setView] = useState<"all" | "plannable" | "unavailable">("all");
+  const [group, setGroup] = useState<"all" | "order_needed" | "check_order" | "balanced" | "need_data">("all");
   const products = useMemo(
     () => joinPurchaseEvidence(snapshot, forecast),
     [snapshot, forecast],
@@ -115,6 +117,23 @@ export function PurchasePlanScreen({
   );
   const inputsFor = (product: (typeof products)[number]) =>
     drafts[product.key] ?? product.fileInputs;
+  const groupFor = (product: PurchaseProduct) => {
+    const audit = plans.get(product.key)?.audit;
+    if (audit?.state === "verdict") {
+      if (audit.verdict === "Overstock risk") return "check_order";
+      if (audit.verdict === "Looks balanced") return "balanced";
+      return "order_needed";
+    }
+    return plans.get(product.key)?.estimatedRestock.state === "available" ? "order_needed" : "need_data";
+  };
+  const groups = [
+    { id: "order_needed", label: "Order needed", help: "No order entered yet, or below expected demand" },
+    { id: "check_order", label: "Check your order", help: "More than even the busiest expected month" },
+    { id: "balanced", label: "Looks balanced", help: "Within expected demand" },
+    { id: "need_data", label: "Need more data", help: "StockLess could not judge these yet" },
+  ] as const;
+  const avoidedLines = calculatePotentialExcess(snapshot, forecast, drafts);
+  const avoidedUnits = avoidedLines.reduce((sum, item) => sum + item.units, 0);
   const hasPlans = products.some(
     (product) => inputsFor(product).plannedOrder.state === "value",
   );
@@ -123,7 +142,7 @@ export function PurchasePlanScreen({
       `${product.name} ${product.sku ?? ""}`
         .toLowerCase()
         .includes(query.trim().replace(/^sku\s*:?\s*/i, "").toLowerCase()) &&
-      (view === "all" || (view === "plannable" ? plans.get(product.key)?.estimatedRestock.state === "available" : plans.get(product.key)?.estimatedRestock.state !== "available")) &&
+      (group === "all" || groupFor(product) === group) &&
       (!orderingOnly ||
         !hasPlans ||
         inputsFor(product).plannedOrder.state === "value"),
@@ -139,10 +158,7 @@ export function PurchasePlanScreen({
   };
   const highlighted = [...visible].sort((a,b) => priority(a) - priority(b)).slice(0, 3);
   const selected = products.find((product) => product.key === selectedKey);
-  const counts = (label: string) =>
-    products.filter(
-      (product) => !product.issue && product.demand?.label === label,
-    ).length;
+  const selectedIndex = visible.findIndex((product) => product.key === selectedKey);
   const mismatchCount = products.filter((product) => product.issue).length;
   function download() {
     const rows = [
@@ -193,8 +209,7 @@ export function PurchasePlanScreen({
   }
   return (
     <main className="purchase-plan">
-      <section className="heading-row">
-        <div>
+      <section className="pp-heading">
           <p className="eyebrow">
             {t("Purchase plan ·")}{t(" ")}
             {new Date(`${snapshot.analysisDate}T00:00:00Z`).toLocaleDateString(
@@ -211,56 +226,58 @@ export function PurchasePlanScreen({
             {t("Plan what to restock, then check it before you order.")}</h1>
           <p className="lede">
             {t("Start with StockLess's estimated quantity, enter what you intend to buy, and see whether the plan fits expected demand.")}</p>
-        </div>
-        <button className="btn btn--ghost" type="button" onClick={download}>
-          {t("↓ Download purchase summary")}</button>
       </section>
       <p className="privacy-note">
         <span aria-hidden="true">▣</span>
         <span>
           <strong>{t("Your figures stay local.")}</strong> {t("Typed order quantities last for this visit only and are not sent to a supplier.")}</span>
       </p>
-      <details className="planning-guide"><summary>{t("How to plan an order")}</summary><section className="planning-guide__body" aria-label={t("Purchase planning instructions")}>
-        <div className="planning-guide__intro">
-          <span className="planning-guide__icon" aria-hidden="true">🌳</span>
+      <details className="pp-how"><summary>{t("How to plan an order")}</summary><section className="pp-how__body" aria-label={t("Purchase planning instructions")}>
+        <div className="pp-how__head">
+          <span className="pp-how__mark" aria-hidden="true">🌳</span>
           <div>
             <h2>{t("From sales data to your next order")}</h2>
             <p>{t("Select a product below, then follow these three steps.")}</p>
           </div>
         </div>
-        <ol className="planning-steps">
+        <ol className="pp-how__steps">
           {[
             ["Review demand", "See past sales and the four-week range."],
             ["Enter your quantities", "Add your planned order and incoming stock."],
             ["Check before ordering", "Compare the plan with expected demand."],
           ].map(([title, description]) => (
-            <li key={title}><b>{t(title)}</b><span>{t(description)}</span></li>
+            <li key={title}><span className="pp-how__n">{["Review demand", "Enter your quantities", "Check before ordering"].indexOf(title) + 1}</span><div><b>{t(title)}</b><span>{t(description)}</span></div></li>
           ))}
         </ol>
       </section></details>
-      <section className="plan-overview" aria-label={t("Purchase planning overview")}>
-        <div className="plan-overview__intro"><span className="plan-overview__icon" aria-hidden="true">🌳</span><div><h2>{t("Your next purchase, at a glance")}</h2><p>{products.length} {t("products")} · {t("for the next 4 weeks")}</p></div></div>
-        <div className="plan-overview__groups">
-          <button type="button" aria-pressed={view === "plannable"} onClick={() => setView(view === "plannable" ? "all" : "plannable")} className="plan-group plan-group--ready"><b>{plannableCount}</b><span>{t("Can plan")}</span><small>{t("Usable demand and stock evidence")}</small></button>
-          <button type="button" aria-pressed={view === "unavailable"} onClick={() => setView(view === "unavailable" ? "all" : "unavailable")} className="plan-group plan-group--missing"><b>{products.length - plannableCount}</b><span>{t("Need more data")}</span><small>{t("Open a product to see the next action")}</small></button>
-          <div className="plan-group plan-group--entered"><b>{enteredCount}</b><span>{t("Plans entered")}</span><small>{t("Included in the product totals")}</small></div>
+      <section className="pp-glance" aria-label={t("Your next purchase, at a glance")}>
+        <div className="pp-glance__head"><span className="pp-glance__mark" aria-hidden="true">🌳</span><div><h2>{t("Your next purchase, at a glance")}</h2><p>{products.length} {t("products")} · {t("for the next 4 weeks")}</p></div></div>
+        <div className="pp-glance__tiles">
+          <div className="pp-tile"><b className="num">{plannableCount}</b><span>{t("Can plan")}</span><small>{t("Usable demand and stock evidence")}</small></div>
+          <div className="pp-tile pp-tile--warn"><b className="num">{products.length - plannableCount}</b><span>{t("Need more data")}</span><small>{t("Open a product to see the next action")}</small></div>
+          <div className="pp-tile"><b className="num">{enteredCount}</b><span>{t("Plans entered")}</span><small>{t("Included in the product totals")}</small></div>
         </div>
       </section>
-      <FinancePreview />
-      <p className="plan-next"><b>{t("Next step:")}</b> {t("Open a product, review the estimate, and enter the quantity you intend to order.")}</p>
-      <section className="plan-highlights" aria-label={t("Suggested starting points")}>
-        <div className="plan-section-head"><h2>{t("Start with these products")}</h2><p>{t("Purchase concerns appear first. Each suggestion uses your current inputs.")}</p></div>
-        <div className="plan-cards">{highlighted.map(product => {
+      <section className="pp-money" aria-labelledby="pp-money-title">
+        <div className="pp-money__head"><div><h2 id="pp-money-title">{t("What will this plan cost?")}</h2><p>{t("Money insights · design preview")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={onImpact}>{t("Open dashboard example →")}</button></div>
+        <div className="pp-impact"><span className="pp-impact__k">{copy("Potential excess stock", "潜在过量库存", "Stok berlebihan berpotensi")}</span><b className="pp-impact__v num">{avoidedLines.length ? numberText(avoidedUnits) : "—"} <small>{avoidedLines.length ? t("units") : ""}</small></b><span className="pp-impact__note">{avoidedLines.length ? copy(`Across ${avoidedLines.length} checked products`, `基于 ${avoidedLines.length} 件已核对商品`, `Berdasarkan ${avoidedLines.length} produk yang disemak`) : copy("No checked purchase plan yet", "尚无已核对的采购计划", "Belum ada pelan pembelian yang disemak")}</span></div>
+        <div className="pp-money__tiles">{["Planned purchase spending", "Incoming stock cost", "Potential excess-stock cost"].map(label => <div className="pp-cost" key={label}><span>{t(label)}</span><b aria-label={t("Not available")}>—</b><small>{t("Purchase cost and currency required")}</small></div>)}</div>
+        <p className="pp-money__note">{copy("Money figures need purchase cost and currency. The dashboard shows unit estimates from your current plan.", "金额需要采购单价和币种。Dashboard 显示您当前计划的件数估算。", "Angka wang memerlukan kos belian dan mata wang. Papan pemuka menunjukkan anggaran unit daripada pelan semasa anda.")}</p>
+      </section>
+      <p className="pp-next"><b>{t("Next step:")}</b> {t("Open a product, review the estimate, and enter the quantity you intend to order.")}</p>
+      <section className="pp-priority" aria-label={t("Suggested starting points")}>
+        <h2>{t("Start with these products")}</h2><p className="pp-priority__sub">{t("Purchase concerns appear first. Each suggestion uses your current inputs.")}</p>
+        <div className="pp-priority__cards">{highlighted.map(product => {
           const plan = plans.get(product.key);
           const restock = plan?.estimatedRestock;
           const audit = plan?.audit;
-          const tone = audit?.state === "verdict" ? audit.verdict === "Overstock risk" ? "high" : audit.verdict === "Needs review" ? "review" : "balanced" : restock?.state === "available" ? "balanced" : "missing";
-          return <article className={`plan-card plan-card--${tone}`} key={product.key}>
-            <header><div><h3>{product.name}</h3><small>SKU {product.sku ?? "—"}</small></div><DataLabel product={product} /></header>
-            <div className="plan-card__action"><span>{t(audit?.state === "verdict" ? "Purchase check" : "Estimated restock")}</span><strong>{t(audit?.state === "verdict" ? audit.verdict : restock?.state === "available" ? `${numberText(restock.quantity.value)} units` : "No reliable estimate")}</strong></div>
-            <p>{t(audit?.state === "verdict" ? audit.reasonSentence : restock?.state === "unavailable" ? restock.reason : product.issue ?? "Review the estimate before entering your plan.")}</p>
-            {plan?.expiry.state === "expires_within_four_weeks" && <p className="plan-card__expiry">{t(plan.expiry.message)}</p>}
-            <button type="button" className="btn btn--ghost btn--small" onClick={() => onSelect(product.key)}>{t(restock?.state === "available" ? "Review and plan →" : "See what is needed →")}</button>
+          const tone = groupFor(product);
+          return <article className={`pp-card pp-card--${tone}`} key={product.key}>
+            <div className="pp-card__head"><div><b>{product.name}</b><small>SKU {product.sku ?? "—"}</small></div><DataLabel product={product} /></div>
+            <div className={`pp-card__verdict${restock?.state !== "available" ? " pp-card__verdict--none" : ""}`}><span>{t(audit?.state === "verdict" ? "Purchase check" : "Estimated restock")}</span><b>{t(audit?.state === "verdict" ? audit.verdict : restock?.state === "available" ? `${numberText(restock.quantity.value)} units` : "No reliable estimate")}</b></div>
+            <p className="pp-card__why">{t(audit?.state === "verdict" ? audit.reasonSentence : restock?.state === "unavailable" ? restock.reason : product.issue ?? "Review the estimate before entering your plan.")}</p>
+            {plan?.expiry.state === "expires_within_four_weeks" && <p className="pp-card__expiry">{t(plan.expiry.message)}</p>}
+            <button type="button" className="btn btn--ghost btn--small pp-card__action" onClick={() => onSelect(product.key)}>{t(restock?.state === "available" ? "Review and plan →" : "See what is needed →")}</button>
           </article>;
         })}</div>
       </section>
@@ -269,27 +286,11 @@ export function PurchasePlanScreen({
           {t("Evidence mismatch affects ")}{t(mismatchCount)}{t(" ")}
           {t(mismatchCount === 1 ? "product" : "products")}{t(". These products remain listed but cannot be evaluated. Return to readiness and refresh the forecast.")}</p>
       ))}
-      <div className={`purchase-layout${selected ? " purchase-layout--detail" : ""}`}>
+      <div className="pp-groups" role="group" aria-label={t("Filter by what each product needs")}>
+        {groups.map(item => <button type="button" key={item.id} className={`pp-group pp-group--${item.id}${group === item.id ? " pp-group--on" : ""}`} aria-pressed={group === item.id} onClick={() => setGroup(group === item.id ? "all" : item.id)}><b>{products.filter(product => groupFor(product) === item.id).length}</b><span>{t(item.label)}</span><small>{t(item.help)}</small></button>)}
+      </div>
+      <div className="pp-layout">
       <section className="card list-card">
-        <div className="card-head">
-          <div>
-            <p className="eyebrow">{t("All products")}</p>
-            <h2>{t("Your purchase plan")}</h2>
-            <p>
-              {t("Select a product to enter quantities and see its evidence and full calculation.")}</p>
-          </div>
-          <span className="pill pill--neutral">
-            {t(products.length)} {t("products")}</span>
-        </div>
-        <div className="readiness-counts" aria-label={t("Product data labels")}>
-          <strong>{t("All ")}{t(products.length)} {t("products")}</strong>
-          {["Ready", "Limited", "Cannot assess"].map((label) => (
-            <span className={`pill pill--${label === "Ready" ? "ready" : label === "Limited" ? "limited" : "cannot"}`} key={label}>
-              <b>{t(counts(label))}</b> {t(label)}
-            </span>
-          ))}
-        </div>
-        <div className="plan-view"><span>{t("Show:")}</span>{(["all", "plannable", "unavailable"] as const).map(item => <button type="button" key={item} aria-pressed={view === item} onClick={() => setView(item)}>{t(item === "all" ? "All products" : item === "plannable" ? "Can plan" : "Need more data")}</button>)}</div>
         <div className="toolbar">
           <label className="search">
             <span className="visually-hidden">{t("Search products")}</span>
@@ -334,13 +335,9 @@ export function PurchasePlanScreen({
           <p className="expiry-note">
             {t("Expiry not checked — your file has no expiry dates")}</p>
         ))}
-        <div className="table-scroll">
-          <table>
-            <colgroup>
-              {t(["30%", "19%", "14%", "14%", "23%"].map((width, index) => (
-                <col key={index} style={{ width }} />
-              )))}
-            </colgroup>
+        <p className="pp-key"><span>{t("Key:")}</span><span className="source-tag source--file">{t("from your file")}</span><span className="source-tag source--worked">{t("worked out by StockLess")}</span><span className="source-tag source--input">{t("input by you")}</span></p>
+        <div className="table-scroll table-scroll--x">
+          <table className="dtable dtable--cards pp-table">
             <thead>
               <tr>
                 <th scope="col">{t("Product")}</th>
@@ -398,10 +395,10 @@ export function PurchasePlanScreen({
                     </td>
                     <td data-label={t("Your order")}>
                       {order.state === "value" ? <span className="num">{numberText(order.value)}</span> : <span className="estimate estimate--none">—</span>}
-                      {plan?.estimatedRestock.state === "available" && <small className="input-source">{t("Suggested")}{" "}{numberText(plan.estimatedRestock.quantity.value)}</small>}
+                      {plan?.estimatedRestock.state === "available" && <small className="pp-suggested num">{t("Suggested")}{" "}{numberText(plan.estimatedRestock.quantity.value)}</small>}
                     </td>
                     <td data-label={t("Check")}>
-                      <button className={`purchase-check purchase-check--${plan?.audit.state === "verdict" ? plan.audit.verdict === "Overstock risk" ? "risk" : "ready" : "pending"}`} type="button" aria-label={t(`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`)} onClick={(event) => { event.stopPropagation(); onSelect(product.key); }}>
+                      <button className={`pp-check pp-check--${groupFor(product)}`} type="button" aria-label={t(`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`)} onClick={(event) => { event.stopPropagation(); onSelect(product.key); }}>
                         {t(plan?.audit.state === "verdict" ? plan.audit.verdict : plan?.audit.state === "cannot_judge" ? "Cannot judge" : "Review →")}
                       </button>
                     </td>
@@ -423,6 +420,7 @@ export function PurchasePlanScreen({
         <div className="list-footer">
           <span role="status">
             {t("Showing ")}{t(visible.length)} {t("of ")}{t(products.length)} {t("products. Counts above do not change when filtering.")}</span>
+          <button className="btn btn--ghost btn--small" type="button" onClick={download}>{t("↓ Download purchase summary")}</button>
           <button
             className="btn btn--ghost btn--small"
             type="button"
@@ -431,7 +429,7 @@ export function PurchasePlanScreen({
             {t("← Back to readiness")}</button>
         </div>
       </section>
-      {selected && (
+      {selected ? (
         <ProductPurchaseDialog
           inline
           key={selected.key}
@@ -442,8 +440,12 @@ export function PurchasePlanScreen({
           onChange={(inputs) => onDraftChange(selected.key, inputs)}
           onReviewData={() => { onSelect(null); onBack(); }}
           onClose={() => onSelect(null)}
+          position={selectedIndex >= 0 ? selectedIndex : undefined}
+          total={visible.length}
+          onPrevious={selectedIndex > 0 ? () => onSelect(visible[selectedIndex - 1].key) : undefined}
+          onNext={selectedIndex >= 0 && selectedIndex < visible.length - 1 ? () => onSelect(visible[selectedIndex + 1].key) : undefined}
         />
-      )}
+      ) : <aside className="pp-panel pp-panel--empty" aria-label={t("Purchase details")}><span aria-hidden="true">🌳</span><h2>{t("Purchase details")}</h2><p>{t("Select a product to enter quantities and see its evidence and full calculation.")}</p></aside>}
       </div>
       {onImpact && <div className="purchase-impact-action"><button type="button" className="btn btn--primary" onClick={onImpact}>{t("See your impact →")}</button></div>}
     </main>

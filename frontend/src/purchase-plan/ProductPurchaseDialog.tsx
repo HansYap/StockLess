@@ -130,6 +130,10 @@ function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
     demandHigh: "Demand range high",
     availableAfterOrder: "Stock after order",
   };
+  const chartMax = Math.max(audit.figures.availableAfterOrder.value, audit.figures.demandHigh.value, 1);
+  const stockWidth = Math.min(100, audit.figures.stockOnHand.value / chartMax * 100);
+  const incomingWidth = Math.min(100 - stockWidth, audit.figures.incomingStock.value / chartMax * 100);
+  const orderWidth = Math.min(100 - stockWidth - incomingWidth, audit.figures.plannedOrder.value / chartMax * 100);
   return (
     <section
       className={`verdict verdict--${tone}`}
@@ -142,6 +146,14 @@ function PurchaseVerdict({ audit }: { audit?: PurchaseAuditResult }) {
           {t(audit.verdict)}
         </span>
       </div>
+      <p className="pp-eq num">{numberText(audit.figures.stockOnHand.value)} {t("in stock")} + {numberText(audit.figures.incomingStock.value)} {t("incoming")} + {numberText(audit.figures.plannedOrder.value)} {t("order")} = <b>{numberText(audit.figures.availableAfterOrder.value)} {t("units")}</b></p>
+      <div className="pp-bar" role="img" aria-label={`${t("Stock after order")}: ${numberText(audit.figures.availableAfterOrder.value)} ${t("units")}. ${t("Expected demand")}: ${numberText(audit.figures.demandLow.value)}–${numberText(audit.figures.demandHigh.value)} ${t("units")}.`}>
+        <span className="pp-bar__band" style={{ left: `${audit.figures.demandLow.value / chartMax * 100}%`, width: `${(audit.figures.demandHigh.value - audit.figures.demandLow.value) / chartMax * 100}%` }} />
+        <span className="pp-bar__seg pp-bar__seg--stock" style={{ left: 0, width: `${stockWidth}%` }} />
+        <span className="pp-bar__seg pp-bar__seg--incoming" style={{ left: `${stockWidth}%`, width: `${incomingWidth}%` }} />
+        <span className="pp-bar__seg pp-bar__seg--order" style={{ left: `${stockWidth + incomingWidth}%`, width: `${orderWidth}%` }} />
+      </div>
+      <ul className="pp-bar__key"><li><i className="pp-bar__seg--stock" />{t("In stock")}</li><li><i className="pp-bar__seg--incoming" />{t("Incoming")}</li><li><i className="pp-bar__seg--order" />{t("Your order")}</li><li><i className="pp-bar__band" />{t("Expected demand")}</li></ul>
       <h3>{t(titles[tone])}</h3>
       <p>
         {t(audit.reasonSentence)} <SourceTag source="worked out by StockLess" />
@@ -169,6 +181,10 @@ export function ProductPurchaseDialog({
   onClose,
   onReviewData,
   inline = false,
+  position,
+  total,
+  onPrevious,
+  onNext,
 }: {
   product: PurchaseProduct;
   plan?: ProductPurchasePlan;
@@ -178,6 +194,10 @@ export function ProductPurchaseDialog({
   onClose: () => void;
   onReviewData?: () => void;
   inline?: boolean;
+  position?: number;
+  total?: number;
+  onPrevious?: () => void;
+  onNext?: () => void;
 }) {
   useLanguage();
   const ref = useRef<HTMLDialogElement>(null);
@@ -240,6 +260,7 @@ export function ProductPurchaseDialog({
         }
       }}
     >
+      {inline && position !== undefined && total !== undefined && <div className="pp-nav"><span>{t("Product ")}{position + 1} {t("of ")}{total}</span><span className="pp-nav__buttons"><button type="button" onClick={onPrevious} disabled={!onPrevious} aria-label={t("Previous product")}>←</button><button type="button" onClick={onNext} disabled={!onNext} aria-label={t("Next product")}>→</button></span></div>}
       <header className="dialog-head">
         <div>
           <p className="eyebrow">

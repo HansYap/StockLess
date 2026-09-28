@@ -20,9 +20,10 @@ describe("impact dashboard", () => {
     expect(lines[0].key).toBe("A");
     expect(lines[0].units).toBeGreaterThan(0);
 
-    render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
+    const { container } = render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
     expect(screen.getByText("Potential excess stock")).toBeTruthy();
     expect(screen.getByText((_, element) => element?.classList.contains("impact__lunits") === true && element.textContent === `${lines[0].units} units above expected demand`)).toBeTruthy();
     expect(screen.getAllByText("Not yet available")).toHaveLength(2);
+    expect(container.querySelectorAll(".learn__item")).toHaveLength(4);
   });
 });
