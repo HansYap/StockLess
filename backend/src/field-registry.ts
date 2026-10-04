@@ -201,7 +201,7 @@ export const UPLOAD_REQUIREMENTS = Object.freeze({
 
 export const PRIVACY_NOTICE = Object.freeze({
   beforeUpload:
-    "Your CSV or Excel file is processed in this browser and no account is required. StockLess may save column headings and confirmed matching rules in this browser, but your preview values, rows, derived series, and product identifiers are not uploaded to an AI or API service.",
+    "Your CSV or Excel file is processed in this browser and no account is required. If you save a dataset, StockLess keeps its records, settings and plans in this browser. Your file is not uploaded to an AI or API service.",
   persistence:
-    "Only saved column matching remains for returning use. Dataset rows, forecasts and purchase plans stay in the active session and are not saved in the browser database.",
+    "Saved datasets, plans, supplier terms, decisions and outcomes remain in this browser for returning use. Clear Everything removes them and saved column matchings.",
 });

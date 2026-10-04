@@ -2,12 +2,13 @@ import { t, useLanguage } from "./i18n/index.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { SavedMatchingBar } from "./components/SavedMatchingBar.tsx";
+import { SavedDataControls, SaveDatasetControls } from "./components/SavedDataControls.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
 import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessScreen.tsx";
 import { PurchasePlanScreen } from "./screens/PurchasePlanScreen.tsx";
 import { ImpactDashboard } from "./screens/ImpactDashboard.tsx";
-import type { PurchaseDrafts } from "./purchase-plan/model.ts";
+import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from "./purchase-plan/model.ts";
 import {
   MappingConflictError,
   FIELD_REGISTRY,
@@ -33,6 +34,7 @@ import {
   type ReadinessSnapshot,
   type SessionEnvelope,
   type SourceMode,
+  evaluateProductPurchasePlan,
 } from "./engine.ts";
 import { replaceSessionSourceInWorker } from "./workers/import-session-client.ts";
 import { runDemandForecastInWorker } from "./workers/forecast-client.ts";
@@ -48,6 +50,13 @@ import {
   saveMatching,
   type SavedMatchingDifferences,
 } from "./storage/saved-matching.ts";
+import {
+  clearEverything, createSavedDataset, findSavedDataset, getSavedDataset,
+  listSavedDatasets, recordDecision, recordOutcome, removeSavedDataset,
+  removeSavedDecision, removeSavedOutcome, removeSavedPlan,
+  replaceSavedDataset, saveDatasetWork,
+  type SavedDataset, type SavedDatasetSummary, type SavedWork,
+} from "./storage/saved-datasets.ts";
 
 /** Seeds an unconfirmed mapping state from the engine's proposals. */
 function seedFromProposals(base: MappingState, proposals: MappingProposalResult): MappingState {
@@ -77,7 +86,12 @@ function mismatchNotice(differences: SavedMatchingDifferences): string {
   return `Saved matching not used because the columns changed. Missing: ${summarizeColumns(differences.missingColumns)}. New: ${summarizeColumns(differences.newColumns)}. Match the columns manually.`;
 }
 
-export default function App() {
+interface AppProps {
+  readonly initialDatasetId?: string;
+  readonly updateDatasetId?: string;
+}
+
+export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}) {
   useLanguage();
   const [envelope, setEnvelope] = useState<SessionEnvelope>(() => createEmptySession());
   const [proposals, setProposals] = useState<MappingProposalResult | null>(null);
@@ -102,6 +116,14 @@ export default function App() {
   const [savedMatchingOffered, setSavedMatchingOffered] = useState(false);
   const [savedMatchingCount, setSavedMatchingCount] = useState(0);
   const [deletingSavedMatchings, setDeletingSavedMatchings] = useState(false);
+  const [savedDatasets, setSavedDatasets] = useState<readonly SavedDatasetSummary[]>([]);
+  const [selectedSaved, setSelectedSaved] = useState<SavedDataset | null>(null);
+  const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
+  const [updateTargetId, setUpdateTargetId] = useState<string | null>(updateDatasetId ?? null);
+  const [openingDataset, setOpeningDataset] = useState(Boolean(initialDatasetId));
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const retrySave = useRef<(() => Promise<void>) | null>(null);
+  const lastSavedEnvelope = useRef<SessionEnvelope | null>(null);
   const readinessRun = useRef(0);
   const readinessAbort = useRef<AbortController | null>(null);
   const forecastRun = useRef(0);
@@ -116,6 +138,41 @@ export default function App() {
     });
     return () => { active = false; };
   }, []);
+
+  const refreshSavedDatasets = useCallback(async () => {
+    setSavedDatasets(await listSavedDatasets());
+  }, []);
+
+  const inspectSavedDataset = useCallback(async (id: string) => {
+    setSelectedSaved((await getSavedDataset(id)) ?? null);
+  }, []);
+
+  useEffect(() => {
+    void refreshSavedDatasets().catch(() => setSaveError("Saved information could not be read in this browser."));
+  }, [refreshSavedDatasets]);
+
+  const persistWork = useCallback(async (id: string, work: Partial<SavedWork>) => {
+    const retry = async () => {
+      const saved = await saveDatasetWork(id, work);
+      setSelectedSaved((current) => current?.id === id ? saved : current);
+      setSaveError(null);
+      retrySave.current = null;
+      await refreshSavedDatasets();
+    };
+    try { await retry(); }
+    catch {
+      retrySave.current = retry;
+      setSaveError("Your latest changes could not be saved. Your inputs are still here.");
+    }
+  }, [refreshSavedDatasets]);
+
+  useEffect(() => {
+    if (!activeSavedId || !dataset || lastSavedEnvelope.current === envelope) return;
+    lastSavedEnvelope.current = envelope;
+    void persistWork(activeSavedId, {
+      envelope, analysisDate, dateConfirmations, duplicateDecisions, readiness, forecast,
+    });
+  }, [activeSavedId, dataset, envelope, analysisDate, dateConfirmations, duplicateDecisions, readiness, forecast, persistWork]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -178,6 +235,10 @@ export default function App() {
       if (readinessRun.current !== runId) return;
       resetForecastEvidence();
       setReadiness(snapshot);
+      if (activeSavedId) void persistWork(activeSavedId, {
+        envelope: activeEnvelope, analysisDate, dateConfirmations: confirmations,
+        duplicateDecisions: decisions, readiness: snapshot, forecast: null,
+      });
       if (navigate) goTo(3);
     } catch (error) {
       if (readinessRun.current !== runId) return;
@@ -186,7 +247,7 @@ export default function App() {
       if (readinessAbort.current === controller) readinessAbort.current = null;
       if (readinessRun.current === runId) setReadinessLoading(false);
     }
-  }, [analysisDate, dataset, dateConfirmations, duplicateDecisions, envelope, goTo, resetForecastEvidence]);
+  }, [activeSavedId, analysisDate, dataset, dateConfirmations, duplicateDecisions, envelope, goTo, persistWork, resetForecastEvidence]);
 
   const executeForecast = useCallback(async () => {
     if (!readiness) return;
@@ -205,6 +266,7 @@ export default function App() {
       const review = await runDemandForecastInWorker(readiness, controller.signal);
       if (forecastRun.current !== runId) return;
       setForecast(review);
+      if (activeSavedId) void persistWork(activeSavedId, { forecast: review });
       goTo(4);
     } catch (error) {
       if (forecastRun.current !== runId) return;
@@ -213,7 +275,51 @@ export default function App() {
       if (forecastAbort.current === controller) forecastAbort.current = null;
       if (forecastRun.current === runId) setForecastLoading(false);
     }
-  }, [forecast, goTo, readiness]);
+  }, [activeSavedId, forecast, goTo, persistWork, readiness]);
+
+  const openSavedDataset = useCallback(async (id: string) => {
+    const saved = await getSavedDataset(id);
+    if (!saved) { window.location.hash = "returning"; return; }
+    readinessAbort.current?.abort();
+    forecastAbort.current?.abort();
+    readinessAbort.current = null;
+    forecastAbort.current = null;
+    readinessRun.current += 1;
+    forecastRun.current += 1;
+    setReadinessLoading(false);
+    setForecastLoading(false);
+    setEnvelope(saved.envelope);
+    lastSavedEnvelope.current = saved.envelope;
+    setAnalysisDate(saved.analysisDate);
+    setDateConfirmations(saved.dateConfirmations);
+    setDuplicateDecisions(saved.duplicateDecisions);
+    setReadiness(saved.readiness);
+    setForecast(saved.forecast);
+    setPurchaseDrafts(saved.purchaseDrafts);
+    setProposals(null);
+    setSavedMatchingOffered(false);
+    setProductKey(null);
+    setShowImpact(false);
+    setReadinessError(null);
+    setForecastError(null);
+    setActiveSavedId(id);
+    const furthest: StepId = saved.forecast && saved.readiness ? 4 : saved.readiness ? 3 : 2;
+    setReached(furthest);
+    goTo(2);
+    setSessionNotice(`${saved.shopName} / ${saved.datasetName} opened.`);
+  }, [goTo]);
+
+  useEffect(() => {
+    if (initialDatasetId) void openSavedDataset(initialDatasetId)
+      .catch(() => setSaveError("The dataset could not be opened."))
+      .finally(() => setOpeningDataset(false));
+  }, [initialDatasetId, openSavedDataset]);
+
+  useEffect(() => {
+    if (!updateDatasetId) return;
+    setUpdateTargetId(updateDatasetId);
+    setSessionNotice("Upload the replacement file for the selected dataset.");
+  }, [updateDatasetId]);
 
   const handleSource = useCallback(async (
     bytes: Uint8Array,
@@ -234,21 +340,37 @@ export default function App() {
     const parsed = next.session.dataset;
     if (!parsed) throw new Error("The parsed dataset is missing from the session.");
 
+    const target = updateTargetId ? await getSavedDataset(updateTargetId) : undefined;
+    if (updateTargetId && !target) throw new Error("The dataset selected for update is no longer saved.");
+    if (target && !window.confirm(`Replace ${target.shopName} / ${target.datasetName} with ${sourceName}? Earlier decisions and outcomes will remain.`)) {
+      setUpdateTargetId(null);
+      return;
+    }
     const saved = await loadSavedMatching(next);
     const proposed = saved ? null : await proposeMappings(parsed, createLocalSemanticScorer(signal));
+    if (target) await replaceSavedDataset(target.id, saved?.envelope ?? next, malaysiaDate());
     resetReadinessEvidence();
     setProposals(proposed);
     setSavedMatchingOffered(saved?.offered ?? false);
-    setEnvelope(saved?.envelope ?? updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed!)));
+    const importedEnvelope = saved?.envelope ?? updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed!));
+    setEnvelope(importedEnvelope);
+    lastSavedEnvelope.current = target ? saved?.envelope ?? next : null;
     setMappingError(null);
     setMappingNotice(saved?.differences ? mismatchNotice(saved.differences) : null);
     setProductKey(null);
     setAnalysisDate(malaysiaDate());
+    setActiveSavedId(target?.id ?? null);
+    setUpdateTargetId(null);
+    if (target) {
+      window.history.replaceState(null, "", `#dataset/${encodeURIComponent(target.id)}`);
+      setPurchaseDrafts(target.purchaseDrafts);
+      await refreshSavedDatasets();
+    }
     setSessionNotice(previousMode && previousMode !== sourceMode
       ? `${previousMode === "sample" ? "Sample data" : "The retailer file"} was replaced. Dataset-specific mappings and results were cleared.`
       : sourceMode === "sample" ? "Sample data loaded." : "Retailer file loaded locally.");
     goTo(2);
-  }, [envelope, goTo, resetReadinessEvidence]);
+  }, [envelope, goTo, refreshSavedDatasets, resetReadinessEvidence, updateTargetId]);
 
   const handleDeleteSavedMatchings = useCallback(async () => {
     setDeletingSavedMatchings(true);
@@ -346,8 +468,98 @@ export default function App() {
     setProductKey(null);
     setReached(1);
     setStep(1);
+    setActiveSavedId(null);
+    lastSavedEnvelope.current = null;
+    setUpdateTargetId(null);
     setSessionNotice(cleared.message);
   }, [envelope, resetReadinessEvidence]);
+
+  const handleSaveDataset = useCallback(async (shop: string, datasetName: string) => {
+    try {
+      const existing = await findSavedDataset(shop, datasetName);
+      const saved = existing
+        ? window.confirm(`Update ${existing.shopName} / ${existing.datasetName} with ${dataset?.sourceName}? Its earlier decisions and outcomes will remain.`)
+          ? await replaceSavedDataset(existing.id, envelope, analysisDate) : null
+        : await createSavedDataset(shop, datasetName, envelope, analysisDate);
+      if (!saved) return;
+      setActiveSavedId(saved.id);
+      lastSavedEnvelope.current = saved.envelope;
+      setSaveError(null);
+      setSessionNotice(`${saved.shopName} / ${saved.datasetName} saved.`);
+      await refreshSavedDatasets();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Dataset could not be saved.");
+    }
+  }, [analysisDate, dataset?.sourceName, envelope, refreshSavedDatasets]);
+
+  const handleDeleteDataset = useCallback(async (id: string) => {
+    const item = savedDatasets.find((entry) => entry.id === id);
+    if (!item || !window.confirm(`Delete ${item.shopName} / ${item.datasetName}? Its ${item.rowCount} records, settings, ${item.planCount} plans, ${item.decisionCount} decisions and ${item.outcomeCount} outcomes will be removed. Other datasets remain available.`)) return;
+    try {
+      await removeSavedDataset(id);
+      if (activeSavedId === id) handleClearSession();
+      if (selectedSaved?.id === id) setSelectedSaved(null);
+      await refreshSavedDatasets();
+    } catch { setSaveError("The dataset could not be deleted. Retry the deletion."); }
+  }, [activeSavedId, handleClearSession, refreshSavedDatasets, savedDatasets, selectedSaved?.id]);
+
+  const handleClearEverything = useCallback(async () => {
+    if (!window.confirm("Clear Everything? All saved datasets, records, settings, plans, decisions, outcomes and column matchings will be removed. This cannot be undone.")) return;
+    try {
+      await clearEverything();
+      try { localStorage.removeItem("stockless.language"); } catch { /* Browser preferences may be disabled. */ }
+      handleClearSession();
+      setSelectedSaved(null);
+      setSavedMatchingCount(0);
+      await refreshSavedDatasets();
+      setSessionNotice("Nothing saved. Start by uploading a dataset.");
+    } catch { setSaveError("Saved information could not be cleared. Retry Clear Everything."); }
+  }, [handleClearSession, refreshSavedDatasets]);
+
+  const updateSelected = useCallback(async (operation: () => Promise<SavedDataset>) => {
+    const retry = async () => {
+      const saved = await operation();
+      setSelectedSaved(saved);
+      setSaveError(null);
+      retrySave.current = null;
+      await refreshSavedDatasets();
+    };
+    try {
+      await retry();
+      return true;
+    } catch {
+      retrySave.current = retry;
+      setSaveError("The latest change could not be saved. Retry the action.");
+      return false;
+    }
+  }, [refreshSavedDatasets]);
+
+  const handleSaveDecision = useCallback(async () => {
+    if (!activeSavedId || !readiness || !forecast) return;
+    const products = joinPurchaseEvidence(readiness, forecast).map((product) => ({
+      key: product.key, name: product.name,
+      inputs: purchaseDrafts[product.key] ?? product.fileInputs,
+      plan: evaluatePurchaseProduct(product, readiness.analysisDate,
+        purchaseDrafts[product.key] ?? product.fileInputs, evaluateProductPurchasePlan, product.fileExpiry),
+    }));
+    const decision = {
+      id: globalThis.crypto.randomUUID(), recordedAt: new Date().toISOString(),
+      recommendation: { analysisDate: readiness.analysisDate, sourceSha256: readiness.sourceSha256, products },
+      note: `Purchase plan for ${readiness.analysisDate}`,
+    };
+    const retry = async () => {
+      const saved = await recordDecision(activeSavedId, decision);
+      setSelectedSaved((current) => current?.id === activeSavedId ? saved : current);
+      await refreshSavedDatasets();
+      setSaveError(null);
+      retrySave.current = null;
+      setSessionNotice("Decision saved with its original recommendation and date.");
+    };
+    try { await retry(); } catch {
+      retrySave.current = retry;
+      setSaveError("The decision could not be saved. Your current plan is still here.");
+    }
+  }, [activeSavedId, forecast, purchaseDrafts, readiness, refreshSavedDatasets]);
 
   const mappingSubmit = useRef(false);
   const [mappingSubmitting, setMappingSubmitting] = useState(false);
@@ -364,9 +576,10 @@ export default function App() {
     } else if (shouldSave) {
       setSessionNotice("Matching could not be saved in this browser. You can still continue.");
     }
+    if (activeSavedId) await persistWork(activeSavedId, { envelope: activeEnvelope, analysisDate });
     await executeReadiness(dateConfirmations, duplicateDecisions, true, activeEnvelope);
     } finally { mappingSubmit.current = false; setMappingSubmitting(false); }
-  }, [dateConfirmations, duplicateDecisions, envelope, executeReadiness]);
+  }, [activeSavedId, analysisDate, dateConfirmations, duplicateDecisions, envelope, executeReadiness, persistWork]);
 
   const handleConfirmAllAndContinue = useCallback(async () => {
     if (mappingSubmit.current) return;
@@ -382,6 +595,8 @@ export default function App() {
 
   const reportMetadata = correctionReportMetadata(envelope.session, analysisDate);
 
+  if (openingDataset) return <p role="status">Opening saved dataset…</p>;
+
   return (
     <AppShell
       current={step}
@@ -389,9 +604,54 @@ export default function App() {
       onNavigate={goTo}
       sourceMode={envelope.session.sourceMode}
       sourceName={dataset?.sourceName}
-      notice={step === 4 ? null : sessionNotice}
+      notice={sessionNotice}
       onClear={dataset ? handleClearSession : undefined}
     >
+      {saveError && <p role="alert">{saveError} {retrySave.current && <button type="button" onClick={() => void retrySave.current?.()}>Retry</button>}</p>}
+      {step === 1 && savedDatasets.length > 0 && <details className="saved-management"><summary>Manage saved information</summary><SavedDataControls
+        items={savedDatasets} activeId={activeSavedId} selected={selectedSaved}
+        onInspect={(id) => void inspectSavedDataset(id).catch(() => setSaveError("Saved details could not be read."))}
+        onOpen={(id) => void openSavedDataset(id).catch(() => setSaveError("The dataset could not be opened."))}
+        onUpdate={(id) => { setUpdateTargetId(id); setSessionNotice("Upload the replacement file for the selected dataset."); }}
+        onDelete={(id) => void handleDeleteDataset(id)}
+        onClear={() => void handleClearEverything()}
+        onDeletePlan={(key) => {
+          if (!selectedSaved || !window.confirm(`Delete the plan for ${key} from ${selectedSaved.shopName} / ${selectedSaved.datasetName}?`)) return;
+          void updateSelected(() => removeSavedPlan(selectedSaved.id, key));
+          if (activeSavedId === selectedSaved.id) setPurchaseDrafts((current) => {
+            const next = { ...current }; delete next[key]; return next;
+          });
+        }}
+        onDeleteDecision={(id) => {
+          const decision = selectedSaved?.decisions.find((item) => item.id === id);
+          if (!selectedSaved || !decision || !window.confirm(`Delete ${decision.note ?? `decision from ${decision.recordedAt}`} and its linked outcomes from ${selectedSaved.shopName} / ${selectedSaved.datasetName}?`)) return;
+          void updateSelected(() => removeSavedDecision(selectedSaved.id, id));
+        }}
+        onDeleteOutcome={(id) => {
+          const outcome = selectedSaved?.outcomes.find((item) => item.id === id);
+          if (!selectedSaved || !outcome || !window.confirm(`Delete outcome ${JSON.stringify(outcome.details)} from ${selectedSaved.shopName} / ${selectedSaved.datasetName}?`)) return;
+          void updateSelected(() => removeSavedOutcome(selectedSaved.id, id));
+        }}
+        onSaveOutcome={async (description, decisionId) => {
+          if (!selectedSaved) return false;
+          const outcome = { id: globalThis.crypto.randomUUID(), recordedAt: new Date().toISOString(), decisionId, details: { description } };
+          return updateSelected(() => recordOutcome(selectedSaved.id, {
+            ...outcome,
+          }));
+        }}
+        onSaveSupplierTerm={async (supplier, terms) => {
+          if (!selectedSaved) return false;
+          return updateSelected(() => saveDatasetWork(selectedSaved.id, {
+            supplierTerms: { ...selectedSaved.supplierTerms, [supplier.trim()]: terms.trim() },
+          }));
+        }}
+        onDeleteSupplierTerm={(supplier) => {
+          if (!selectedSaved || !window.confirm(`Delete supplier terms for ${supplier} from ${selectedSaved.shopName} / ${selectedSaved.datasetName}?`)) return;
+          const next = { ...selectedSaved.supplierTerms };
+          delete next[supplier];
+          void updateSelected(() => saveDatasetWork(selectedSaved.id, { supplierTerms: next }));
+        }}
+      /></details>}
       {t(step === 1 && (
         <UploadScreen
           onSource={handleSource}
@@ -401,6 +661,11 @@ export default function App() {
           onDeleteSavedMatchings={() => void handleDeleteSavedMatchings()}
         />
       ))}
+
+      {step === 2 && dataset?.sourceMode === "user" && !activeSavedId &&
+        <SaveDatasetControls key={envelope.session.id} defaultName={dataset.sourceName.replace(/\.[^.]+$/, "")}
+          shops={[...new Set(savedDatasets.map((item) => item.shopName))]}
+          onSave={handleSaveDataset} />}
 
       {t(step === 2 && dataset && savedMatchingOffered && (
         <SavedMatchingBar
@@ -474,16 +739,23 @@ export default function App() {
       ))}
 
       {t(step === 4 && readiness && forecast && !showImpact && (
+        <>
+        {activeSavedId && <button type="button" onClick={() => void handleSaveDecision()}>Save current plan as decision</button>}
         <PurchasePlanScreen
           snapshot={readiness}
           forecast={forecast}
           drafts={purchaseDrafts}
-          onDraftChange={(key, inputs) => setPurchaseDrafts(current => ({ ...current, [key]: inputs }))}
+          onDraftChange={(key, inputs) => {
+            const next = { ...purchaseDrafts, [key]: inputs };
+            setPurchaseDrafts(next);
+            if (activeSavedId) void persistWork(activeSavedId, { purchaseDrafts: next });
+          }}
           selectedKey={productKey}
           onSelect={setProductKey}
           onBack={() => setStep(3)}
           onImpact={() => { setProductKey(null); setShowImpact(true); }}
         />
+        </>
       ))}
     </AppShell>
   );

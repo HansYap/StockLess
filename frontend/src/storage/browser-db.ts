@@ -7,13 +7,45 @@
  */
 
 const DB_NAME = "stockless";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
-export type StoreName = "mapping_templates";
+export type StoreName = "mapping_templates" | "datasets";
 
 /** Creates the stores that did not exist in the browser's previous database version. */
 function upgrade(db: IDBDatabase, oldVersion: number): void {
   if (oldVersion < 1) db.createObjectStore("mapping_templates", { keyPath: "headersKey" });
+  if (oldVersion < 2) {
+    const datasets = db.createObjectStore("datasets", { keyPath: "id" });
+    datasets.createIndex("shop_and_name", ["shopKey", "nameKey"], { unique: true });
+  }
+}
+
+/** Runs a multi-request operation in one atomic transaction. */
+export function withTransaction<T>(
+  stores: readonly StoreName[],
+  mode: IDBTransactionMode,
+  run: (transaction: IDBTransaction, result: (value: T) => void) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const opening = indexedDB.open(DB_NAME, DB_VERSION);
+    opening.onupgradeneeded = (event) => upgrade(opening.result, event.oldVersion);
+    opening.onerror = () => reject(opening.error);
+    opening.onsuccess = () => {
+      const db = opening.result;
+      let value: T;
+      try {
+        const transaction = db.transaction([...stores], mode);
+        transaction.oncomplete = () => resolve(value);
+        transaction.onabort = () => reject(transaction.error ?? new Error("Browser storage transaction failed."));
+        transaction.onerror = () => reject(transaction.error ?? new Error("Browser storage transaction failed."));
+        run(transaction, (next) => { value = next; });
+      } catch (error) {
+        reject(error);
+      } finally {
+        db.close();
+      }
+    };
+  });
 }
 
 /** Runs one request in its own transaction and resolves once that transaction commits. */

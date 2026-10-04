@@ -1,35 +1,64 @@
 import { t, useLanguage } from "./i18n/index.ts";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { HomePage } from "./screens/HomePage.tsx";
+import { ReturningPage } from "./screens/ReturningPage.tsx";
+import { hasSavedDatasets } from "./storage/saved-datasets.ts";
+import { datasetIdFromRoute, isWorkspaceRoute, startRouteFor } from "./visit-routing.ts";
 
 const Workspace = lazy(() => import("./App.tsx"));
-const isWorkspace = () => window.location.hash === "#workspace";
+const currentRoute = () => window.location.hash || "#home";
 
-/** Hash navigation works on static hosting; the mounted workspace retains its session. */
+/** The landing page is the entry point; its start buttons choose the saved or new flow. */
 export default function Site() {
   const language = useLanguage();
-  const [workspace, setWorkspace] = useState(isWorkspace);
-  const [opened, setOpened] = useState(isWorkspace);
+  const [route, setRoute] = useState(currentRoute);
+  const [routeError, setRouteError] = useState<string | null>(null);
+  const [startAttempt, setStartAttempt] = useState(0);
+  const workspace = isWorkspaceRoute(route);
+  const returning = route === "#returning";
+
   useEffect(() => {
-    const navigate = () => {
-      const next = isWorkspace();
-      setWorkspace(next);
-      if (next) setOpened(true);
-    };
+    const navigate = () => setRoute(currentRoute());
     window.addEventListener("hashchange", navigate);
     return () => window.removeEventListener("hashchange", navigate);
   }, []);
+
+  useEffect(() => {
+    if (route !== "#start") return;
+    let active = true;
+    setRouteError(null);
+    void hasSavedDatasets().then((saved) => {
+      if (active) window.location.hash = startRouteFor(saved);
+    }).catch(() => {
+      if (active) setRouteError("Saved datasets could not be checked in this browser.");
+    });
+    return () => { active = false; };
+  }, [route, startAttempt]);
+
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      if (workspace || !window.location.hash || window.location.hash === "#home") window.scrollTo(0, 0);
-      else document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
-      const heading = document.querySelector<HTMLElement>(workspace ? ".workspace-view h1" : "#home-title");
+      if (workspace || returning || route === "#start" || route === "#home") window.scrollTo(0, 0);
+      else document.getElementById(route.slice(1))?.scrollIntoView();
+      const heading = document.querySelector<HTMLElement>(workspace ? ".workspace-view h1" : returning ? ".returning-page h1" : "#home-title");
       if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
     });
     return () => cancelAnimationFrame(frame);
-  }, [workspace]);
+  }, [route, workspace, returning]);
+
   useEffect(() => {
-    document.title = t(workspace ? "StockLess | Your restocking workspace" : "StockLess | Less food waste. Smarter restocking.");
-  }, [workspace, language]);
-  return <>{t(!workspace && <HomePage />)}{t(opened && <div className="workspace-view" hidden={!workspace}><Suspense fallback={<p className="notice" role="status">{t("Opening your workspace…")}</p>}><Workspace /></Suspense></div>)}</>;
+    document.title = t(workspace ? "StockLess | Your restocking workspace" : returning ? "StockLess | Welcome back" : "StockLess | Less food waste. Smarter restocking.");
+  }, [workspace, returning, language]);
+
+  if (route === "#start") return <main className="start-routing" role="status">
+    {routeError ? <><p>{routeError}</p><button type="button" onClick={() => setStartAttempt((value) => value + 1)}>Retry</button></> : <p>Opening StockLess…</p>}
+  </main>;
+
+  if (returning) return <ReturningPage />;
+
+  if (workspace) return <div className="workspace-view"><Suspense fallback={<p className="notice" role="status">{t("Opening your workspace…")}</p>}>
+    <Workspace key={route} initialDatasetId={route.startsWith("#dataset/") ? datasetIdFromRoute(route) : undefined}
+      updateDatasetId={route.startsWith("#update/") ? datasetIdFromRoute(route) : undefined} />
+  </Suspense></div>;
+
+  return <HomePage startHref="#start" />;
 }

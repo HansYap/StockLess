@@ -9,19 +9,18 @@ import { parseCsvBytes } from "./csv.ts";
 import { createIdentityEvidence } from "./identity.ts";
 import { createMappingState } from "./mapping.ts";
 
-/** Documents which content may and may not be stored persistently. */
+/** Documents browser-local persistence. */
 export const PERSISTENCE_POLICY = Object.freeze({
-  retailerDataStores: Object.freeze(["mapping_templates"]),
+  retailerDataStores: Object.freeze(["mapping_templates", "datasets"]),
   allowedPersistentContent: Object.freeze([
     "static application assets",
     "local AI model assets",
     "normalized column headings and confirmed column-matching rules",
+    "named shops and parsed datasets in IndexedDB",
+    "dataset-specific settings, purchase plans, supplier terms, decisions and outcomes",
   ]),
   prohibitedPersistentContent: Object.freeze([
-    "raw CSV rows",
-    "CSV preview values",
-    "derived series",
-    "product identifiers",
+    "uploading retailer records to an AI or API service",
   ]),
 });
 
