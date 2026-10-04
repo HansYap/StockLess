@@ -220,6 +220,7 @@ export function ProductPurchaseDialog({
   }, [inline]);
   const [quantityErrors, setQuantityErrors] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
   const [typedValues, setTypedValues] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
+  const [activeTab, setActiveTab] = useState<"purchase" | "numbers" | "scenario">("purchase");
   const update = (field: keyof ProductPurchaseInputs, raw: string) => {
     const result = applyPurchaseQuantityEdit(inputs[field], raw);
     setTypedValues(previous => ({ ...previous, [field]: raw }));
@@ -240,7 +241,7 @@ export function ProductPurchaseDialog({
     <dialog
       ref={ref}
       open={inline || undefined}
-      className={inline ? "purchase-detail" : undefined}
+      className={inline ? `purchase-detail purchase-detail--${activeTab}` : undefined}
       aria-labelledby="purchase-dialog-title"
       onKeyDown={inline ? (event) => { if (event.key === "Escape") onClose(); } : undefined}
       onCancel={(event) => {
@@ -295,6 +296,13 @@ export function ProductPurchaseDialog({
           ×
         </button>
       </header>
+      <div className="purchase-detail__tabs" role="tablist" aria-label={t("Planning views")}>
+        {([ ["purchase", "Purchase plan"], ["numbers", "How the numbers are calculated"], ["scenario", "Scenario planner"] ] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={activeTab === id} className={activeTab === id ? "is-active" : ""} onClick={() => setActiveTab(id)}>{t(label)}</button>)}
+      </div>
+      {range && <section className="purchase-detail__graph" aria-label={t("Past sales and expected demand")}>
+        <div className="purchase-detail__graph-head"><span>{t("Past sales and expected demand")}</span><strong>{numberText(range.low)}–{numberText(range.high)} {t("units")}</strong></div>
+        <DemandChart weeks={evidence?.timeline.weeks.filter(week => week.weekEnd < analysisDate).slice(-8) ?? []} range={range} name={product.name} />
+      </section>}
       <div className="dialog-action-first">
           <section className="estimate-hero">
             {plan?.audit.state === "verdict" && <div className={`hero-concern hero-concern--${plan.audit.verdict === "Overstock risk" ? "high" : plan.audit.verdict === "Needs review" ? "review" : "balanced"}`}>
@@ -426,7 +434,7 @@ export function ProductPurchaseDialog({
           </div>
         </div>
         <aside className="dialog-column">
-          <details className="panel supporting-evidence"><summary>{t("Why this estimate? See demand and stock")}</summary><div className="supporting-evidence__body">
+          <section className="panel supporting-evidence"><h3 className="supporting-evidence__heading">{t("How the numbers are calculated")}</h3><div className="supporting-evidence__body">
             <div className="evidence-top">
               <div>
                 <p className="eyebrow">{t("Demand evidence")}</p>
@@ -454,15 +462,6 @@ export function ProductPurchaseDialog({
             </div>
             {range && (
               <>
-                <DemandChart
-                  weeks={
-                    evidence?.timeline.weeks.filter(
-                      (week) => week.weekEnd < analysisDate,
-                    ).slice(-8) ?? []
-                  }
-                  range={range}
-                  name={product.name}
-                />
                 <p className="basis">
                   {t("Range based on ")}{t(range.basedOnWeekCount)} {t("weeks, from")}{t(" ")}
                   {t(range.firstWeekUsed)} {t("to ")}{t(range.lastWeekUsed)}.
@@ -518,7 +517,7 @@ export function ProductPurchaseDialog({
                 }
               />
             </div>
-          </div></details>
+          </div></section>
         </aside>
       </div>
       <footer className="dialog-footer">

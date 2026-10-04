@@ -148,7 +148,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   }, []);
 
   useEffect(() => {
-    void refreshSavedDatasets().catch(() => setSaveError("Saved information could not be read in this browser."));
+    void refreshSavedDatasets().catch(() => setSaveError("Saved information is unavailable here. You can still upload a file or use the sample."));
   }, [refreshSavedDatasets]);
 
   const persistWork = useCallback(async (id: string, work: Partial<SavedWork>) => {
@@ -451,12 +451,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     void executeReadiness(next, {});
   }, [dateConfirmations, executeReadiness]);
 
-  const handleDuplicateDecision = useCallback((fingerprint: string, decision: DuplicateDecision) => {
-    const next = Object.freeze({ ...duplicateDecisions, [fingerprint]: decision });
-    setDuplicateDecisions(next);
-    void executeReadiness(dateConfirmations, next);
-  }, [dateConfirmations, duplicateDecisions, executeReadiness]);
-
   const handleClearSession = useCallback(() => {
     terminateStocklessWorkers();
     const cleared = clearActiveSession(envelope);
@@ -704,7 +698,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
           filter={issueFilter}
           onFilter={setIssueFilter}
           onConfirmDateFormat={handleConfirmDateFormat}
-          onDuplicateDecision={handleDuplicateDecision}
           onBack={() => setStep(2)}
           onContinue={() => void executeForecast()}
           reportFilename={reportMetadata.filename}

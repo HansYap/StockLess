@@ -4,7 +4,6 @@ import type { DragEvent } from "react";
 import { excelToCsvBytes } from "./excel-import.ts";
 import {
   CsvImportError,
-  CAPABILITY_LABELS,
   PRIVACY_NOTICE,
   UPLOAD_ATTRIBUTE_GUIDE,
   UPLOAD_REQUIREMENTS,
@@ -213,14 +212,15 @@ export function UploadScreen({
             items={requiredAttributes}
             startIndex={0}
           />
-          <div className="optional-fields">
+          <details className="optional-fields optional-fields--collapsible">
+            <summary>{t("Optional data")} <span>{t("Show fields that add more detail")}</span></summary>
             <AttributeSection
               id="optional-data"
               title={t("Optional data")}
               items={optionalAttributes}
               startIndex={requiredAttributes.length}
             />
-          </div>
+          </details>
         </div>
 
         <div className="card upload-card">
@@ -370,14 +370,6 @@ function AttributeSection({
                 {t(item.acceptedForms.map((form) => <li key={form}>{t(form)}</li>))}
               </ol>
             ))}
-            {item.requirement === "optional" && <div className="attribute-card__features">
-              <b>{t("Unlocks")}</b>
-              <ul>
-                {t(item.capabilities.map((capability) => (
-                  <li key={capability}>{t(CAPABILITY_LABELS[capability])}</li>
-                )))}
-              </ul>
-            </div>}
           </article>
         )))}
       </div>

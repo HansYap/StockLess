@@ -8,7 +8,7 @@ import { makeEvidence } from "./fixtures.ts";
 
 afterEach(() => { cleanup(); setLanguage("en"); });
 describe("Readiness product overview", () => {
-  it("reconciles each excluded row once and filters from the five chart cards", () => {
+  it("reconciles each excluded row once and filters from the four active chart cards", () => {
     const { snapshot } = makeEvidence();
     const sourceRow = snapshot.rows[0].sourceRow;
     const issue = {
@@ -23,7 +23,7 @@ describe("Readiness product overview", () => {
     };
     const onFilter = vi.fn();
     render(<ReadinessCharts snapshot={changed} filter={null} onFilter={onFilter} />);
-    expect(document.querySelectorAll(".issue")).toHaveLength(5);
+    expect(document.querySelectorAll(".issue")).toHaveLength(4);
     expect(screen.getByText(`${snapshot.rows.length} → ${snapshot.rows.length - 1} + 1`)).toBeTruthy();
     const quality = screen.getByRole("region", { name: "Data quality by row" });
     expect(within(quality).getByText("Date issues").closest("li")?.textContent).toContain("1");

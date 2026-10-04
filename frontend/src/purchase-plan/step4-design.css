@@ -391,3 +391,34 @@
 .purchase-plan .purchase-detail .dialog-footer{position:sticky;bottom:0;margin-top:auto;padding:12px 18px}
 @media(max-width:1180px){.purchase-plan .pp-layout{grid-template-columns:1fr}.purchase-plan dialog.purchase-detail{position:static;max-height:none}}
 @media(max-width:768px){.purchase-plan .pp-heading .page-title{font-size:30px}.purchase-plan .pp-heading .lede{font-size:var(--text-body)}.purchase-plan .pp-layout .toolbar{grid-template-columns:1fr}.purchase-plan .pp-layout .table-scroll{overflow:visible}.purchase-plan .pp-layout .pp-table,.purchase-plan .pp-layout .pp-table tbody,.purchase-plan .pp-layout .pp-table tr{display:block;width:100%}.purchase-plan .pp-layout .pp-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.purchase-plan .pp-layout .pp-table tbody tr{padding:12px 16px;border-bottom:1px solid var(--line-soft)}.purchase-plan .pp-layout .pp-table tbody td{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border:0;padding:7px 0;text-align:right}.purchase-plan .pp-layout .pp-table tbody td::before{content:attr(data-label);flex:none;max-width:42%;font-size:var(--text-description);font-weight:700;color:var(--muted);text-align:left}.purchase-plan .pp-layout .pp-table tbody td:first-child{display:block;text-align:left;border-bottom:1px solid var(--line-soft)}.purchase-plan .pp-layout .pp-table tbody td:first-child::before{display:none}}
+
+/* October UI update: the selected product and graph lead; the compact list sits to the right. */
+.purchase-plan .pp-layout{grid-template-columns:minmax(0,1.65fr) minmax(320px,.9fr);align-items:start}
+.purchase-plan .pp-layout .list-card{grid-column:2;grid-row:1;display:flex;flex-direction:column;overflow:hidden}
+.purchase-plan .pp-layout .list-card .table-scroll{flex:1 1 auto;min-height:0;overflow:auto;scrollbar-gutter:stable}
+.purchase-plan .pp-layout .list-card .table-scroll:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+.purchase-plan .pp-layout .pp-table thead th{position:sticky;top:0;z-index:1}
+.purchase-plan .pp-layout .toolbar{grid-template-columns:1fr;gap:10px}
+.purchase-plan .pp-layout .search{width:100%;min-width:0}
+.purchase-plan .pp-layout .purchase-detail,.purchase-plan .pp-layout .pp-panel--empty{grid-column:1;grid-row:1}
+.purchase-plan .pp-table th:first-child,.purchase-plan .pp-table td:first-child{width:56%!important}
+.purchase-plan .pp-table th:nth-child(2),.purchase-plan .pp-table td:nth-child(2){width:44%!important}
+.purchase-plan .pp-table .product-button{width:100%;text-align:left}
+.purchase-plan dialog.purchase-detail{position:static;max-height:none;overflow:visible}
+.purchase-plan .purchase-detail .dialog-footer{position:static}
+.purchase-plan .purchase-detail__tabs{display:flex;gap:6px;overflow-x:auto;padding:0 18px 12px;border-bottom:1px solid var(--line)}
+.purchase-plan .purchase-detail__tabs button{white-space:nowrap;cursor:pointer;border:0;border-radius:8px;background:transparent;padding:9px 12px;color:var(--muted);font:700 var(--text-secondary) var(--body)}
+.purchase-plan .purchase-detail__tabs button:hover,.purchase-plan .purchase-detail__tabs button.is-active{background:var(--teal-tint);color:var(--teal-deep)}
+.purchase-plan .purchase-detail__tabs button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.purchase-plan .purchase-detail__graph{padding:16px 18px 4px}
+.purchase-plan .purchase-detail__graph-head{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:var(--text-secondary);color:var(--muted)}
+.purchase-plan .purchase-detail__graph-head strong{color:var(--ink);font-family:var(--display);font-size:var(--text-body)}
+.purchase-plan .purchase-detail__graph .chart-wrap{margin-top:8px}
+.purchase-plan .purchase-detail__graph svg{width:100%;height:auto}
+.purchase-plan .purchase-detail .supporting-evidence__heading{margin:0 0 14px;font-family:var(--display);font-size:var(--text-section-head)}
+.purchase-plan .purchase-detail--purchase .supporting-evidence,.purchase-plan .purchase-detail--scenario .supporting-evidence{display:none}
+.purchase-plan .purchase-detail--numbers .purchase-detail__graph,.purchase-plan .purchase-detail--numbers .dialog-action-first,.purchase-plan .purchase-detail--numbers .order-panel,.purchase-plan .purchase-detail--numbers .verdict,.purchase-plan .purchase-detail--numbers .expiry{display:none}
+.purchase-plan .purchase-detail--scenario .dialog-action-first{display:none}
+.purchase-plan .purchase-detail--scenario .order-panel{background:var(--teal-tint)}
+@media(max-width:1050px){.purchase-plan .pp-layout{grid-template-columns:minmax(0,1fr)}.purchase-plan .pp-layout .list-card{grid-column:1;grid-row:2;max-height:clamp(520px,85vh,760px)!important}.purchase-plan .pp-layout .purchase-detail,.purchase-plan .pp-layout .pp-panel--empty{grid-column:1;grid-row:1;min-width:0;max-width:100%}}
+@media(max-width:600px){.purchase-plan .purchase-detail__tabs{padding:0 10px 10px}.purchase-plan .purchase-detail__tabs button{font-size:12px;padding:8px}.purchase-plan .pp-layout .pp-table th:first-child,.purchase-plan .pp-layout .pp-table td:first-child,.purchase-plan .pp-layout .pp-table th:nth-child(2),.purchase-plan .pp-layout .pp-table td:nth-child(2){width:100%!important}}

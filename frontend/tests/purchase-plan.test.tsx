@@ -90,19 +90,11 @@ describe("purchase planning", () => {
     expect(hero.textContent).toContain("Estimated restock");
     expect(hero.compareDocumentPosition(dialog.querySelector(".order-panel")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
-  it("shows the five planning columns and no entered order initially", () => {
+  it("shows the compact planning columns and opens the first product", () => {
     render(<Harness />);
     expect(
       screen.getAllByRole("columnheader").map((el) => el.textContent),
-    ).toEqual([
-      "Product",
-      "Expected demand",
-      "In stock",
-      "Your order",
-      "Check",
-    ]);
-    expect(screen.queryByLabelText("Planned order")).toBeNull();
-    expect(screen.queryByLabelText("Incoming stock")).toBeNull();
+    ).toEqual(["Product", "Expected demand"]);
     expect(
       within(screen.getByRole("table")).queryByText(/Overstock risk|Needs review|Looks balanced|Cannot judge/),
     ).toBeNull();
@@ -129,7 +121,7 @@ describe("purchase planning", () => {
   it("opens the clicked row by product key even when display names are identical", () => {
     render(<Harness />);
     fireEvent.click(
-      within(screen.getByRole("table")).getByText("SKU 000202").closest("tr")!.querySelectorAll("td")[2],
+      within(screen.getByRole("table")).getByText("SKU 000202").closest("tr")!.querySelectorAll("td")[1],
     );
     expect(
       within(screen.getByRole("dialog")).getByText(

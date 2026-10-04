@@ -12,8 +12,6 @@ const currentRoute = () => window.location.hash || "#home";
 export default function Site() {
   const language = useLanguage();
   const [route, setRoute] = useState(currentRoute);
-  const [routeError, setRouteError] = useState<string | null>(null);
-  const [startAttempt, setStartAttempt] = useState(0);
   const workspace = isWorkspaceRoute(route);
   const returning = route === "#returning";
 
@@ -26,14 +24,15 @@ export default function Site() {
   useEffect(() => {
     if (route !== "#start") return;
     let active = true;
-    setRouteError(null);
     void hasSavedDatasets().then((saved) => {
       if (active) window.location.hash = startRouteFor(saved);
     }).catch(() => {
-      if (active) setRouteError("Saved datasets could not be checked in this browser.");
+      // Local storage may be unavailable (for example in an embedded browser).
+      // Upload still works, so let the visitor continue as a new session.
+      if (active) window.location.hash = "#workspace";
     });
     return () => { active = false; };
-  }, [route, startAttempt]);
+  }, [route]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -49,9 +48,7 @@ export default function Site() {
     document.title = t(workspace ? "StockLess | Your restocking workspace" : returning ? "StockLess | Welcome back" : "StockLess | Less food waste. Smarter restocking.");
   }, [workspace, returning, language]);
 
-  if (route === "#start") return <main className="start-routing" role="status">
-    {routeError ? <><p>{routeError}</p><button type="button" onClick={() => setStartAttempt((value) => value + 1)}>Retry</button></> : <p>Opening StockLess…</p>}
-  </main>;
+  if (route === "#start") return <main className="start-routing" role="status"><p>Opening StockLess…</p></main>;
 
   if (returning) return <ReturningPage />;
 

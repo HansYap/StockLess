@@ -1,5 +1,5 @@
 import { t, useLanguage, getLocale } from "../i18n/index.ts";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   evaluateProductPurchasePlan,
   type DemandForecastReview,
@@ -149,16 +149,40 @@ export function PurchasePlanScreen({
   );
   const plannableCount = products.filter(product => plans.get(product.key)?.estimatedRestock.state === "available").length;
   const enteredCount = products.filter(product => inputsFor(product).plannedOrder.state === "value").length;
-  const priority = (product: PurchaseProduct) => {
-    const plan = plans.get(product.key);
-    return plan?.audit.state === "verdict" && plan.audit.verdict === "Overstock risk" ? 0
-      : plan?.expiry.state === "expires_within_four_weeks" ? 1
-      : plan?.audit.state === "verdict" && plan.audit.verdict === "Needs review" ? 2
-      : plan?.estimatedRestock.state === "available" ? 3 : 4;
-  };
-  const highlighted = [...visible].sort((a,b) => priority(a) - priority(b)).slice(0, 3);
+  const autoSelected = useRef(false);
+  useEffect(() => {
+    if (!autoSelected.current && !selectedKey && products.length > 0) {
+      autoSelected.current = true;
+      onSelect(products[0].key);
+    }
+  }, [onSelect, products, selectedKey]);
   const selected = products.find((product) => product.key === selectedKey);
   const selectedIndex = visible.findIndex((product) => product.key === selectedKey);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const [detailHeight, setDetailHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const detail = layoutRef.current?.querySelector<HTMLElement>(".purchase-detail, .pp-panel--empty");
+    if (!detail) return;
+    const updateHeight = () => {
+      const height = Math.ceil(detail.getBoundingClientRect().height);
+      if (height > 0) setDetailHeight(height);
+    };
+    updateHeight();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(detail);
+    return () => observer.disconnect();
+  }, [selected?.key]);
+  useEffect(() => {
+    const list = listScrollRef.current;
+    const row = list?.querySelector<HTMLElement>("tr.selected");
+    if (!list || !row) return;
+    const listBounds = list.getBoundingClientRect();
+    const rowBounds = row.getBoundingClientRect();
+    if (rowBounds.top < listBounds.top) list.scrollTop += rowBounds.top - listBounds.top;
+    else if (rowBounds.bottom > listBounds.bottom) list.scrollTop += rowBounds.bottom - listBounds.bottom;
+  }, [selectedKey]);
   const mismatchCount = products.filter((product) => product.issue).length;
   function download() {
     const rows = [
@@ -265,22 +289,6 @@ export function PurchasePlanScreen({
         <p className="pp-money__note">{copy("Money figures need purchase cost and currency. The dashboard shows unit estimates from your current plan.", "金额需要采购单价和币种。Dashboard 显示您当前计划的件数估算。", "Angka wang memerlukan kos belian dan mata wang. Papan pemuka menunjukkan anggaran unit daripada pelan semasa anda.")}</p>
       </section>
       <p className="pp-next"><b>{t("Next step:")}</b> {t("Open a product, review the estimate, and enter the quantity you intend to order.")}</p>
-      <section className="pp-priority" aria-label={t("Suggested starting points")}>
-        <h2>{t("Start with these products")}</h2><p className="pp-priority__sub">{t("Purchase concerns appear first. Each suggestion uses your current inputs.")}</p>
-        <div className="pp-priority__cards">{highlighted.map(product => {
-          const plan = plans.get(product.key);
-          const restock = plan?.estimatedRestock;
-          const audit = plan?.audit;
-          const tone = groupFor(product);
-          return <article className={`pp-card pp-card--${tone}`} key={product.key}>
-            <div className="pp-card__head"><div><b>{product.name}</b><small>SKU {product.sku ?? "—"}</small></div><DataLabel product={product} /></div>
-            <div className={`pp-card__verdict${restock?.state !== "available" ? " pp-card__verdict--none" : ""}`}><span>{t(audit?.state === "verdict" ? "Purchase check" : "Estimated restock")}</span><b>{t(audit?.state === "verdict" ? audit.verdict : restock?.state === "available" ? `${numberText(restock.quantity.value)} units` : "No reliable estimate")}</b></div>
-            <p className="pp-card__why">{t(audit?.state === "verdict" ? audit.reasonSentence : restock?.state === "unavailable" ? restock.reason : product.issue ?? "Review the estimate before entering your plan.")}</p>
-            {plan?.expiry.state === "expires_within_four_weeks" && <p className="pp-card__expiry">{t(plan.expiry.message)}</p>}
-            <button type="button" className="btn btn--ghost btn--small pp-card__action" onClick={() => onSelect(product.key)}>{t(restock?.state === "available" ? "Review and plan →" : "See what is needed →")}</button>
-          </article>;
-        })}</div>
-      </section>
       {t(mismatchCount > 0 && (
         <p className="evidence-warning" role="alert">
           {t("Evidence mismatch affects ")}{t(mismatchCount)}{t(" ")}
@@ -289,8 +297,8 @@ export function PurchasePlanScreen({
       <div className="pp-groups" role="group" aria-label={t("Filter by what each product needs")}>
         {groups.map(item => <button type="button" key={item.id} className={`pp-group pp-group--${item.id}${group === item.id ? " pp-group--on" : ""}`} aria-pressed={group === item.id} onClick={() => setGroup(group === item.id ? "all" : item.id)}><b>{products.filter(product => groupFor(product) === item.id).length}</b><span>{t(item.label)}</span><small>{t(item.help)}</small></button>)}
       </div>
-      <div className="pp-layout">
-      <section className="card list-card">
+      <div className="pp-layout" ref={layoutRef}>
+      <section className="card list-card" style={{ maxHeight: selected ? detailHeight ?? undefined : 720 }}>
         <div className="toolbar">
           <label className="search">
             <span className="visually-hidden">{t("Search products")}</span>
@@ -336,21 +344,16 @@ export function PurchasePlanScreen({
             {t("Expiry not checked — your file has no expiry dates")}</p>
         ))}
         <p className="pp-key"><span>{t("Key:")}</span><span className="source-tag source--file">{t("from your file")}</span><span className="source-tag source--worked">{t("worked out by StockLess")}</span><span className="source-tag source--input">{t("input by you")}</span></p>
-        <div className="table-scroll table-scroll--x">
+        <div className="table-scroll table-scroll--x" ref={listScrollRef} role="region" tabIndex={0} aria-label={t("Products to review")}>
           <table className="dtable dtable--cards pp-table">
             <thead>
               <tr>
                 <th scope="col">{t("Product")}</th>
                 <th scope="col">{t("Expected demand")}</th>
-                <th scope="col">{t("In stock")}</th>
-                <th scope="col">{t("Your order")}</th>
-                <th scope="col">{t("Check")}</th>
               </tr>
             </thead>
             <tbody>
               {visible.map((product) => {
-                const plan = plans.get(product.key);
-                const order = inputsFor(product).plannedOrder;
                 const range =
                   !product.issue && product.demand?.label !== "Cannot assess"
                     ? product.demand?.range
@@ -365,6 +368,7 @@ export function PurchasePlanScreen({
                       <button
                         className="product-button"
                         type="button"
+                        aria-label={t(`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`)}
                         onClick={(event) => {
                           event.stopPropagation();
                           onSelect(product.key);
@@ -388,26 +392,12 @@ export function PurchasePlanScreen({
                         </small>
                       </span>
                     </td>
-                    <td data-label={t("In stock")}>
-                      {product.stock?.usableForCover && product.stock.currentStock !== undefined
-                        ? <span className="num">{numberText(product.stock.currentStock)}</span>
-                        : <span className="estimate estimate--none">—</span>}
-                    </td>
-                    <td data-label={t("Your order")}>
-                      {order.state === "value" ? <span className="num">{numberText(order.value)}</span> : <span className="estimate estimate--none">—</span>}
-                      {plan?.estimatedRestock.state === "available" && <small className="pp-suggested num">{t("Suggested")}{" "}{numberText(plan.estimatedRestock.quantity.value)}</small>}
-                    </td>
-                    <td data-label={t("Check")}>
-                      <button className={`pp-check pp-check--${groupFor(product)}`} type="button" aria-label={t(`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`)} onClick={(event) => { event.stopPropagation(); onSelect(product.key); }}>
-                        {t(plan?.audit.state === "verdict" ? plan.audit.verdict : plan?.audit.state === "cannot_judge" ? "Cannot judge" : "Review →")}
-                      </button>
-                    </td>
                   </tr>
                 );
               })}
               {t(!visible.length && (
                 <tr>
-                  <td colSpan={5} className="empty-row">
+                  <td colSpan={2} className="empty-row">
                     {t(products.length
                       ? "No products match"
                       : "No products are available. Return to readiness to review your data.")}

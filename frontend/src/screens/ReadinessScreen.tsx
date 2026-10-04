@@ -1,24 +1,20 @@
 import "./readiness.css";
-import { ReadinessOverview } from "./ReadinessOverview.tsx";
+import { ReadinessOverview, foodCategory } from "./ReadinessOverview.tsx";
 import { ReadinessCharts, FILTER_META, issueMatches, type ReadinessIssueFilter } from "./ReadinessCharts.tsx";
 export type { ReadinessIssueFilter } from "./ReadinessCharts.tsx";
 import { t, useLanguage } from "../i18n/index.ts";
 import { useEffect, useMemo, useState } from "react";
 import {
-  CAPABILITY_LABELS,
   buildProductTimelines,
   createCorrectionReport,
   detectDateFormatCandidate,
   type ConfirmedDateFormat,
   type DataIssue,
   type DateFormatConfirmation,
-  type DuplicateDecision,
   type MappingState,
   type NormalizationEvent,
   type ParsedDataset,
   type ReadinessSnapshot,
-  type StockFreshness,
-  type WeekState,
 } from "../engine.ts";
 
 interface ReadinessScreenProps {
@@ -33,18 +29,10 @@ interface ReadinessScreenProps {
   readonly filter: ReadinessIssueFilter | null;
   readonly onFilter: (kind: ReadinessIssueFilter | null) => void;
   readonly onConfirmDateFormat: (sourceColumnId: string, format: ConfirmedDateFormat) => void;
-  readonly onDuplicateDecision: (fingerprint: string, decision: DuplicateDecision) => void;
   readonly onBack: () => void;
   readonly onContinue: () => void;
   readonly reportFilename: string;
 }
-
-const WEEK_LABEL: Readonly<Record<WeekState, string>> = Object.freeze({
-  missing: "Missing",
-  confirmed_zero_sales: "Confirmed zero",
-  net_zero_with_activity: "Net zero + activity",
-  observed_demand: "Observed demand",
-});
 
 const TIDY_UP_LABEL: Readonly<Record<NormalizationEvent["normalizationType"], string>> = Object.freeze({
   trim_whitespace: "Trim leading and trailing whitespace",
@@ -59,22 +47,12 @@ function humanize(value: string): string {
   return value.toLowerCase().replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-/** Uses the retailer-facing stock-age bands without mislabelling invalid dates as old stock. */
-function stockFreshnessLabel(freshness: StockFreshness): string {
-  if (freshness.state === "current") return "Current · 0–7 days old";
-  if (freshness.state === "limited") return "Getting old · 8–14 days old";
-  if (freshness.reasonCode === "STALE_STOCK") return "Too old to rely on · more than 14 days old";
-  if (freshness.reasonCode === "MISSING_STOCK_DATE") return "Stock count date missing";
-  if (freshness.reasonCode === "INVALID_STOCK_DATE") return "Stock count date invalid";
-  if (freshness.reasonCode === "FUTURE_STOCK_DATE") return "Stock count date is in the future";
-  return "Stock count cannot be relied on";
-}
-
 /** Screen 03. Renders the domain engine's immutable Epic 2 evidence snapshot. */
 export function ReadinessScreen(props: ReadinessScreenProps) {
   useLanguage();
   const [problemPage, setProblemPage] = useState(0);
   const [tidyUpPage, setTidyUpPage] = useState(0);
+  const [categoryFilter, setCategoryFilter] = useState("All foods");
   const timelines = useMemo(() => buildProductTimelines(props.snapshot), [props.snapshot]);
   const report = useMemo(() => createCorrectionReport(props.snapshot), [props.snapshot]);
 
@@ -100,18 +78,21 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
     });
   }, [props.dataset, props.dateConfirmations, props.mapping]);
 
-  const shown = props.filter
-    ? props.snapshot.issues.filter((issue) => issueMatches(issue, props.filter!))
-    : props.snapshot.issues;
+  const categoryByRow = new Map(props.snapshot.rows.map(row => [row.sourceRow, foodCategory(row.interpretedValues.productName ?? row.interpretedValues.productCode ?? "")]));
+  const availableCategories = [...new Set(categoryByRow.values())].sort();
+  const categoryMatches = (sourceRow: number) => categoryFilter === "All foods" || categoryByRow.get(sourceRow) === categoryFilter;
+  const actionableIssues = props.snapshot.issues.filter(issue => issue.issueCode !== "DUPLICATE_CANDIDATE" && issue.issueCode !== "DUPLICATE_CONFIRMED");
+  const shown = actionableIssues.filter(issue =>
+    (!props.filter || issueMatches(issue, props.filter)) && categoryMatches(issue.sourceRow));
   const problemPageCount = Math.max(1, Math.ceil(shown.length / PROBLEMS_PER_PAGE));
   const currentProblemPage = Math.min(problemPage, problemPageCount - 1);
   const problemStart = currentProblemPage * PROBLEMS_PER_PAGE;
   const visibleProblems = shown.slice(problemStart, problemStart + PROBLEMS_PER_PAGE);
-  const unresolvedDuplicates = props.snapshot.duplicateGroups.filter((group) => group.decision === "unresolved").length;
-  const tidyUpPageCount = Math.max(1, Math.ceil(props.snapshot.normalizations.length / TIDY_UPS_PER_PAGE));
+  const filteredTidyUps = props.snapshot.normalizations.filter(event => categoryMatches(event.sourceRow));
+  const tidyUpPageCount = Math.max(1, Math.ceil(filteredTidyUps.length / TIDY_UPS_PER_PAGE));
   const currentTidyUpPage = Math.min(tidyUpPage, tidyUpPageCount - 1);
   const tidyUpStart = currentTidyUpPage * TIDY_UPS_PER_PAGE;
-  const visibleTidyUps = props.snapshot.normalizations.slice(tidyUpStart, tidyUpStart + TIDY_UPS_PER_PAGE);
+  const visibleTidyUps = filteredTidyUps.slice(tidyUpStart, tidyUpStart + TIDY_UPS_PER_PAGE);
 
   function download() {
     const blob = new Blob([report.csvText], { type: "text/csv;charset=utf-8" });
@@ -134,7 +115,8 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
 
       <ReadinessOverview snapshot={props.snapshot} timelines={timelines} />
 
-      {(dateEvidence.length > 0 || props.snapshot.duplicateGroups.length > 0) && (
+      {props.snapshot.duplicateGroups.length > 0 && <p className="notice notice--info" role="status">{props.snapshot.duplicateGroups.length} {t(props.snapshot.duplicateGroups.length === 1 ? "duplicate group resolved automatically; the latest matching row is kept." : "duplicate groups resolved automatically; the latest matching row is kept.")}</p>}
+      {dateEvidence.length > 0 && (
         <section className="decision-grid" aria-label={t("Readiness decisions")}>
           {dateEvidence.map(({ column, detection, confirmation }) => (
             <article className="decision-card" key={column.id}>
@@ -163,47 +145,17 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
             </article>
           ))}
 
-          {props.snapshot.duplicateGroups.map((group, index) => (
-            <article className="decision-card" key={group.fingerprint}>
-              <span className={`pill ${group.decision === "unresolved" ? "pill--amber" : "pill--teal"}`}>
-                {t("Exact duplicate ")}{t(index + 1)}
-              </span>
-              <h2>{t("Rows ")}{group.sourceRows.join(", ")}</h2>
-              <p>
-                {t(group.decision === "unresolved"
-                  ? "These rows are identical. Your row count is unchanged and every row remains in use until you decide."
-                  : group.decision === "keep_both"
-                    ? "You chose “keep both”. Every row remains in use and your row count is unchanged."
-                    : `You chose “these are duplicates”. Row ${group.sourceRows[0]} remains in use; rows ${group.sourceRows.slice(1).join(", ")} are left out and marked as duplicates you confirmed.`)}
-              </p>
-              {group.decision === "unresolved" && group.productKeys.length > 0 && (
-                <p className="notice notice--info" role="status">
-                  {t("Warning for ")}{group.productKeys.join(", ")}{t(": these products cannot pass the order check until you decide.")}</p>
-              )}
-              <div className="decision-card__actions">
-                <button
-                  type="button"
-                  className={`btn btn--small ${group.decision === "keep_both" ? "btn--primary" : "btn--ghost"}`}
-                  disabled={props.checking || group.decision === "keep_both"}
-                  onClick={() => props.onDuplicateDecision(group.fingerprint, "keep_both")}
-                >
-                  {t("keep both")}</button>
-                <button
-                  type="button"
-                  className={`btn btn--small ${group.decision === "treat_as_duplicate" ? "btn--primary" : "btn--ghost"}`}
-                  disabled={props.checking || group.decision === "treat_as_duplicate"}
-                  onClick={() => props.onDuplicateDecision(group.fingerprint, "treat_as_duplicate")}
-                >
-                  {t("these are duplicates")}</button>
-              </div>
-            </article>
-          ))}
+
         </section>
       )}
 
       <section className="problems">
-        <div className="problems__head"><div><h2>{props.snapshot.issues.length} {t("issues to review")}</h2><p>{t("Here are the issues StockLess found and what you can do about them.")}</p></div>
+        <div className="problems__head"><div><h2>{actionableIssues.length} {t("issues to review")}</h2><p>{t("Here are the issues StockLess found and what you can do about them.")}</p></div>
           <span className="pill pill--grey">{props.snapshot.reconciliation.rowsExcluded} {t("Rows left out")}</span>
+        </div>
+        <div className="readiness-filters">
+          <label>{t("Food category")}<select value={categoryFilter} onChange={event => { setCategoryFilter(event.currentTarget.value); setProblemPage(0); setTidyUpPage(0); }}><option value="All foods">{t("All foods")}</option>{availableCategories.map(category => <option key={category} value={category}>{t(category)}</option>)}</select></label>
+          <label>{t("Issue type")}<select value={props.filter ?? "all"} onChange={event => props.onFilter(event.currentTarget.value === "all" ? null : event.currentTarget.value as ReadinessIssueFilter)}><option value="all">{t("All issues")}</option>{Object.entries(FILTER_META).map(([key, meta]) => <option key={key} value={key}>{t(meta.label)}</option>)}</select></label>
         </div>
         <div className="problems__list">
           {[...Object.keys(FILTER_META), "other"].map(kind => {
@@ -227,7 +179,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
           })}
           {shown.length === 0 && <p className="empty">{t("Nothing to correct in this selection.")}</p>}
         </div>
-        {props.snapshot.normalizations.length > 0 && <details className="tidyups"><summary><span className="tidyups__tick" aria-hidden="true">✓</span>{props.snapshot.normalizations.length} {t("safe tidy-ups applied")}</summary><ul className="tidyups__list">{visibleTidyUps.map((event, index) => <li key={`${event.sourceRow}-${event.sourceColumn}-${index}`}><b>{t(TIDY_UP_LABEL[event.normalizationType])}</b><span>{t("Row")} {event.sourceRow}</span><code>{JSON.stringify(event.originalValue)}</code><span aria-hidden="true">→</span><code>{JSON.stringify(event.resultingValue)}</code></li>)}</ul><p className="tidyups__note">{t("Every tidy-up is available in the underlying evidence and download. Your original file has not been changed.")}</p></details>}
+        {filteredTidyUps.length > 0 && <details className="tidyups"><summary><span className="tidyups__tick" aria-hidden="true">✓</span>{filteredTidyUps.length} {t("safe tidy-ups applied")}</summary><ul className="tidyups__list">{visibleTidyUps.map((event, index) => <li key={`${event.sourceRow}-${event.sourceColumn}-${index}`}><b>{t(TIDY_UP_LABEL[event.normalizationType])}</b><span>{t("Row")} {event.sourceRow}</span><code>{JSON.stringify(event.originalValue)}</code><span aria-hidden="true">→</span><code>{JSON.stringify(event.resultingValue)}</code></li>)}</ul><p className="tidyups__note">{t("Every tidy-up is available in the underlying evidence and download. Your original file has not been changed.")}</p></details>}
         <button type="button" className="btn btn--small btn--ghost problems__download" onClick={download}>{t("↓ Download problem list")}</button>
       </section>
 
@@ -369,67 +321,6 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         )}
       </section>
 
-      <section className="card evidence-section">
-        <div className="card__head">
-          <div>
-            <h2 className="card-title">{t(CAPABILITY_LABELS.weekly_history)}</h2>
-            <p className="card-sub"><b>{t(CAPABILITY_LABELS.timeline_gap_evidence)}</b> {t("· Each product starts at its own first observed week and ends at its own last observed week.")}</p>
-          </div>
-          <span className="pill pill--grey">{t(timelines.length)} {t("products")}</span>
-        </div>
-        {timelines.length === 0 ? <p className="empty">{t("No valid demand rows are available.")}</p> : (
-          <div className="timeline-list">
-            {timelines.map((timeline) => (
-              <article className="timeline-row" key={timeline.productKey}>
-                <div className="timeline-row__summary">
-                  <b className="num">{timeline.productKey}</b>
-                  <span>{t(timeline.summary.observedWeekCount)} {t("observed · ")}{t(timeline.summary.weeksInSpan)} {t("in span · ")}{t(timeline.summary.missingWeekCount)} {t("missing")}</span>
-                  <span>{timeline.summary.dateRangeStart} {t("to ")}{timeline.summary.dateRangeEnd}</span>
-                  <span className={`pill ${timeline.recentWindow.state === "standard" ? "pill--teal" : "pill--amber"}`}>
-                    {t(CAPABILITY_LABELS.recent_weekly_average)}: {t(humanize(timeline.recentWindow.state))}
-                  </span>
-                </div>
-                <div className="week-strip" aria-label={t(`${CAPABILITY_LABELS.weekly_history} for ${timeline.productKey}`)}>
-                  {timeline.weeks.map((week) => (
-                    <span
-                      className={`week-chip week-chip--${week.state}`}
-                      title={t(`${week.weekStart}: ${WEEK_LABEL[week.state]}${week.netQuantity === null ? "" : `, net ${week.netQuantity}`}`)}
-                      key={week.weekStart}
-                    >
-                      <b>{week.weekStart.slice(5)}</b>
-                      {t(WEEK_LABEL[week.state])}
-                    </span>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {props.snapshot.productStock.length > 0 && (
-        <section className="card evidence-section">
-          <div className="card__head">
-            <div>
-              <h2 className="card-title">{t(CAPABILITY_LABELS.stock_freshness)}</h2>
-              <p className="card-sub">{t("Age is measured in calendar days at Asia/Kuala_Lumpur midnight.")}</p>
-            </div>
-            <span className="pill pill--grey">{t("As at ")}{props.snapshot.analysisDate}</span>
-          </div>
-          <div className="freshness-grid">
-            {props.snapshot.productStock.map((stock) => (
-              <article className={`freshness-card freshness-card--${stock.freshness.state}`} key={stock.productKey}>
-                <b className="num">{stock.productKey}</b>
-                <span>{t("Snapshot: ")}{stock.stockAsOfDate ?? "missing"}</span>
-                <span>{t("Age: ")}{t(stock.freshness.ageDays === undefined ? "not available" : `${stock.freshness.ageDays} days`)}</span>
-                <strong>{t(stockFreshnessLabel(stock.freshness))}</strong>
-                {t(!stock.usableForCover && <small>{t("Cover unavailable: ")}{t(stock.reasonCodes.map(humanize).join(" · ") || "stock evidence incomplete")}</small>)}
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
-
       </details>
 
       {t(props.forecastError && <p className="notice notice--error" role="alert">{t(props.forecastError)}</p>)}
@@ -437,9 +328,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       <div className="footer-row">
         <p className="validity">
           <i aria-hidden="true">✓</i>
-          {t(unresolvedDuplicates > 0
-            ? `${unresolvedDuplicates} duplicate decision${unresolvedDuplicates === 1 ? "" : "s"} remain; affected products have Limited data.`
-            : `Calculations use ${props.snapshot.reconciliation.rowsUsed.toLocaleString("en")} valid rows only.`)}
+          {t(`Calculations use ${props.snapshot.reconciliation.rowsUsed.toLocaleString("en")} valid rows only.`)}
         </p>
         <div className="footer-row__right">
           <button type="button" className="btn btn--ghost" onClick={download}>{t("↓ Download problems")}</button>

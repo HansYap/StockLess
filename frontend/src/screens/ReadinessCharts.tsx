@@ -1,13 +1,12 @@
 import { t, useLanguage } from "../i18n/index.ts";
 import type { DataIssue, DataIssueCode, ReadinessSnapshot } from "../engine.ts";
 
-export type ReadinessIssueFilter = "dates" | "quantities" | "identity" | "duplicates" | "stock";
+export type ReadinessIssueFilter = "dates" | "quantities" | "identity" | "stock";
 
 export const FILTER_CODES: Readonly<Record<ReadinessIssueFilter, readonly DataIssueCode[]>> = {
   dates: ["INVALID_DATE", "FUTURE_TRANSACTION_DATE", "DATE_FORMAT_CONFIRMATION_REQUIRED", "INVALID_EXPIRY_DATE"],
   quantities: ["INVALID_QUANTITY", "INVALID_PLANNED_ORDER", "INVALID_INCOMING_STOCK", "CONFLICTING_PLANNED_ORDER", "CONFLICTING_INCOMING_STOCK"],
   identity: ["MISSING_IDENTITY"],
-  duplicates: ["DUPLICATE_CANDIDATE", "DUPLICATE_CONFIRMED"],
   stock: ["INVALID_CURRENT_STOCK", "MISSING_CURRENT_STOCK", "INVALID_STOCK_DATE", "MISSING_STOCK_DATE", "FUTURE_STOCK_DATE", "CONFLICTING_CURRENT_STOCK", "CONFLICTING_STOCK_DATE"],
 };
 
@@ -21,7 +20,6 @@ export const FILTER_META: Readonly<Record<ReadinessIssueFilter, Readonly<{
   dates: { label: "Date issues", hint: "Invalid or unconfirmed date values", severity: "fix", color: "#eb6834", explanation: "StockLess checks whether each sale date can be interpreted reliably. Invalid or ambiguous dates are flagged." },
   quantities: { label: "Quantity issues", hint: "Values that are not finite numbers", severity: "fix", color: "#2a78d6", explanation: "Quantities must resolve to valid numbers. Missing, non-numeric or conflicting values are flagged." },
   identity: { label: "Missing product ID", hint: "Rows without the chosen product identity", severity: "fix", color: "#eda100", explanation: "Each sales row needs a reliable product identifier so sales can be grouped correctly." },
-  duplicates: { label: "Duplicate rows", hint: "Matching rows need your decision", severity: "review", color: "#e87ba4", explanation: "Identical source rows remain traceable. You can decide whether to count both or exclude repeats." },
   stock: { label: "Stock data", hint: "Optional stock values that limit cover", severity: "review", color: "#4a3aa7", explanation: "Current stock and stock-count dates are optional evidence for coverage and restocking." },
 };
 
@@ -42,10 +40,6 @@ const BAR_CATEGORIES: Record<ReadinessIssueFilter, readonly { label: string; cod
     { label: "Conflicting", codes: ["CONFLICTING_PLANNED_ORDER", "CONFLICTING_INCOMING_STOCK"] },
   ],
   identity: [{ label: "No product ID", codes: ["MISSING_IDENTITY"] }],
-  duplicates: [
-    { label: "Matching rows", codes: ["DUPLICATE_CANDIDATE", "DUPLICATE_CONFIRMED"] },
-    { label: "Left out", codes: ["DUPLICATE_CONFIRMED"] },
-  ],
   stock: [
     { label: "Stock missing", codes: ["MISSING_CURRENT_STOCK"] },
     { label: "Stock invalid", codes: ["INVALID_CURRENT_STOCK", "CONFLICTING_CURRENT_STOCK"] },
@@ -104,7 +98,7 @@ export function ReadinessCharts({ snapshot, filter, onFilter }: {
       <div className="verdict__cell verdict__cell--next"><b>{t("Next step:")}</b><p className="verdict__next">{t("Continue with the usable rows, or download the problem list and correct your file first.")}</p></div>
     </div>
 
-    <div className="issues issues--five">
+    <div className="issues">
       {kinds.map(kind => {
         const meta = FILTER_META[kind];
         const count = rowCount(snapshot.issues, FILTER_CODES[kind]);

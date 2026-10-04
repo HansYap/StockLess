@@ -1233,6 +1233,11 @@ body{margin:0}
 @media(max-width:420px){.accepted-forms{grid-template-columns:1fr}.identity__paths{grid-template-columns:1fr}.page{padding-top:28px}}
 .ws-decor__side img{width:100%;height:100%;object-fit:cover;object-position:left center}
 .optional-fields{margin-top:24px}.optional-fields summary{cursor:pointer;font-weight:700;color:var(--teal-deep)}
+.optional-fields--collapsible{border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 16px}
+.optional-fields--collapsible>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 0;list-style:none}
+.optional-fields--collapsible>summary::-webkit-details-marker{display:none}
+.optional-fields--collapsible>summary span{font-size:var(--text-description);font-weight:400;color:var(--muted)}
+.optional-fields--collapsible>.attribute-section{padding-bottom:16px}
 
 /* Session details wrap into their own row rather than under the progress bar. */
 .frame .topbar{height:auto;min-height:76px;gap:16px;flex-wrap:wrap;padding-top:14px;padding-bottom:14px}

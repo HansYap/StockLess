@@ -800,7 +800,9 @@ export async function runReadinessCheck(
   const productLimitations: ProductLimitation[] = [];
   for (const [fingerprint, members] of [...byFingerprint.entries()].filter(([, rows]) => rows.length > 1)) {
     members.sort((left, right) => left.sourceRow - right.sourceRow);
-    const decision = options.duplicateDecisions?.[fingerprint] ?? "unresolved";
+    // Exact matching rows are resolved automatically. The last source row is
+    // retained so a re-export with repeated records uses its latest entry.
+    const decision = "treat_as_duplicate" as const;
     duplicateGroups.push(Object.freeze({
       fingerprint,
       sourceRows: Object.freeze(members.map((row) => row.sourceRow)),
@@ -816,37 +818,25 @@ export async function runReadinessCheck(
         issueCode: "DUPLICATE_CANDIDATE",
         observedValue: fingerprint,
         reason: "Every source cell matches another record after permitted representation normalization.",
-        correctiveAction: decision === "unresolved"
-          ? "Choose “keep both” or “these are duplicates” for this exact-match group."
-          : "The retailer has reviewed this exact-match group.",
-        resolutionState: decision === "unresolved" ? "unresolved" : "resolved",
+        correctiveAction: "StockLess kept the latest matching source row automatically.",
+        resolutionState: "resolved",
       });
       row.issueIds.push(issue.id);
     }
 
-    if (decision === "treat_as_duplicate") {
-      for (const row of members.slice(1)) {
-        row.useState = "excluded";
-        const issue = addIssue(issues, {
-          sourceRow: row.sourceRow,
-          productKey: row.productKey,
-          originalProductHint: row.originalProductHint,
-          issueCode: "DUPLICATE_CONFIRMED",
-          observedValue: fingerprint,
-          reason: `The retailer confirmed this row duplicates source row ${members[0].sourceRow}.`,
-          correctiveAction: "Remove the repeated source record if the source spreadsheet should be corrected.",
-          resolutionState: "resolved",
-        });
-        row.issueIds.push(issue.id);
-      }
-    } else if (decision === "unresolved") {
-      for (const productKey of new Set(members.map((row) => row.productKey).filter((value): value is string => Boolean(value)))) {
-        productLimitations.push(Object.freeze({
-          productKey,
-          code: "DUPLICATE_UNRESOLVED",
-          message: "An exact duplicate group is awaiting a retailer decision, so this product has Limited data.",
-        }));
-      }
+    for (const row of members.slice(0, -1)) {
+      row.useState = "excluded";
+      const issue = addIssue(issues, {
+        sourceRow: row.sourceRow,
+        productKey: row.productKey,
+        originalProductHint: row.originalProductHint,
+        issueCode: "DUPLICATE_CONFIRMED",
+        observedValue: fingerprint,
+        reason: `This row matches the latest source row ${members[members.length - 1].sourceRow} and was left out automatically.`,
+        correctiveAction: "Remove the repeated source record if the source spreadsheet should be corrected.",
+        resolutionState: "resolved",
+      });
+      row.issueIds.push(issue.id);
     }
   }
 

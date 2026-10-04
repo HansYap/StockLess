@@ -5,6 +5,18 @@ import type { ProductTimeline, ReadinessSnapshot } from "../engine.ts";
 type Status = "ready" | "review" | "missing";
 const LABELS: Record<Status, string> = { ready: "Ready", review: "Need review", missing: "Missing data" };
 
+const FOOD_CATEGORIES = ["Produce", "Dairy & eggs", "Meat & seafood", "Bakery", "Beverages", "Pantry & snacks", "Other"] as const;
+export function foodCategory(name: string): (typeof FOOD_CATEGORIES)[number] {
+  const value = name.toLowerCase();
+  if (/apple|banana|pear|berry|mango|orange|grape|lettuce|tomato|potato|carrot|onion|vegetable|fruit|sayur|buah/.test(value)) return "Produce";
+  if (/milk|yogurt|cheese|butter|egg|susu|telur/.test(value)) return "Dairy & eggs";
+  if (/chicken|beef|fish|salmon|tuna|prawn|meat|ayam|ikan|daging/.test(value)) return "Meat & seafood";
+  if (/bread|bun|cake|pastry|croissant|roti/.test(value)) return "Bakery";
+  if (/drink|juice|water|coffee|tea|soda|milk tea|minuman|kopi|teh|milo|nescafe|air mineral/.test(value)) return "Beverages";
+  if (/rice|noodle|pasta|sauce|oil|flour|sugar|snack|chips|cereal|biscuit|beras|mee|mi segera|biskut|keropok|gula|garam|tepung|minyak|kicap|sos cili|sardin|serbuk kari|cuka/.test(value)) return "Pantry & snacks";
+  return "Other";
+}
+
 function WeeklySales({ timeline }: { timeline?: ProductTimeline }) {
   const weeks = timeline?.weeks.slice(-8) ?? [];
   const maximum = Math.max(1, ...weeks.map(w => Math.abs(w.netQuantity ?? 0)));
@@ -24,6 +36,7 @@ export function ReadinessOverview({ snapshot, timelines }: { snapshot: Readiness
   useLanguage();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("age");
+  const [category, setCategory] = useState("All foods");
   const products = useMemo(() => {
     const rowsByKey = new Map<string, (typeof snapshot.rows)[number][]>();
     const rowKeys = new Map<number, string>();
@@ -50,7 +63,7 @@ export function ReadinessOverview({ snapshot, timelines }: { snapshot: Readiness
       const values = rows.find(row => row.interpretedValues.productName)?.interpretedValues ?? rows[0]?.interpretedValues;
       const stock = stockByKey.get(key);
       const timeline = timelineByKey.get(key);
-      const issues = issuesByKey.get(key) ?? [];
+      const issues = (issuesByKey.get(key) ?? []).filter(issue => issue.issueCode !== "DUPLICATE_CANDIDATE" && issue.issueCode !== "DUPLICATE_CONFIRMED");
       const blocked = snapshot.productLimitations.some(item => item.productKey === key);
       const excluded = !rows.some(row => row.useState !== "excluded");
       const status: Status = excluded || !stock?.usableForCover || stock.freshness.state === "unusable" ? "missing"
@@ -61,15 +74,18 @@ export function ReadinessOverview({ snapshot, timelines }: { snapshot: Readiness
         ...(!stock?.usableForCover ? ["Stock evidence is incomplete or cannot be relied on."] : stock.freshness.state === "limited" ? ["The stock count is getting old. A fresher count would be better."] : []),
         ...(timeline?.summary.missingWeekCount ? ["Some weeks are missing — they are not zero sales."] : []),
       ])];
-      return { key, name: values?.productName ?? values?.productCode ?? key, code: values?.productCode ?? key, pack: values?.packVariant, stock, timeline, status, reasons };
+      const name = values?.productName ?? values?.productCode ?? key;
+      return { key, name, category: foodCategory(name), code: values?.productCode ?? key, pack: values?.packVariant, stock, timeline, status, reasons };
     });
   }, [snapshot, timelines]);
   const counts = { ready: 0, review: 0, missing: 0 };
   products.forEach(p => counts[p.status]++);
   const query = search.trim().replace(/^sku\s*:?\s*/i, "").toLowerCase();
-  const attention = products.filter(p => p.status !== "ready" && `${p.name} ${p.code} ${p.pack ?? ""}`.toLowerCase().includes(query)).sort((a,b) =>
+  const categories = FOOD_CATEGORIES.filter(item => products.some(product => product.category === item));
+  const inCategory = (product: (typeof products)[number]) => category === "All foods" || product.category === category;
+  const attention = products.filter(p => p.status !== "ready" && inCategory(p) && `${p.name} ${p.code} ${p.pack ?? ""}`.toLowerCase().includes(query)).sort((a,b) =>
     sort === "name" ? a.name.localeCompare(b.name) : sort === "status" ? a.status.localeCompare(b.status) : (b.stock?.freshness.ageDays ?? -1) - (a.stock?.freshness.ageDays ?? -1));
-  const ready = products.filter(p => p.status === "ready");
+  const ready = products.filter(p => p.status === "ready" && inCategory(p));
   return <>
     <p className="validity validity--top"><i aria-hidden="true">✓</i>{t(`Calculations use ${snapshot.reconciliation.rowsUsed.toLocaleString("en")} valid rows only.`)} {snapshot.reconciliation.rowsExcluded} {t("Rows left out")}</p>
     <section className="summary" aria-label={t("Product readiness summary")}>
@@ -81,9 +97,12 @@ export function ReadinessOverview({ snapshot, timelines }: { snapshot: Readiness
       </li>)}</ul>
     </section>
     <p className="nextstep"><b>{t("Next step:")}</b> {t("Continue with the usable rows, or download the problem list and correct your file first.")}</p>
+    <nav className="food-tabs" aria-label={t("Food categories")}>
+      {["All foods", ...categories].map(item => <button type="button" key={item} className={category === item ? "food-tabs__active" : ""} aria-pressed={category === item} onClick={() => setCategory(item)}>{t(item)} <span>{item === "All foods" ? products.length : products.filter(product => product.category === item).length}</span></button>)}
+    </nav>
     {counts.review + counts.missing > 0 && <section className="attention">
       <div className="attention__head">
-        <div className="attention__heading"><span className="attention__icon" aria-hidden="true">!</span><div><h2>{counts.review + counts.missing} {t("products need your attention")}</h2><p>{t("Review data issues and stock age before continuing.")}</p></div></div>
+        <div className="attention__heading"><span className="attention__icon" aria-hidden="true">!</span><div><h2>{attention.length} {t("products need your attention")}</h2><p>{t("Review data issues and stock age before continuing.")}</p></div></div>
         <div className="attention__filters">
           <label className="attention__search"><input type="search" aria-label={t("Search by product name or code")} placeholder={t("Search by product name or code")} value={search} onChange={e => setSearch(e.target.value)} /></label>
           <label className="attention__sort"><select aria-label={t("Sort products")} value={sort} onChange={e => setSort(e.target.value)}><option value="age">{t("Sort by: stock age (oldest)")}</option><option value="name">{t("Sort by: product name")}</option><option value="status">{t("Sort by: issue type")}</option></select></label>

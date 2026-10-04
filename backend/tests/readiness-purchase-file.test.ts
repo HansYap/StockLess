@@ -106,3 +106,15 @@ test("a confirmed non-ISO expiry format is normalized before Epic 5 uses it", as
   assert.ok(snapshot.normalizations.some((event) =>
     event.sourceColumn === "Expiry Date" && event.resultingValue === "2026-09-20"));
 });
+
+test("identical source rows automatically keep the latest row", async () => {
+  const snapshot = await runReadinessCheck(dataset([
+    ["2026-07-20", "A", "5", "10", "2026-09-10", "", "", ""],
+    ["2026-07-20", "A", "5", "10", "2026-09-10", "", "", ""],
+  ]), mapping, { analysisDate: "2026-09-14" });
+
+  assert.equal(snapshot.duplicateGroups[0]?.decision, "treat_as_duplicate");
+  assert.deepEqual(snapshot.rows.map(row => row.useState), ["excluded", "used"]);
+  assert.equal(snapshot.reconciliation.rowsUsed, 1);
+  assert.ok(snapshot.issues.some(issue => issue.sourceRow === 2 && issue.issueCode === "DUPLICATE_CONFIRMED"));
+});
