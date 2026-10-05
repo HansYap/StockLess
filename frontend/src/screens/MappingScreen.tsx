@@ -1,299 +1,270 @@
-import { t, useLanguage } from "../i18n/index.ts";
-import { useMemo } from "react";
+import { t, useLanguage, getLocale } from "../i18n/index.ts";
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
-  CANONICAL_FIELDS,
-  CORE_COLUMN_PATHS,
   FIELD_REGISTRY,
   detectIdentityConflicts,
-  evaluateCapabilities,
   getReadinessBlockers,
-  partitionCapabilities,
+  parseIsoDate,
   type CanonicalField,
   type MappingProposalResult,
   type MappingState,
   type ParsedDataset,
 } from "../engine.ts";
-import { FieldHelp } from "../components/FieldHelp.tsx";
-import { confirmCurrentMapping } from "../storage/saved-matching.ts";
+import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
+import { confirmCurrentMapping } from "../mapping-confirmation.ts";
+import "./mapping.css";
 
+type IdentityMode = "stable" | "composite";
 interface MappingScreenProps {
   readonly dataset: ParsedDataset;
   readonly mapping: MappingState;
   readonly proposals: MappingProposalResult | null;
   readonly onSelectColumn: (field: CanonicalField, sourceColumnId: string | null) => void;
-  readonly onConfirmField: (field: CanonicalField) => void;
-  readonly onConfirmIdentity: (mode: "stable" | "composite") => void;
+  readonly onSelectIdentity: (mode: IdentityMode) => void;
   readonly onBack: () => void;
-  readonly onContinue: () => void;
+  readonly onClear?: () => void;
   readonly onConfirmAllAndContinue: () => void;
   readonly error: string | null;
   readonly notice: string | null;
+  readonly sessionNotice?: string | null;
   readonly checking?: boolean;
+  readonly children?: ReactNode;
 }
 
-/** Screen 02. Every mapping starts unconfirmed; the retailer confirms each one. */
+const OPTIONAL_FIELDS = [
+  ["current_stock", "box", "How much is on the shelf"],
+  ["stock_as_of_date", "calendar", "When that stock was counted"],
+  ["planned_order_quantity", "document", "Orders you plan to place"],
+  ["incoming_stock_quantity", "truck", "Ordered but not yet arrived"],
+  ["expiry_date", "expiry", "When each batch expires"],
+] as const;
+
+/** Screen 02. Suggestions stay unconfirmed until the retailer confirms this page. */
 export function MappingScreen(props: MappingScreenProps) {
   useLanguage();
-  const { dataset, mapping, proposals } = props;
+  const { dataset, mapping } = props;
+  const [compactTitle, setCompactTitle] = useState(false);
+  useEffect(() => {
+    const update = () => setCompactTitle((compact) => window.scrollY > 140 || (compact && window.scrollY >= 40));
+    window.addEventListener("scroll", update, { passive: true });
+    update();
+    return () => window.removeEventListener("scroll", update);
+  }, []);
 
-  const fields = useMemo(
-    () => CANONICAL_FIELDS.filter((field) => FIELD_REGISTRY[field].status !== "later_locked"),
-    [],
-  );
-
-  const missingInformation = useMemo(() => {
-    const grouped = new Map<string, { fields: string[]; analyses: string[] }>();
-    const byField = new Map<string, Set<string>>();
-    for (const item of partitionCapabilities(evaluateCapabilities(mapping)).needsMoreInformation) {
-      for (const reason of item.reasons) {
-        if (!reason.field) continue;
-        const labels = byField.get(reason.field) ?? new Set<string>();
-        labels.add(item.label);
-        byField.set(reason.field, labels);
-      }
+  const mode: IdentityMode = mapping.identityMode ?? (mapping.mappings.product_code ? "stable"
+    : mapping.mappings.product_name && mapping.mappings.pack_variant ? "composite" : "stable");
+  const productFields: readonly CanonicalField[] = mode === "stable" ? ["product_code"] : ["product_name", "pack_variant"];
+  const supplementaryFields: readonly CanonicalField[] = mode === "stable" ? ["product_name", "pack_variant"] : ["product_code"];
+  const usage = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const match of Object.values(mapping.mappings)) {
+      if (match) counts.set(match.sourceColumnId, (counts.get(match.sourceColumnId) ?? 0) + 1);
     }
-    for (const [field, labels] of byField) {
-      const analyses = [...labels].sort();
-      const key = analyses.join('|');
-      const entry = grouped.get(key) ?? { fields: [], analyses };
-      entry.fields.push(FIELD_REGISTRY[field as CanonicalField].label);
-      grouped.set(key, entry);
-    }
-    return [...grouped.values()];
+    return counts;
   }, [mapping]);
   const conflicts = useMemo(() => detectIdentityConflicts(dataset, mapping), [dataset, mapping]);
-  const blockers = useMemo(() => getReadinessBlockers(mapping), [mapping]);
-
   const bulkMapping = useMemo(() => confirmCurrentMapping(mapping), [mapping]);
-  const bulkBlockers = bulkMapping ? getReadinessBlockers(bulkMapping) : ["Resolve columns used more than once"];
-  const bulkPath = CORE_COLUMN_PATHS.find((path) => path.id === bulkMapping?.identityMode);
-  const confirmedCount = fields.filter((field) => mapping.mappings[field]?.confirmed).length;
+  const blockers = bulkMapping ? getReadinessBlockers(bulkMapping) : ["Resolve columns used more than once"];
+  const staleColumns = Object.values(mapping.mappings).some(match => match && !dataset.columns.some(column => column.id === match.sourceColumnId));
+  const blocked = blockers.length > 0 || staleColumns;
 
-  function identityPathReady(mode: "stable" | "composite"): boolean {
-    const path = CORE_COLUMN_PATHS.find((candidate) => candidate.id === mode);
-    if (!path) return false;
-    return path.requiredFields
-      .filter((field) => field !== "transaction_date" && field !== "quantity_sold")
-      .every((field) => mapping.mappings[field]?.confirmed);
+  function columnFor(field: CanonicalField) {
+    return dataset.columns.find(column => column.id === mapping.mappings[field]?.sourceColumnId);
+  }
+  function matched(field: CanonicalField) {
+    const column = columnFor(field);
+    return !!column && usage.get(column.id) === 1;
+  }
+  function warningFor(field: CanonicalField, required = false) {
+    const column = columnFor(field);
+    if (column && (usage.get(column.id) ?? 0) > 1) return "This column is already used above.";
+    if (!column && (required || mapping.mappings[field])) return "Choose a column to continue.";
+    return null;
+  }
+  const requiredCount = Number(matched("transaction_date")) + Number(matched("quantity_sold")) + Number(productFields.every(matched));
+  const optionalCount = OPTIONAL_FIELDS.filter(([field]) => matched(field)).length;
+  const totalCount = requiredCount + optionalCount;
+  const totalFields = 3 + OPTIONAL_FIELDS.length;
+  const unusedColumns = dataset.columns.filter(column => !usage.has(column.id));
+  const otherMatchedFields = (Object.keys(mapping.mappings) as CanonicalField[])
+    .filter(field => FIELD_REGISTRY[field].status === "later_locked");
+  const fileType = /\.(xlsx|xls)$/i.test(dataset.sourceName) ? "XLS" : "CSV";
+  const sessionNotice = props.sessionNotice && !["Sample data loaded.", "Retailer file loaded locally."].includes(props.sessionNotice)
+    ? props.sessionNotice : null;
+
+  function selectControl(field: CanonicalField, required = false) {
+    const warning = warningFor(field, required);
+    const id = "mapping-" + field;
+    return <div className="mapping-select">
+      <select id={id} value={mapping.mappings[field]?.sourceColumnId ?? ""} disabled={props.checking}
+        aria-label={t(`Source column for ${FIELD_REGISTRY[field].label}`)} aria-invalid={!!warning}
+        aria-describedby={warning ? id + "-warning" : undefined}
+        className={!columnFor(field) ? "mapping-select--empty" : undefined}
+        onChange={event => props.onSelectColumn(field, event.target.value || null)}>
+        <option value="">{t("Not in this file")}</option>
+        {dataset.columns.map(column => <option key={column.id} value={column.id}>{column.header}</option>)}
+      </select>
+      {warning && <small className="mapping-warning" id={id + "-warning"}>{t(warning)}</small>}
+    </div>;
+  }
+  function fieldRow(field: CanonicalField, icon: "calendar" | "cart" | "box" | "document" | "truck" | "expiry" | "barcode", description: string, required = false) {
+    return <li className="mapping-row" key={field}>
+      <span className="mapping-icon"><WorkflowIcon name={icon} /></span>
+      <div className="mapping-label"><b>{t(FIELD_REGISTRY[field].label)}</b><small>{t(description)}</small></div>
+      {selectControl(field, required)}
+      <div className="mapping-preview">{formatPreview(columnFor(field)?.previewValues ?? [])}</div>
+    </li>;
+  }
+  function productPreview() {
+    if (mode === "stable") return formatPreview(columnFor("product_code")?.previewValues ?? []);
+    const name = columnFor("product_name"), pack = columnFor("pack_variant");
+    if (!name || !pack) return "—";
+    const values = dataset.rows.slice(0, 3).map(row => [row.originalValues[name.index], row.originalValues[pack.index]].filter(Boolean).join(" · "));
+    return formatPreview(values.length ? values : name.previewValues.map((value, index) => [value, pack.previewValues[index]].filter(Boolean).join(" · ")));
   }
 
-  return (
-    <>
-      <p className="eyebrow">{t("Make sure StockLess understands your data")}</p>
-      <h1 className="title">
-        {t("We found your data. Let's make sure it's right.")}</h1>
-      <p className="lede">
-        {t("Review the suggested column matches before continuing. Your original file won't be changed.")}</p>
-
-      <div className="filebar">
-        <div className="filebar__left">
-          <span className="filebar__icon" aria-hidden="true">{t("CSV")}</span>
-          <div>
-            <div className="filebar__name">{dataset.sourceName}</div>
-            <div className="filebar__meta">
-              {t(dataset.rows.length.toLocaleString("en"))} {t("rows · ")}{t(dataset.columns.length)} {t("columns ·")}{t(" ")}
-              {t((dataset.sourceByteLength / 1024).toFixed(1))} {t("KB · delimiter")}{t(" ")}
-              {t(dataset.delimiter === "\t" ? "tab" : dataset.delimiter)}
+  return <div className="mapping-screen">
+    <section className={"mapping-hero" + (compactTitle ? " mapping-hero--compact" : "")} aria-labelledby="mapping-title">
+      <div className="mapping-wrap mapping-hero__box">
+        <div className="mapping-hero__inner">
+          <div className="mapping-hero__copy">
+            <p className="mapping-eyebrow"><span aria-hidden="true">🌿</span> {t("Step 2 of 4")}</p>
+            <h1 id="mapping-title">{t("Check how we read your file")}</h1>
+            <p className="mapping-lede">{t("We matched your columns by their names. Fix anything that's wrong, then confirm. Your file isn't changed.")}</p>
+          </div>
+          <div className="mapping-file" aria-label={t("Active session")}>
+            <span className="mapping-file__icon" aria-hidden="true">{fileType}</span>
+            <div className="mapping-file__details">
+              <b title={dataset.sourceName}>{dataset.sourceName}</b>
+              <small><span className="mapping-tag mapping-tag--teal">✓ {t("Read")}</span>
+                {dataset.rows.length.toLocaleString(getLocale())} {t("rows ·")} {dataset.columns.length} {t("columns")}</small>
+              <small><span className="mapping-tag">{t(dataset.sourceMode === "sample" ? "Sample data" : "Retailer file")}</span> {(dataset.sourceByteLength / 1024).toFixed(1)} KB</small>
+            </div>
+            <div className="mapping-file__actions">
+              <button type="button" onClick={props.onBack} disabled={props.checking}>{t("Change")}</button>
+              {props.onClear && <button type="button" onClick={props.onClear} disabled={props.checking}>{t("Clear session")}</button>}
             </div>
           </div>
         </div>
-        <span className="pill pill--teal">{t("✓ Read successfully")}</span>
+        <div className="mapping-actions">
+          <button type="button" className="mapping-back" onClick={props.onBack} disabled={props.checking}>{t("← Choose another file")}</button>
+          <span className="mapping-actions__spacer" />
+          <span className="mapping-total" role="status">{totalCount} {t("of")} {totalFields} {t("matched")}</span>
+          <span className="mapping-meter" aria-hidden="true"><i style={{ width: (100 * totalCount / totalFields) + "%" }} /></span>
+          <button type="button" className="btn btn--primary" disabled={blocked || props.checking} aria-busy={props.checking}
+            onClick={props.onConfirmAllAndContinue}>{t(props.checking ? "Checking locally…" : "Confirm and check my data →")}</button>
+        </div>
       </div>
-
-      {t(proposals && !proposals.usedSemanticModel && proposals.fallbackNotice && (
-        <p className="notice notice--info">{t(proposals.fallbackNotice)}</p>
-      ))}
-
-      <div className="split">
-        <section className="card split__main">
-          <div className="card__head">
-            <div>
-              <h2 className="card-title">{t("Column mapping")}</h2>
-              <p className="card-sub">
-                {t("Nothing is applied until you confirm it. Sale date, quantity sold and how your products are named or coded are required.")}</p>
-            </div>
-            <span className={`pill ${confirmedCount === fields.length ? "pill--teal" : "pill--grey"}`}>
-              {t(confirmedCount)} {t("of ")}{t(fields.length)} {t("confirmed")}</span>
+    </section>
+    <main className="mapping-wrap mapping-main">
+      <div className="mapping-grid">
+        <div className="mapping-left">
+          <div className="mapping-all">
+            <div><b>{t("All matches look right?")}</b><p>{t("Confirm all selected columns and continue in one step.")}</p>
+              <small>{t("Products will be kept separate using:")} {t(mode === "stable" ? "One code column" : "Product name + pack size")}.</small></div>
+            <button type="button" className="btn btn--primary" disabled={blocked || props.checking} aria-busy={props.checking}
+              onClick={props.onConfirmAllAndContinue}>{t(props.checking ? "Checking locally…" : "Confirm all and continue →")}</button>
           </div>
-
-          <div className="mapping-bulk">
-            <div>
-              <b>{t("All matches look right?")}</b>
-              <p>{t("Confirm all selected columns and continue in one step.")}</p>
-              {t(bulkPath && <small>{t("Products will be kept separate using: ")}{t(bulkPath.label)}.</small>)}
-              {t(bulkBlockers.length > 0 && <small role="status">{t("Still needed: ")}{t(bulkBlockers.map(t).join(" · "))}</small>)}
-            </div>
-            <button type="button" className="btn btn--primary"
-              disabled={bulkBlockers.length > 0 || props.checking}
-              aria-busy={props.checking} onClick={props.onConfirmAllAndContinue}>
-              {t(props.checking ? "Checking locally…" : "Confirm all and continue →")}
-            </button>
-          </div>
-          <div className="table-scroll">
-            <table className="dtable dtable--cards">
-              <thead>
-                <tr>
-                  <th style={{ width: "28%" }}>{t("StockLess field")}</th>
-                  <th style={{ width: "27%" }}>{t("Your column")}</th>
-                  <th style={{ width: "25%" }}>{t("Preview")}</th>
-                  <th style={{ width: "20%" }}>{t("Status")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fields.map((field) => {
-                  const definition = FIELD_REGISTRY[field];
-                  const current = mapping.mappings[field];
-                  const column = dataset.columns.find((c) => c.id === current?.sourceColumnId);
-                  const required = definition.status === "core";
-
-                  return (
-                    <tr key={field}>
-                      <td className="dtable__title">
-                        <div className="field-head"><b className="dtable__label">{t(definition.label)}</b>
-                        <FieldHelp description={t(definition.description)} />
-                        {required && <span className="req">{t("Required")}</span>}</div>
-                      </td>
-                      <td data-label={t("Your column")}>
-                        <select
-                          className="select"
-                          disabled={props.checking}
-                          aria-label={t(`Source column for ${definition.label}`)}
-                          value={current?.sourceColumnId ?? ""}
-                          onChange={(event) =>
-                            props.onSelectColumn(field, event.target.value || null)
-                          }
-                        >
-                          <option value="">{t("Not in this file")}</option>
-                          {dataset.columns.map((sourceColumn) => (
-                            <option key={sourceColumn.id} value={sourceColumn.id}>
-                              {sourceColumn.header}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="num" data-label={t("Preview")}>
-                        {column ? formatPreview(column.previewValues) : "—"}
-                      </td>
-                      <td data-label={t("Status")}>
-                        {t(current?.confirmed ? (
-                          <span className="pill pill--confirmed">{t("✓ Confirmed")}</span>
-                        ) : current ? (
-                          <div className="mapping-status">
-                            <span className="pill pill--amber">{t("Please confirm")}</span>
-                            <button
-                              type="button"
-                              className="btn btn--small btn--ghost"
-                              disabled={props.checking}
-                              onClick={() => props.onConfirmField(field)}
-                            >
-                              {t("Confirm")}</button>
-                          </div>
-                        ) : (
-                          <span className="pill pill--grey">{t("Not matched yet")}</span>
-                        ))}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="identity">
-            <h3 className="identity__title">{t("How should StockLess identify your products?")}</h3>
-            <p className="identity__lede">
-              {t("Choose how each product should be identified in your sales data.")}</p>
-            <div className="identity__paths">
-              {t(CORE_COLUMN_PATHS.map((path) => {
-                const ready = identityPathReady(path.id);
-                const chosen = mapping.identityMode === path.id && mapping.identityConfirmed;
-                return (
-                  <button key={path.id} type="button" className={`identity__path${chosen ? " identity__path--on" : ""}`}
-                    aria-pressed={chosen} disabled={!ready || props.checking}
-                    onClick={() => props.onConfirmIdentity(path.id)}>
-                    <span className="identity__path-name"><span className="identity__path-number" aria-hidden="true">{path.id === 'stable' ? 1 : 2}</span>{t(path.label)}</span>
-                    <span className="identity__path-fields">{t(path.detail)}</span>
-                    <span className="identity__path-state">{t(chosen ? "✓ Selected" : ready ? "Use this option" : "Confirm its columns first")}</span>
-                  </button>
-                );
-              }))}
-            </div>
-
-            {conflicts.length > 0 && (
-              <div className="alert alert--warn" role="alert">
-                <span className="alert__icon alert__icon--warn" aria-hidden="true">!</span>
-                <div>
-                  <p className="alert__title">
-                    {t(conflicts.length === 1 ? "One identity conflict" : `${conflicts.length} identity conflicts`)}
-                  </p>
-                  <ul className="alert__list">
-                    {conflicts.slice(0, 4).map((conflict) => (
-                      <li key={`${conflict.code}-${conflict.productHint}`}>
-                        <b>{conflict.productHint}</b>{t(" ")}
-                        {t(conflict.code === "CODE_TO_MULTIPLE_VARIANTS"
-                          ? "covers more than one pack size"
-                          : "maps to more than one product code")}
-                        : {t(conflict.values.join(", "))} {t("(rows")}{t(" ")}
-                        {conflict.sourceRows.slice(0, 6).join(", ")}
-                        {conflict.sourceRows.length > 6 ? "…" : ""})
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {t(props.notice && <p className="notice notice--info" role="status">{t(props.notice)}</p>)}
-          {t(props.error && <p className="notice notice--error" role="alert">{t(props.error)}</p>)}
-        </section>
-
-        <aside className="panel-sage">
-          <h2 className="panel-sage__title"><span aria-hidden="true">🌱</span>{t("Check your data")}</h2>
-          <p className="panel-sage__lede">{t("Review your columns and make sure StockLess has the information it needs.")}</p>
-          <ol className="sage-steps">{["Read your column names", "Match each column to a StockLess field", "Review the data preview", "Confirm your column mappings"].map(label => <li key={label}>{t(label)}</li>)}</ol>
-          <h3 className="panel-sage__subtitle">{t("Identify your products")}</h3>
-          <p className="panel-sage__lede">{t("Choose how StockLess should tell your products apart.")}</p>
-          <ol className="sage-formats">{CORE_COLUMN_PATHS.map(path => <li key={path.id}><b>{t(path.label)}</b><span>{t(path.hint)}</span></li>)}</ol>
-          {missingInformation.length > 0 && <div className="unlocks">
-            <h3 className="unlocks__title">{t("Add more, see more")}</h3>
-            <p className="unlocks__lede">{t("Confirm these columns to unlock:")}</p>
-            <ul className="unlocks__list">{missingInformation.map(group => <li key={group.fields.join('|')}><b>{group.fields.map(t).join(' + ')}</b><span>{group.analyses.map(t).join(', ')}</span></li>)}</ul>
+          {(sessionNotice || props.notice || props.error || props.proposals?.fallbackNotice || blocked) && <div className="mapping-feedback">
+            {sessionNotice && <p className="notice notice--info" role="status">{t(sessionNotice)}</p>}
+            {props.proposals && !props.proposals.usedSemanticModel && props.proposals.fallbackNotice && <p className="notice notice--info">{t(props.proposals.fallbackNotice)}</p>}
+            {props.notice && <p className="notice notice--info" role="status">{t(props.notice)}</p>}
+            {props.error && <p className="notice notice--error" role="alert">{t(props.error)}</p>}
+            {blocked && <p className="mapping-blockers" role="status">{t("Still needed: ")}{staleColumns ? t("Choose a column to continue.") : blockers.map(t).join(" · ")}</p>}
           </div>}
-          <p className="panel-sage__privacy"><span className="panel-sage__lock" aria-hidden="true">🔒</span><span><b>{t("Your data stays on your device.")}</b>{t("Your file is processed directly in your browser. Your sales data and product information are not uploaded to an AI or API service.")}</span></p>
+          <section className="mapping-card" aria-labelledby="mapping-required">
+            <div className="mapping-card__head"><span className="mapping-icon mapping-icon--solid"><WorkflowIcon name="leaf" /></span>
+              <div><h2 id="mapping-required">{t("Required")}</h2><p>{t("Needed to continue")}</p></div>
+              <span className={"mapping-pill" + (requiredCount === 3 ? " mapping-pill--ok" : " mapping-pill--missing")}>{requiredCount} {t("of")} 3 {t("matched")}{requiredCount === 3 ? " ✓" : ""}</span>
+            </div>
+            <ul className="mapping-list">
+              {fieldRow("transaction_date", "calendar", "When each sale or return happened", true)}
+              <li className="mapping-row mapping-product">
+                <span className="mapping-icon"><WorkflowIcon name="barcode" /></span>
+                <div className="mapping-label"><b>{t("Product")}</b><small>{t("How we tell products and pack sizes apart")}</small>
+                  <div className="mapping-segment" role="group" aria-label={t("Identify your products")}>
+                    <button type="button" aria-pressed={mode === "stable"} disabled={props.checking} onClick={() => props.onSelectIdentity("stable")}>{t("Product code")}</button>
+                    <button type="button" aria-pressed={mode === "composite"} disabled={props.checking} onClick={() => props.onSelectIdentity("composite")}>{t("Name + pack size")}</button>
+                  </div>
+                </div>
+                <div className="mapping-product__selects">
+                  {productFields.map(field => <div key={field}>{mode === "composite" && <label htmlFor={"mapping-" + field}>{t(FIELD_REGISTRY[field].label)}</label>}{selectControl(field, true)}</div>)}
+                </div>
+                <div className="mapping-preview">{productPreview()}</div>
+                <details className="mapping-product__more" open={supplementaryFields.some(field => warningFor(field)) || undefined}>
+                  <summary>{t(mode === "stable" ? "Product name and pack size" : "Product code (optional)")}</summary>
+                  <p>{t("Keep these details for product names, pack sizes and identity checks.")}</p>
+                  {supplementaryFields.map(field => <div className="mapping-product__detail" key={field}>
+                    <label htmlFor={"mapping-" + field}>{t(FIELD_REGISTRY[field].label)}</label>
+                    {selectControl(field)}<span className="mapping-preview">{formatPreview(columnFor(field)?.previewValues ?? [])}</span>
+                  </div>)}
+                </details>
+              </li>
+              {fieldRow("quantity_sold", "cart", "Units sold, or returned as negative numbers", true)}
+            </ul>
+          </section>
+          <section className="mapping-card" aria-labelledby="mapping-optional">
+            <div className="mapping-card__head"><span className="mapping-icon mapping-icon--amber" aria-hidden="true">🪴</span>
+              <div><h2 id="mapping-optional">{t("Optional")}</h2><p>{t('Each one adds to your results. Choose "Not in this file" to skip.')}</p></div>
+              <span className={"mapping-pill" + (optionalCount === OPTIONAL_FIELDS.length ? " mapping-pill--ok" : "")}>{optionalCount} {t("of")} {OPTIONAL_FIELDS.length} {t("matched")}</span>
+            </div>
+            <ul className="mapping-list">
+              {OPTIONAL_FIELDS.map(([field, icon, description]) => fieldRow(field, icon, description))}
+              <li className="mapping-row mapping-row--unavailable"><span className="mapping-icon"><WorkflowIcon name="cost" /></span>
+                <div className="mapping-label"><b>{t("Unit cost")}</b><small>{t("What you pay your supplier for one unit")}</small></div>
+                <div className="mapping-select"><select disabled aria-label={t("Source column for Unit cost")}><option>{t("Not yet available")}</option></select></div>
+                <span className="mapping-preview">—</span>
+              </li>
+            </ul>
+          </section>
+          <section className="mapping-unused" aria-labelledby="mapping-unused-title">
+            <h3 id="mapping-unused-title">{t("Columns we won't use")}</h3>
+            {unusedColumns.length ? <ul>{unusedColumns.map(column => <li key={column.id}>{column.header}</li>)}</ul> : <p>{t("All columns are matched.")}</p>}
+            <p>{t("These columns stay in your original file and are not used in this check.")}</p>
+          </section>
+          {otherMatchedFields.length > 0 && <details className="mapping-additional"
+            open={otherMatchedFields.some(field => warningFor(field)) || undefined}>
+            <summary>{t("Other matched columns")}</summary>
+            <p>{t("These extra suggestions are kept for later steps. You can change or clear them.")}</p>
+            {otherMatchedFields.map(field => <div className="mapping-product__detail" key={field}>
+              <label htmlFor={"mapping-" + field}>{t(FIELD_REGISTRY[field].label)}</label>
+              {selectControl(field)}<span className="mapping-preview">{formatPreview(columnFor(field)?.previewValues ?? [])}</span>
+            </div>)}
+          </details>}
+          {conflicts.length > 0 && <div className="alert alert--warn" role="alert">
+            <span className="alert__icon alert__icon--warn" aria-hidden="true">!</span><div>
+              <p className="alert__title">{t(conflicts.length === 1 ? "One identity conflict" : `${conflicts.length} identity conflicts`)}</p>
+              <ul className="alert__list">{conflicts.slice(0, 4).map(conflict => <li key={`${conflict.code}-${conflict.productHint}`}>
+                <b>{conflict.productHint}</b> {t(conflict.code === "CODE_TO_MULTIPLE_VARIANTS" ? "covers more than one pack size" : "maps to more than one product code")}: {conflict.values.join(", ")} {t("(rows")} {conflict.sourceRows.slice(0, 6).join(", ")}{conflict.sourceRows.length > 6 ? "…" : ""})
+              </li>)}</ul></div>
+          </div>}
+          <div className="mapping-saved-controls">{props.children}</div>
+        </div>
+        <aside className="mapping-help mapping-card">
+          <h2><span aria-hidden="true">🌱</span> {t("Check your data")}</h2><p>{t("Review your columns and make sure StockLess has the information it needs.")}</p>
+          <ol>{["Read your column names", "Match each column to a StockLess field", "Review the data preview", "Confirm your column mappings"].map((label, index) => <li key={label}><span className="mapping-help__number" aria-hidden="true">{index + 1}</span><span>{t(label)}</span></li>)}</ol>
+          <h3>{t("Identify your products")}</h3><p>{t("Choose how StockLess should tell your products apart.")}</p>
+          <ol>{[["One code column", "SKU, barcode or product code"], ["Product name + pack size", "Product Name + Pack Variant"]].map(([label, description], index) => <li key={label}><span className="mapping-help__number" aria-hidden="true">{index + 1}</span><span><b>{t(label)}</b><small>{t(description)}</small></span></li>)}</ol>
+          <div className="mapping-more"><b>{t("Add more, see more")}</b><small>{t("Confirm these columns to unlock:")}</small>
+            <p><b>{t("Sale date + Quantity sold")}</b><small>{t("Weeks of cover, recent weekly average, missing-week check, weekly product history")}</small></p>
+            <p><b>{t("Stock on hand + Stock count date")}</b><small>{t("Weeks of cover, purchase check, stock freshness")}</small></p>
+            <p><b>{t("Expiry date")}</b><small>{t("Expiry-aware note")}</small></p>
+          </div>
+          <p className="mapping-privacy"><span aria-hidden="true">🔒</span> {t("Processed in your browser, never uploaded.")}</p>
         </aside>
       </div>
-
-      <div className="footer-row">
-        <button type="button" className="btn--link" onClick={props.onBack}>
-          {t("← Choose another file")}</button>
-        <div className="footer-row__right">
-          {t(blockers.length > 0 && (
-            <p className="blockers">{t("Still needed: ")}{t(blockers.map(t).join(" · "))}</p>
-          ))}
-          <button
-            type="button"
-            className="btn btn--primary"
-            disabled={blockers.length > 0 || props.checking}
-            onClick={props.onContinue}
-            aria-busy={props.checking}
-          >
-            {t(props.checking && <span className="btn__spinner" aria-hidden="true" />)}
-            {t(props.checking ? "Checking locally…" : "Check my data →")}
-          </button>
-        </div>
-      </div>
-    </>
-  );
+    </main>
+  </div>;
 }
 
-/** Preview only: this does not normalise or modify source records. */
+/** Formats previews without changing the original records or translating product values. */
 function formatPreview(values: readonly string[]): string {
- const unique = [...new Set(values.map(value => value.trim()).filter(Boolean))].slice(0, 3);
- const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
- return unique.map(value => {
-   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-   if (!match || Number(match[2]) < 1 || Number(match[2]) > 12) return value;
-   return `${Number(match[3])} ${months[Number(match[2]) - 1]} ${match[1]}`;
- }).join(' · ') || '—';
+  const unique = [...new Set(values.map(value => value.trim()).filter(Boolean))].slice(0, 3);
+  return unique.map(value => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match || !parseIsoDate(value)) return value;
+    const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    return new Intl.DateTimeFormat(getLocale(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(date);
+  }).join(" · ") || "—";
 }

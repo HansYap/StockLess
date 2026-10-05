@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { HomePage } from "../src/screens/HomePage.tsx";
 import { MappingScreen } from "../src/screens/MappingScreen.tsx";
 import { PurchasePlanScreen } from "../src/screens/PurchasePlanScreen.tsx";
-import { confirmCurrentMapping } from "../src/storage/saved-matching.ts";
+import { confirmCurrentMapping } from "../src/mapping-confirmation.ts";
 import { createMappingState, getReadinessBlockers, setMapping, type MappingState, type ParsedDataset } from "../src/engine.ts";
 import { setLanguage, t } from "../src/i18n/index.ts";
 import { makeEvidence } from "./fixtures.ts";
@@ -25,8 +25,8 @@ const dataset: ParsedDataset = {
 };
 function mappingPage(mapping: MappingState) {
   return <MappingScreen dataset={dataset} mapping={mapping} proposals={null} error={null} notice={null}
-    onSelectColumn={vi.fn()} onConfirmField={vi.fn()} onConfirmIdentity={vi.fn()} onBack={vi.fn()}
-    onContinue={vi.fn()} onConfirmAllAndContinue={vi.fn()} />;
+    onSelectColumn={vi.fn()} onSelectIdentity={vi.fn()} onBack={vi.fn()}
+    onConfirmAllAndContinue={vi.fn()} />;
 }
 
 describe("first-visit bulk confirmation", () => {
@@ -49,6 +49,16 @@ describe("first-visit bulk confirmation", () => {
     render(mappingPage(partial));
     expect((screen.getByRole("button", { name: "Confirm all and continue →" }) as HTMLButtonElement).disabled).toBe(true);
   });
+  it("honours a selected identity mode and keeps it blocked when its columns are missing", () => {
+    const both = setMapping(setMapping(suggested(), "product_name", "name", false), "pack_variant", "pack", false);
+    const composite = { ...both, identityMode: "composite" as const };
+    expect(confirmCurrentMapping(composite)?.identityMode).toBe("composite");
+    expect(confirmCurrentMapping(composite)?.identityConfirmed).toBe(true);
+    const missingPack = { ...suggested(), identityMode: "composite" as const };
+    expect(confirmCurrentMapping(missingPack)?.identityMode).toBe("composite");
+    expect(confirmCurrentMapping(missingPack)?.identityConfirmed).toBe(false);
+    expect(getReadinessBlockers(confirmCurrentMapping(missingPack)!)).toContain("How your products are named or coded");
+  });
 });
 
 describe("persistent language choice across the frontend", () => {
@@ -69,7 +79,7 @@ describe("persistent language choice across the frontend", () => {
     expect(screen.queryByText(/Unique approved/)).toBeNull();
     act(() => setLanguage("ms"));
     expect(screen.getByText("Sahkan semua dan teruskan →")).toBeTruthy();
-    expect(screen.getByText("Padanan lajur")).toBeTruthy();
+    expect(screen.getByText("Semak cara kami baca fail anda")).toBeTruthy();
   });
   it("translates purchase results without translating retailer product names", () => {
     const { snapshot, forecast } = makeEvidence();

@@ -62,8 +62,8 @@ vi.mock("../src/screens/UploadScreen.tsx", () => ({
   ),
 }));
 vi.mock("../src/screens/MappingScreen.tsx", () => ({
-  MappingScreen: ({ onContinue }: { onContinue: () => void }) => (
-    <button onClick={onContinue}>Check test readiness</button>
+  MappingScreen: ({ onConfirmAllAndContinue }: { onConfirmAllAndContinue: () => void }) => (
+    <button onClick={onConfirmAllAndContinue}>Check test readiness</button>
   ),
 }));
 vi.mock("../src/screens/ReadinessScreen.tsx", () => ({

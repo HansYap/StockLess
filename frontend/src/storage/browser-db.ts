@@ -7,16 +7,19 @@
  */
 
 const DB_NAME = "stockless";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
-export type StoreName = "mapping_templates" | "datasets";
+export type StoreName = "datasets";
 
-/** Creates the stores that did not exist in the browser's previous database version. */
+/** Upgrades browser storage while preserving saved dataset work. */
 function upgrade(db: IDBDatabase, oldVersion: number): void {
-  if (oldVersion < 1) db.createObjectStore("mapping_templates", { keyPath: "headersKey" });
   if (oldVersion < 2) {
     const datasets = db.createObjectStore("datasets", { keyPath: "id" });
     datasets.createIndex("shop_and_name", ["shopKey", "nameKey"], { unique: true });
+  }
+  // Retire standalone column templates while preserving every saved dataset.
+  if (oldVersion < 3 && db.objectStoreNames.contains("mapping_templates")) {
+    db.deleteObjectStore("mapping_templates");
   }
 }
 

@@ -181,11 +181,6 @@ a.btn,a.btn:hover{text-decoration:none}
 .privacy p{margin:0}
 .privacy b{display:block;color:var(--ink);font-size:var(--text-body);line-height:1.4;margin-bottom:3px}
 .privacy span{color:var(--muted);font-size:var(--text-secondary);line-height:1.5}
-.saved-setup{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;
-  border:1px solid var(--line);border-radius:12px;background:#fff}
-.saved-setup div{display:flex;flex-direction:column;gap:3px}
-.saved-setup b{font-size:var(--text-secondary);color:var(--ink)}
-.saved-setup span{font-size:var(--text-description);line-height:1.4;color:var(--muted)}
 
 .alert{display:flex;gap:14px;padding:15px;border-radius:14px}
 .alert--error{background:var(--red-tint);border:1px solid #EFC8C3}
@@ -452,7 +447,6 @@ a.btn,a.btn:hover{text-decoration:none}
   .decision-grid,.freshness-grid{grid-template-columns:1fr}
   .ready{flex-direction:column;align-items:flex-start}
   .picker .select{min-width:0;width:100%}
-  .saved-setup{align-items:flex-start;flex-direction:column}
 }
 
 

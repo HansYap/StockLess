@@ -816,34 +816,6 @@ export const messages: Record<string, readonly [string, string]> = {
     "销售数据仅保留在本浏览器中。",
     "Angka jualan anda kekal dalam pelayar ini."
   ],
-  "Saved column matching": [
-    "已保存的字段匹配",
-    "Padanan lajur disimpan"
-  ],
-  "saved column": [
-    "组已保存的字段",
-    "padanan lajur disimpan"
-  ],
-  "matching": [
-    "匹配",
-    "padanan"
-  ],
-  "matchings": [
-    "匹配",
-    "padanan"
-  ],
-  "Only column headings and matching rules are stored for returning use.": [
-    "仅保存列标题与匹配规则，方便下次使用。",
-    "Hanya tajuk lajur dan peraturan padanan disimpan untuk kegunaan seterusnya."
-  ],
-  "Deleting…": [
-    "正在删除…",
-    "Memadam…"
-  ],
-  "Delete saved matching": [
-    "删除已保存的匹配",
-    "Padam padanan disimpan"
-  ],
   "Import cancelled.": [
     "已取消导入。",
     "Import dibatalkan."
@@ -1031,18 +1003,6 @@ export const messages: Record<string, readonly [string, string]> = {
   "Limited data": [
     "数据有限",
     "Data terhad"
-  ],
-  "We filled in the column matching you saved last time.": [
-    "已填入您上次保存的字段匹配。",
-    "Kami telah mengisi padanan lajur yang anda simpan sebelum ini."
-  ],
-  "Check each suggestion, then confirm them all at once": [
-    "检查各项建议后，可一次性全部确认",
-    "Semak setiap cadangan, kemudian sahkan semuanya sekali gus"
-  ],
-  "Confirm all": [
-    "全部确认",
-    "Sahkan semua"
   ],
   "Data readiness · snapshot": [
     "数据检查 · 快照",
@@ -1484,14 +1444,6 @@ export const messages: Record<string, readonly [string, string]> = {
     "已在本地加载商家文件。",
     "Fail peruncit dimuatkan secara setempat."
   ],
-  "Saved column matching deleted from this browser.": [
-    "已从本浏览器删除保存的字段匹配。",
-    "Padanan lajur disimpan telah dipadam daripada pelayar ini."
-  ],
-  "Saved column matching could not be deleted in this browser.": [
-    "无法删除本浏览器中保存的字段匹配。",
-    "Padanan lajur disimpan tidak dapat dipadam dalam pelayar ini."
-  ],
   "The mapping could not be updated.": [
     "无法更新字段匹配。",
     "Padanan tidak dapat dikemas kini."
@@ -1503,14 +1455,6 @@ export const messages: Record<string, readonly [string, string]> = {
   "The identity could not be confirmed.": [
     "无法确认商品标识方式。",
     "Cara pengenalan produk tidak dapat disahkan."
-  ],
-  "Matching saved for next time": [
-    "匹配已保存，下次可用",
-    "Padanan disimpan untuk kegunaan seterusnya"
-  ],
-  "Matching could not be saved in this browser. You can still continue.": [
-    "无法在此浏览器保存匹配，您仍可继续。",
-    "Padanan tidak dapat disimpan dalam pelayar ini. Anda masih boleh meneruskan."
   ],
   "Readiness evidence needs to be refreshed": [
     "需要更新数据检查结果",
@@ -2175,14 +2119,6 @@ export const messages: Record<string, readonly [string, string]> = {
   "Required data is enough to continue. Optional data unlocks more features when you have it.": [
     "提供必填数据即可继续。补充可选数据后，可以使用更多功能。",
     "Data wajib mencukupi untuk meneruskan. Data pilihan membolehkan lebih banyak fungsi apabila tersedia."
-  ],
-  "Your raw CSV rows are processed in this browser and no account is required. StockLess may save column headings and confirmed matching rules in this browser, but your preview values, rows, derived series, and product identifiers are not uploaded to an AI or API service.": [
-    "原始 CSV 在此浏览器中处理，无需账户。StockLess 可能保存列标题及已确认的匹配规则，但不会将预览值、原始行、派生序列或商品标识上传至 AI 或 API 服务。",
-    "Baris CSV asal diproses dalam pelayar ini tanpa akaun. StockLess mungkin menyimpan tajuk lajur dan peraturan padanan disahkan, tetapi nilai pratonton, baris, siri terbitan dan pengenal produk tidak dimuat naik ke perkhidmatan AI atau API."
-  ],
-  "Only saved column matching remains for returning use. Dataset rows, forecasts and purchase plans stay in the active session and are not saved in the browser database.": [
-    "仅保存字段匹配供下次使用。数据行、预测和采购计划仅存在于当前会话，不会保存到浏览器数据库。",
-    "Hanya padanan lajur disimpan untuk kegunaan seterusnya. Baris data, ramalan dan pelan pembelian kekal dalam sesi aktif dan tidak disimpan dalam pangkalan data pelayar."
   ],
   "Duplicate rows not yet decided": [
     "重复行尚未处理",
@@ -3074,7 +3010,6 @@ Object.assign(messages, {
   "Choose CSV or Excel file": ["选择 CSV 或 Excel 文件", "Pilih fail CSV atau Excel"],
   ".csv, .xlsx or .xls": [".csv、.xlsx 或 .xls", ".csv, .xlsx atau .xls"],
   "Excel uses the first worksheet with data": ["Excel 将使用第一个有数据的工作表", "Excel menggunakan helaian pertama yang mengandungi data"],
-  "Your CSV or Excel file is processed in this browser and no account is required. StockLess may save column headings and confirmed matching rules in this browser, but your preview values, rows, derived series, and product identifiers are not uploaded to an AI or API service.": ["CSV 或 Excel 文件仅在此浏览器中处理，无需账户。StockLess 可能保存列标题及已确认的匹配规则，但不会将预览值、原始行、派生序列或商品标识上传至 AI 或 API 服务。", "Fail CSV atau Excel anda diproses dalam pelayar ini tanpa akaun. StockLess mungkin menyimpan tajuk lajur dan peraturan padanan yang disahkan, tetapi nilai pratonton, baris, siri terbitan dan pengecam produk tidak dimuat naik ke perkhidmatan AI atau API."],
   "Every source row is tracked through readiness; none is silently discarded.": ["每一行原始数据都会被追踪，不会被悄悄丢弃。", "Setiap baris sumber dijejaki; tiada yang dibuang secara senyap."],
   "Matching rows need your decision": ["相同记录需要您作出决定", "Baris sepadan memerlukan keputusan anda"],
   "StockLess checks whether each sale date can be interpreted reliably. Invalid or ambiguous dates are flagged.": ["StockLess 检查每个销售日期是否可靠；无效或含糊的日期会被标记。", "StockLess menyemak sama ada setiap tarikh jualan boleh ditafsir dengan yakin. Tarikh tidak sah atau kabur ditandakan."],
@@ -3185,5 +3120,151 @@ Object.assign(messages, {
   "Your CSV or Excel file is processed in this browser and no account is required. If you save a dataset, StockLess keeps its records, settings and plans in this browser. Your file is not uploaded to an AI or API service.": [
     "CSV 或 Excel 文件只在此浏览器中处理，无需账户。如果您保存数据集，StockLess 会将其记录、设置和计划保存在此浏览器中。文件不会上传至 AI 或 API 服务。",
     "Fail CSV atau Excel anda diproses dalam pelayar ini tanpa akaun. Jika anda menyimpan set data, StockLess menyimpan rekod, tetapan dan rancangannya dalam pelayar ini. Fail anda tidak dimuat naik ke perkhidmatan AI atau API."
+  ]
+});
+
+Object.assign(messages, {
+  "Step 2 of 4": [
+    "第 2 步 / 共 4 步",
+    "Langkah 2 / 4"
+  ],
+  "Sample": [
+    "示例",
+    "Sampel"
+  ],
+  "Read": [
+    "已读取",
+    "Sudah dibaca"
+  ],
+  "Change": [
+    "换文件",
+    "Tukar fail"
+  ],
+  "Check how we read your file": [
+    "确认我们读对了您的文件",
+    "Semak cara kami baca fail anda"
+  ],
+  "We matched your columns by their names. Fix anything that's wrong, then confirm. Your file isn't changed.": [
+    "我们已按栏位名称自动对应。如有不对请改正，再按确认。原文件不会被改动。",
+    "Kami padankan lajur anda ikut namanya. Betulkan mana yang salah, kemudian sahkan. Fail asal anda tak diubah."
+  ],
+  "Needed to continue": [
+    "缺了就无法继续",
+    "Perlu ada untuk teruskan"
+  ],
+  "Each one adds to your results. Choose \"Not in this file\" to skip.": [
+    "每多一栏，结果就更完整。没有的话选“文件里没有”即可。",
+    "Setiap satu menambah maklumat. Pilih \"Tiada dalam fail\" untuk langkau."
+  ],
+  "matched": [
+    "已对应",
+    "dipadankan"
+  ],
+  "When each sale or return happened": [
+    "每笔销售或退货的日期",
+    "Bila jualan atau pemulangan berlaku"
+  ],
+  "How we tell products and pack sizes apart": [
+    "用来分辨商品和规格",
+    "Cara kami bezakan produk dan saiz pek"
+  ],
+  "Units sold, or returned as negative numbers": [
+    "卖出的数量，退货写负数",
+    "Unit dijual; pemulangan ditulis negatif"
+  ],
+  "How much is on the shelf": [
+    "货架上现在有多少",
+    "Berapa banyak di rak sekarang"
+  ],
+  "When that stock was counted": [
+    "库存是哪天点的",
+    "Bila stok itu dikira"
+  ],
+  "Orders you plan to place": [
+    "您打算下的订单",
+    "Pesanan yang anda nak buat"
+  ],
+  "Ordered but not yet arrived": [
+    "已订货但还没到",
+    "Sudah dipesan tapi belum sampai"
+  ],
+  "When each batch expires": [
+    "每批货的到期日",
+    "Bila setiap kelompok luput"
+  ],
+  "What you pay your supplier for one unit": [
+    "每件向供应商进货的价钱",
+    "Harga yang anda bayar kepada pembekal untuk satu unit"
+  ],
+  "Product code": [
+    "商品代码",
+    "Kod produk"
+  ],
+  "Name + pack size": [
+    "名称 + 规格",
+    "Nama + saiz pek"
+  ],
+  "This column is already used above.": [
+    "这一栏上面已经用过了。",
+    "Lajur ini sudah dipakai di atas."
+  ],
+  "Choose a column to continue.": [
+    "请先选一栏才能继续。",
+    "Pilih satu lajur dulu untuk teruskan."
+  ],
+  "Columns we won't use": [
+    "用不到的栏位",
+    "Lajur yang kami tak guna"
+  ],
+  "Processed in your browser, never uploaded.": [
+    "只在浏览器里处理，不会上传。",
+    "Diproses dalam pelayar anda sahaja, tak dimuat naik."
+  ],
+  "Confirm and check my data →": [
+    "确认，开始检查数据 →",
+    "Sahkan dan semak data →"
+  ],
+  "Product Name + Pack Variant": [
+    "Product Name + Pack Variant",
+    "Product Name + Pack Variant"
+  ],
+  "Sale date + Quantity sold": [
+    "销售日期 + 卖出数量",
+    "Tarikh jualan + Kuantiti dijual"
+  ],
+  "Weeks of cover, recent weekly average, missing-week check, weekly product history": [
+    "库存能卖几周、最近每周平均、哪几周没数据、每周销量记录",
+    "Tempoh bekalan, purata mingguan terkini, semakan minggu tanpa data, sejarah jualan mingguan"
+  ],
+  "Stock on hand + Stock count date": [
+    "现有库存 + 盘点日期",
+    "Stok sedia ada + Tarikh kiraan stok"
+  ],
+  "Weeks of cover, purchase check, stock freshness": [
+    "库存能卖几周、进货检查、库存新不新",
+    "Tempoh bekalan, semakan belian, seberapa baru kiraan stok"
+  ],
+  "Product name and pack size": [
+    "商品名称和规格",
+    "Nama produk dan saiz pek"
+  ],
+  "Product code (optional)": [
+    "商品代码（选填）",
+    "Kod produk (pilihan)"
+  ],
+  "Keep these details for product names, pack sizes and identity checks.": [
+    "保留这些资料，用于显示商品名称、规格和检查商品标识。",
+    "Simpan butiran ini untuk nama produk, saiz pek dan semakan identiti."
+  ],
+  "These columns stay in your original file and are not used in this check.": [
+    "这些栏位保留在原文件中，不用于本次检查。",
+    "Lajur ini kekal dalam fail asal anda dan tidak digunakan dalam semakan ini."
+  ],
+  "columns": ["栏", "lajur"],
+  "Other matched columns": ["其他已对应栏位", "Lajur lain yang dipadankan"],
+  "These extra suggestions are kept for later steps. You can change or clear them.": ["这些额外建议保留用于后续步骤。您可以更改或清除它们。", "Cadangan tambahan ini disimpan untuk langkah seterusnya. Anda boleh mengubah atau mengosongkannya."],
+  "All columns are matched.": [
+    "所有栏位均已对应。",
+    "Semua lajur telah dipadankan."
   ]
 });

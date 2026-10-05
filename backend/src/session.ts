@@ -11,12 +11,11 @@ import { createMappingState } from "./mapping.ts";
 
 /** Documents browser-local persistence. */
 export const PERSISTENCE_POLICY = Object.freeze({
-  retailerDataStores: Object.freeze(["mapping_templates", "datasets"]),
+  retailerDataStores: Object.freeze(["datasets"]),
   allowedPersistentContent: Object.freeze([
     "static application assets",
     "local AI model assets",
-    "normalized column headings and confirmed column-matching rules",
-    "named shops and parsed datasets in IndexedDB",
+    "named shops and parsed datasets with their column setup in IndexedDB",
     "dataset-specific settings, purchase plans, supplier terms, decisions and outcomes",
   ]),
   prohibitedPersistentContent: Object.freeze([

@@ -39,7 +39,7 @@ export function ReturningPage() {
   };
 
   const clearAll = async () => {
-    if (!window.confirm("Clear Everything? All saved datasets, records, settings, plans, decisions, outcomes and column matchings will be removed.")) return;
+    if (!window.confirm("Clear Everything? All saved datasets, records, settings, plans, decisions and outcomes will be removed.")) return;
     setBusy(true);
     try {
       await clearEverything();

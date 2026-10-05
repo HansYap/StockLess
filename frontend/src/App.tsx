@@ -1,7 +1,6 @@
 import { t, useLanguage } from "./i18n/index.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
-import { SavedMatchingBar } from "./components/SavedMatchingBar.tsx";
 import { SavedDataControls, SaveDatasetControls } from "./components/SavedDataControls.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
@@ -11,11 +10,8 @@ import { ImpactDashboard } from "./screens/ImpactDashboard.tsx";
 import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from "./purchase-plan/model.ts";
 import {
   MappingConflictError,
-  FIELD_REGISTRY,
   getReadinessBlockers,
   clearActiveSession,
-  confirmIdentityMode,
-  confirmMappingWithRelease,
   createEmptySession,
   correctionReportMetadata,
   proposeMappings,
@@ -41,15 +37,7 @@ import { runDemandForecastInWorker } from "./workers/forecast-client.ts";
 import { runReadinessCheckInWorker } from "./workers/readiness-client.ts";
 import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
-import {
-  confirmAllMatches,
-  confirmCurrentMapping,
-  countSavedMatchings,
-  deleteAllSavedMatchings,
-  loadSavedMatching,
-  saveMatching,
-  type SavedMatchingDifferences,
-} from "./storage/saved-matching.ts";
+import { confirmCurrentMapping } from "./mapping-confirmation.ts";
 import {
   clearEverything, createSavedDataset, findSavedDataset, getSavedDataset,
   listSavedDatasets, recordDecision, recordOutcome, removeSavedDataset,
@@ -75,15 +63,6 @@ function seedFromProposals(base: MappingState, proposals: MappingProposalResult)
 /** Returns the retailer-facing calendar date in the specification's fixed zone. */
 function malaysiaDate(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
-}
-
-export function summarizeColumns(columns: readonly string[]): string {
-  if (columns.length === 0) return "none";
-  return columns.map((column) => `“${column}”`).join(", ");
-}
-
-function mismatchNotice(differences: SavedMatchingDifferences): string {
-  return `Saved matching not used because the columns changed. Missing: ${summarizeColumns(differences.missingColumns)}. New: ${summarizeColumns(differences.newColumns)}. Match the columns manually.`;
 }
 
 interface AppProps {
@@ -113,9 +92,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [dateConfirmations, setDateConfirmations] = useState<readonly DateFormatConfirmation[]>([]);
   const [duplicateDecisions, setDuplicateDecisions] = useState<Readonly<Record<string, DuplicateDecision>>>({});
   const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
-  const [savedMatchingOffered, setSavedMatchingOffered] = useState(false);
-  const [savedMatchingCount, setSavedMatchingCount] = useState(0);
-  const [deletingSavedMatchings, setDeletingSavedMatchings] = useState(false);
   const [savedDatasets, setSavedDatasets] = useState<readonly SavedDatasetSummary[]>([]);
   const [selectedSaved, setSelectedSaved] = useState<SavedDataset | null>(null);
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
@@ -130,14 +106,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const forecastAbort = useRef<AbortController | null>(null);
 
   const dataset = envelope.session.dataset;
-
-  useEffect(() => {
-    let active = true;
-    void countSavedMatchings().then((count) => {
-      if (active) setSavedMatchingCount(count);
-    });
-    return () => { active = false; };
-  }, []);
 
   const refreshSavedDatasets = useCallback(async () => {
     setSavedDatasets(await listSavedDatasets());
@@ -297,7 +265,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setForecast(saved.forecast);
     setPurchaseDrafts(saved.purchaseDrafts);
     setProposals(null);
-    setSavedMatchingOffered(false);
     setProductKey(null);
     setShowImpact(false);
     setReadinessError(null);
@@ -346,17 +313,15 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       setUpdateTargetId(null);
       return;
     }
-    const saved = await loadSavedMatching(next);
-    const proposed = saved ? null : await proposeMappings(parsed, createLocalSemanticScorer(signal));
-    if (target) await replaceSavedDataset(target.id, saved?.envelope ?? next, malaysiaDate());
+    const proposed = await proposeMappings(parsed, createLocalSemanticScorer(signal));
+    const importedEnvelope = updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed));
+    if (target) await replaceSavedDataset(target.id, importedEnvelope, malaysiaDate());
     resetReadinessEvidence();
     setProposals(proposed);
-    setSavedMatchingOffered(saved?.offered ?? false);
-    const importedEnvelope = saved?.envelope ?? updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed!));
     setEnvelope(importedEnvelope);
-    lastSavedEnvelope.current = target ? saved?.envelope ?? next : null;
+    lastSavedEnvelope.current = target ? importedEnvelope : null;
     setMappingError(null);
-    setMappingNotice(saved?.differences ? mismatchNotice(saved.differences) : null);
+    setMappingNotice(null);
     setProductKey(null);
     setAnalysisDate(malaysiaDate());
     setActiveSavedId(target?.id ?? null);
@@ -372,18 +337,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     goTo(2);
   }, [envelope, goTo, refreshSavedDatasets, resetReadinessEvidence, updateTargetId]);
 
-  const handleDeleteSavedMatchings = useCallback(async () => {
-    setDeletingSavedMatchings(true);
-    const deleted = await deleteAllSavedMatchings();
-    setDeletingSavedMatchings(false);
-    if (deleted) {
-      setSavedMatchingCount(0);
-      setSessionNotice("Saved column matching deleted from this browser.");
-    } else {
-      setSessionNotice("Saved column matching could not be deleted in this browser.");
-    }
-  }, []);
-
   const handleSelectColumn = useCallback((field: CanonicalField, sourceColumnId: string | null) => {
     setMappingError(null);
     setMappingNotice(null);
@@ -393,7 +346,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
         const mapping = sourceColumnId
           ? setMapping(current.session.mapping, field, sourceColumnId, false)
           : removeMapping(current.session.mapping, field);
-        return updateSessionMapping(current, mapping);
+        return updateSessionMapping(current, ["product_code", "product_name", "pack_variant"].includes(field)
+          ? Object.freeze({ ...mapping, identityConfirmed: false }) : mapping);
       } catch (error) {
         setMappingError(
           error instanceof MappingConflictError
@@ -405,40 +359,13 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     });
   }, [resetReadinessEvidence]);
 
-  const handleConfirmField = useCallback((field: CanonicalField) => {
+  const handleSelectIdentity = useCallback((mode: "stable" | "composite") => {
     setMappingError(null);
     setMappingNotice(null);
     resetReadinessEvidence();
-    setEnvelope((current) => {
-      try {
-        const result = confirmMappingWithRelease(current.session.mapping, field);
-        if (result.releasedFields.length > 0) {
-          const released = result.releasedFields.map((releasedField) => FIELD_REGISTRY[releasedField].label);
-          setMappingNotice(
-            `${released.join(" and ")} ${released.length === 1 ? "was" : "were"} released and ${released.length === 1 ? "is" : "are"} now Not matched yet.`,
-          );
-        }
-        return updateSessionMapping(current, result.state);
-      } catch (error) {
-        setMappingError(error instanceof Error ? error.message : "The field could not be confirmed.");
-        return current;
-      }
-    });
-  }, [resetReadinessEvidence]);
-
-  const handleConfirmIdentity = useCallback((mode: "stable" | "composite") => {
-    setMappingError(null);
-    setMappingNotice(null);
-    resetReadinessEvidence();
-    setEnvelope((current) => {
-      try {
-        const withMode = updateSessionMapping(current, confirmIdentityMode(current.session.mapping, mode));
-        return recordConfirmedIdentity(withMode);
-      } catch (error) {
-        setMappingError(error instanceof Error ? error.message : "The identity could not be confirmed.");
-        return current;
-      }
-    });
+    setEnvelope((current) => updateSessionMapping(current, Object.freeze({
+      ...current.session.mapping, identityMode: mode, identityConfirmed: false,
+    })));
   }, [resetReadinessEvidence]);
 
   const handleConfirmDateFormat = useCallback((sourceColumnId: string, format: ConfirmedDateFormat) => {
@@ -498,13 +425,12 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   }, [activeSavedId, handleClearSession, refreshSavedDatasets, savedDatasets, selectedSaved?.id]);
 
   const handleClearEverything = useCallback(async () => {
-    if (!window.confirm("Clear Everything? All saved datasets, records, settings, plans, decisions, outcomes and column matchings will be removed. This cannot be undone.")) return;
+    if (!window.confirm("Clear Everything? All saved datasets, records, settings, plans, decisions and outcomes will be removed. This cannot be undone.")) return;
     try {
       await clearEverything();
       try { localStorage.removeItem("stockless.language"); } catch { /* Browser preferences may be disabled. */ }
       handleClearSession();
       setSelectedSaved(null);
-      setSavedMatchingCount(0);
       await refreshSavedDatasets();
       setSessionNotice("Nothing saved. Start by uploading a dataset.");
     } catch { setSaveError("Saved information could not be cleared. Retry Clear Everything."); }
@@ -562,16 +488,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     mappingSubmit.current = true;
     setMappingSubmitting(true);
     try {
-    const shouldSave = activeEnvelope.session.dataset?.sourceMode === "user";
-    const saved = await saveMatching(activeEnvelope);
-    if (saved) {
-      setSessionNotice("Matching saved for next time");
-      setSavedMatchingCount(await countSavedMatchings());
-    } else if (shouldSave) {
-      setSessionNotice("Matching could not be saved in this browser. You can still continue.");
-    }
-    if (activeSavedId) await persistWork(activeSavedId, { envelope: activeEnvelope, analysisDate });
-    await executeReadiness(dateConfirmations, duplicateDecisions, true, activeEnvelope);
+      if (activeSavedId) await persistWork(activeSavedId, { envelope: activeEnvelope, analysisDate });
+      await executeReadiness(dateConfirmations, duplicateDecisions, true, activeEnvelope);
     } finally { mappingSubmit.current = false; setMappingSubmitting(false); }
   }, [activeSavedId, analysisDate, dateConfirmations, duplicateDecisions, envelope, executeReadiness, persistWork]);
 
@@ -598,7 +516,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       onNavigate={goTo}
       sourceMode={envelope.session.sourceMode}
       sourceName={dataset?.sourceName}
-      notice={sessionNotice}
+      notice={step === 2 ? null : sessionNotice}
       onClear={dataset ? handleClearSession : undefined}
     >
       {saveError && <p role="alert">{saveError} {retrySave.current && <button type="button" onClick={() => void retrySave.current?.()}>Retry</button>}</p>}
@@ -650,21 +568,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
         <UploadScreen
           onSource={handleSource}
           onCancel={handleClearSession}
-          savedMatchingCount={savedMatchingCount}
-          deletingSavedMatchings={deletingSavedMatchings}
-          onDeleteSavedMatchings={() => void handleDeleteSavedMatchings()}
-        />
-      ))}
-
-      {step === 2 && dataset?.sourceMode === "user" && !activeSavedId &&
-        <SaveDatasetControls key={envelope.session.id} defaultName={dataset.sourceName.replace(/\.[^.]+$/, "")}
-          shops={[...new Set(savedDatasets.map((item) => item.shopName))]}
-          onSave={handleSaveDataset} />}
-
-      {t(step === 2 && dataset && savedMatchingOffered && (
-        <SavedMatchingBar
-          mapping={envelope.session.mapping}
-          onConfirmAll={() => setEnvelope((current) => confirmAllMatches(current))}
         />
       ))}
 
@@ -675,14 +578,20 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
           proposals={proposals}
           error={mappingError}
           notice={mappingNotice}
+          sessionNotice={sessionNotice}
+          onClear={handleClearSession}
           onSelectColumn={handleSelectColumn}
-          onConfirmField={handleConfirmField}
-          onConfirmIdentity={handleConfirmIdentity}
+          onSelectIdentity={handleSelectIdentity}
           onBack={() => setStep(1)}
-          onContinue={() => void handleMappingContinue()}
           checking={readinessLoading || mappingSubmitting}
           onConfirmAllAndContinue={() => void handleConfirmAllAndContinue()}
-        />
+        >
+          {dataset.sourceMode === "user" && !activeSavedId && (
+            <SaveDatasetControls key={envelope.session.id} defaultName={dataset.sourceName.replace(/\.[^.]+$/, "")}
+              shops={[...new Set(savedDatasets.map((item) => item.shopName))]}
+              onSave={handleSaveDataset} />
+          )}
+        </MappingScreen>
       ))}
 
       {t(step === 3 && dataset && readiness && (

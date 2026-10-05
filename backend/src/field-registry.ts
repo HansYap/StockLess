@@ -203,5 +203,5 @@ export const PRIVACY_NOTICE = Object.freeze({
   beforeUpload:
     "Your CSV or Excel file is processed in this browser and no account is required. If you save a dataset, StockLess keeps its records, settings and plans in this browser. Your file is not uploaded to an AI or API service.",
   persistence:
-    "Saved datasets, plans, supplier terms, decisions and outcomes remain in this browser for returning use. Clear Everything removes them and saved column matchings.",
+    "Saved datasets, plans, supplier terms, decisions and outcomes remain in this browser for returning use. Clear Everything removes all saved information.",
 });

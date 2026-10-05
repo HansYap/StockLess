@@ -4,7 +4,7 @@ import "../i18n/language.css";
 /** Native select keeps the compact language control keyboard and touch accessible. */
 export function LanguageSwitcher({ compact = false }: { readonly compact?: boolean }) {
   const language = useLanguage();
-  return <label className={compact ? "upload-language" : "language-switcher"}>
+  return <label className={compact ? "workflow-language" : "language-switcher"}>
     {!compact && <svg viewBox="0 0 36 32" width="28" height="26" aria-hidden="true">
       <path d="M3 2h18v23H9l-6 5Z" fill="#86c7a1" />
       <path d="M20 2h10a3 3 0 0 1 3 3v20H20Z" fill="#d6eddd" />

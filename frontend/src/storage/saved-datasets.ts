@@ -227,12 +227,11 @@ export async function removeSavedDataset(id: string): Promise<void> {
   await withStore<undefined>("datasets", "readwrite", (store) => store.delete(id));
 }
 
-/** Includes the legacy matching templates, so Clear Everything really clears the browser database. */
+/** Clears all saved dataset work after pending edits finish. */
 export async function clearEverything(): Promise<void> {
   await Promise.all([...pendingMutations.values()].map((operation) => operation.catch(() => undefined)));
-  await withTransaction<void>(["datasets", "mapping_templates"], "readwrite", (transaction, result) => {
+  await withTransaction<void>(["datasets"], "readwrite", (transaction, result) => {
     transaction.objectStore("datasets").clear();
-    transaction.objectStore("mapping_templates").clear();
     result(undefined);
   });
 }

@@ -18,7 +18,7 @@ function salesFile(name = "sales.csv") {
 }
 
 function upload(onSource = vi.fn<ImportSource>(async () => {}), onCancel = vi.fn()) {
-  render(<UploadScreen onSource={onSource} onCancel={onCancel} savedMatchingCount={0} deletingSavedMatchings={false} onDeleteSavedMatchings={() => {}} />);
+  render(<UploadScreen onSource={onSource} onCancel={onCancel} />);
   return { onSource, onCancel, input: screen.getByLabelText("Choose CSV or Excel file") };
 }
 
@@ -80,13 +80,10 @@ it("cancels an active import and prevents its late rejection from appearing", as
   expect(screen.queryByText("sales.csv")).toBeNull();
 });
 
-it("continues directly with sample data and retains saved matching deletion", async () => {
+it("continues directly with sample data", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, text: async () => "date,sku,qty\n2026-09-15,A1,2" } as Response);
   const onSource = vi.fn<ImportSource>(async () => {});
-  const onDeleteSavedMatchings = vi.fn();
-  render(<UploadScreen onSource={onSource} onCancel={() => {}} savedMatchingCount={2} deletingSavedMatchings={false} onDeleteSavedMatchings={onDeleteSavedMatchings} />);
-  fireEvent.click(screen.getByRole("button", { name: "Delete saved matching" }));
-  expect(onDeleteSavedMatchings).toHaveBeenCalledOnce();
+  render(<UploadScreen onSource={onSource} onCancel={() => {}} />);
   fireEvent.click(screen.getByRole("button", { name: "Use sample file" }));
   await waitFor(() => expect(onSource).toHaveBeenCalledOnce());
   expect(onSource.mock.calls[0]?.[2]).toBe("sample");
