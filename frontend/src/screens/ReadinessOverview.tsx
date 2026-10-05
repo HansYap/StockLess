@@ -1,124 +1,66 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { t, useLanguage } from "../i18n/index.ts";
-import type { ProductTimeline, ReadinessSnapshot } from "../engine.ts";
+import { previousCompleteWeekStarts, type ProductTimeline, type ReadinessSnapshot } from "../engine.ts";
+import { FOOD_CATEGORIES, type FoodCategory } from "../readiness/categories.ts";
+import { buildReadinessProducts, type ProductSummary, type ProductStatus } from "../readiness/model.ts";
+export { foodCategory } from "../readiness/categories.ts";
+const LABELS: Record<ProductStatus, string> = { ready: "Ready", review: "Need review", missing: "Missing data" };
+const NOTES: Record<ProductStatus, string> = { ready: "Complete data, no major issues", review: "Usable, with something to check", missing: "Can't be planned yet" };
 
-type Status = "ready" | "review" | "missing";
-const LABELS: Record<Status, string> = { ready: "Ready", review: "Need review", missing: "Missing data" };
-
-const FOOD_CATEGORIES = ["Produce", "Dairy & eggs", "Meat & seafood", "Bakery", "Beverages", "Pantry & snacks", "Other"] as const;
-export function foodCategory(name: string): (typeof FOOD_CATEGORIES)[number] {
-  const value = name.toLowerCase();
-  if (/apple|banana|pear|berry|mango|orange|grape|lettuce|tomato|potato|carrot|onion|vegetable|fruit|sayur|buah/.test(value)) return "Produce";
-  if (/milk|yogurt|cheese|butter|egg|susu|telur/.test(value)) return "Dairy & eggs";
-  if (/chicken|beef|fish|salmon|tuna|prawn|meat|ayam|ikan|daging/.test(value)) return "Meat & seafood";
-  if (/bread|bun|cake|pastry|croissant|roti/.test(value)) return "Bakery";
-  if (/drink|juice|water|coffee|tea|soda|milk tea|minuman|kopi|teh|milo|nescafe|air mineral/.test(value)) return "Beverages";
-  if (/rice|noodle|pasta|sauce|oil|flour|sugar|snack|chips|cereal|biscuit|beras|mee|mi segera|biskut|keropok|gula|garam|tepung|minyak|kicap|sos cili|sardin|serbuk kari|cuka/.test(value)) return "Pantry & snacks";
-  return "Other";
+function weeksFor(product: ProductSummary, date: string) {
+  return previousCompleteWeekStarts(date).map(start => ({ start, evidence: product.timeline?.weeks.find(week => week.weekStart === start) }));
+}
+function WeeklySales({ product, date }: { product: ProductSummary; date: string }) {
+  const weeks = weeksFor(product, date), maximum = Math.max(1, ...weeks.map(week => Math.abs(week.evidence?.netQuantity ?? 0)));
+  return <div className="rd-weekly"><small>{t("Weekly sales")}</small><span className="spark rd-bars" role="img" aria-label={weeks.map(week => week.start + ": " + (week.evidence?.state && week.evidence.state !== "missing" ? week.evidence.netQuantity : t("Missing — not zero sales"))).join("; ")}>
+    {weeks.map(({ start, evidence }) => <span className="rd-bar" key={start} title={start + ": " + (evidence?.netQuantity ?? t("Missing — not zero sales"))}>
+      <span>{evidence?.netQuantity ?? "—"}</span><i className={!evidence || evidence.state === "missing" ? "spark__bar--missing" : (evidence.netQuantity ?? 0) < 0 ? "rd-bar--negative" : ""} style={{ height: !evidence || evidence.state === "missing" ? 6 : Math.max(3, Math.abs(evidence.netQuantity ?? 0) / maximum * 28) }} /><small>{start.slice(5)}</small>
+    </span>)}
+  </span></div>;
 }
 
-function WeeklySales({ timeline }: { timeline?: ProductTimeline }) {
-  const weeks = timeline?.weeks.slice(-8) ?? [];
-  const maximum = Math.max(1, ...weeks.map(w => Math.abs(w.netQuantity ?? 0)));
-  return <div className="pcard__trend"><span className="pcard__key">{t("Weekly sales")}</span>
-    {weeks.length === 0 ? <span className="spark spark--empty">{t("No valid demand rows are available.")}</span> :
-      <span className="spark spark--labelled" role="img" aria-label={weeks.map(w => `${w.weekStart}: ${w.state === "missing" ? t("Missing — not zero sales") : w.netQuantity}`).join("; ")}>
-        {weeks.map(w => <span className="spark__col" key={w.weekStart} title={`${w.weekStart}: ${w.state === "missing" ? t("Missing — not zero sales") : w.netQuantity}`}>
-          <span className="spark__value">{w.netQuantity ?? "—"}</span>
-          <span className={`spark__bar${w.state === "missing" ? " spark__bar--missing" : (w.netQuantity ?? 0) < 0 ? " spark__bar--negative" : ""}`} style={{ height: w.state === "missing" ? 7 : `${Math.max(3, Math.abs(w.netQuantity ?? 0) / maximum * 28)}px` }} />
-          <span className="spark__day">{w.weekStart.slice(5)}</span>
-        </span>)}
-      </span>}
-  </div>;
-}
-
-export function ReadinessOverview({ snapshot, timelines }: { snapshot: ReadinessSnapshot; timelines: readonly ProductTimeline[] }) {
+export function ReadinessOverview({ snapshot, timelines, products: supplied }: { snapshot: ReadinessSnapshot; timelines: readonly ProductTimeline[]; products?: readonly ProductSummary[] }) {
   useLanguage();
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("age");
-  const [category, setCategory] = useState("All foods");
-  const products = useMemo(() => {
-    const rowsByKey = new Map<string, (typeof snapshot.rows)[number][]>();
-    const rowKeys = new Map<number, string>();
-    for (const row of snapshot.rows) {
-      if (!row.productKey) continue;
-      const group = rowsByKey.get(row.productKey) ?? [];
-      group.push(row);
-      rowsByKey.set(row.productKey, group);
-      rowKeys.set(row.sourceRow, row.productKey);
-    }
-    const issuesByKey = new Map<string, (typeof snapshot.issues)[number][]>();
-    for (const issue of snapshot.issues) {
-      const key = issue.productKey ?? rowKeys.get(issue.sourceRow);
-      if (!key) continue;
-      const group = issuesByKey.get(key) ?? [];
-      group.push(issue);
-      issuesByKey.set(key, group);
-    }
-    const stockByKey = new Map(snapshot.productStock.map(stock => [stock.productKey, stock]));
-    const timelineByKey = new Map(timelines.map(timeline => [timeline.productKey, timeline]));
-    const keys = new Set([...snapshot.rows.flatMap(row => row.productKey ? [row.productKey] : []), ...snapshot.productStock.map(stock => stock.productKey)]);
-    return [...keys].map(key => {
-      const rows = rowsByKey.get(key) ?? [];
-      const values = rows.find(row => row.interpretedValues.productName)?.interpretedValues ?? rows[0]?.interpretedValues;
-      const stock = stockByKey.get(key);
-      const timeline = timelineByKey.get(key);
-      const issues = (issuesByKey.get(key) ?? []).filter(issue => issue.issueCode !== "DUPLICATE_CANDIDATE" && issue.issueCode !== "DUPLICATE_CONFIRMED");
-      const blocked = snapshot.productLimitations.some(item => item.productKey === key);
-      const excluded = !rows.some(row => row.useState !== "excluded");
-      const status: Status = excluded || !stock?.usableForCover || stock.freshness.state === "unusable" ? "missing"
-        : issues.length > 0 || blocked || stock.freshness.state === "limited" || !timeline || timeline.summary.missingWeekCount > 0 ? "review" : "ready";
-      const reasons = [...new Set([
-        ...issues.map(issue => issue.reason),
-        ...snapshot.productLimitations.filter(item => item.productKey === key).map(item => item.message),
-        ...(!stock?.usableForCover ? ["Stock evidence is incomplete or cannot be relied on."] : stock.freshness.state === "limited" ? ["The stock count is getting old. A fresher count would be better."] : []),
-        ...(timeline?.summary.missingWeekCount ? ["Some weeks are missing — they are not zero sales."] : []),
-      ])];
-      const name = values?.productName ?? values?.productCode ?? key;
-      return { key, name, category: foodCategory(name), code: values?.productCode ?? key, pack: values?.packVariant, stock, timeline, status, reasons };
-    });
-  }, [snapshot, timelines]);
-  const counts = { ready: 0, review: 0, missing: 0 };
-  products.forEach(p => counts[p.status]++);
+  const derived = useMemo(() => supplied ?? buildReadinessProducts(snapshot, timelines), [supplied, snapshot, timelines]);
+  const [search, setSearch] = useState(""), [category, setCategory] = useState<FoodCategory | null>(null);
+  const [status, setStatus] = useState<ProductStatus | null>(null), [expanded, setExpanded] = useState(false);
+  const [selected, setSelected] = useState<ProductSummary | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { setSearch(""); setCategory(null); setStatus(null); setExpanded(false); dialog.current?.close(); setSelected(null); }, [snapshot.id]);
+  const counts = { ready: 0, review: 0, missing: 0 }; derived.forEach(product => counts[product.status]++);
+  const categories = [null, ...FOOD_CATEGORIES.filter(item => derived.some(product => product.category === item))];
   const query = search.trim().replace(/^sku\s*:?\s*/i, "").toLowerCase();
-  const categories = FOOD_CATEGORIES.filter(item => products.some(product => product.category === item));
-  const inCategory = (product: (typeof products)[number]) => category === "All foods" || product.category === category;
-  const attention = products.filter(p => p.status !== "ready" && inCategory(p) && `${p.name} ${p.code} ${p.pack ?? ""}`.toLowerCase().includes(query)).sort((a,b) =>
-    sort === "name" ? a.name.localeCompare(b.name) : sort === "status" ? a.status.localeCompare(b.status) : (b.stock?.freshness.ageDays ?? -1) - (a.stock?.freshness.ageDays ?? -1));
-  const ready = products.filter(p => p.status === "ready" && inCategory(p));
+  const matches = derived.filter(product => (!category || product.category === category) && (!status || product.status === status) && (product.name + " " + product.code + " " + (product.pack ?? "")).toLowerCase().includes(query));
+  const visible = expanded ? matches : matches.slice(0, 6);
+  const openProduct = (product: ProductSummary) => { setSelected(product); dialog.current?.showModal(); };
   return <>
-    <p className="validity validity--top"><i aria-hidden="true">✓</i>{t(`Calculations use ${snapshot.reconciliation.rowsUsed.toLocaleString("en")} valid rows only.`)} {snapshot.reconciliation.rowsExcluded} {t("Rows left out")}</p>
-    <section className="summary" aria-label={t("Product readiness summary")}>
-      <div className="summary__verdict"><span className={`summary__tick${counts.missing > 0 ? " summary__tick--warning" : ""}`} aria-hidden="true">{counts.missing > 0 ? "!" : "✓"}</span><div>
-        <h2>{t(products.length === 0 ? "No products can be assessed" : counts.missing > 0 ? "Some products need more data" : counts.review > 0 ? "Your data is mostly ready" : "Your data is ready")}</h2>
-        <p>{products.length} {t("products checked")}</p></div></div>
-      <ul className="summary__groups">{(["ready", "review", "missing"] as const).map(status => <li className={`summary__group summary__group--${status}`} key={status}>
-        <b>{counts[status]}</b><span className="summary__name">{t(LABELS[status])}</span><span className="summary__note">{t(status === "ready" ? "Complete data, no major issues" : status === "review" ? "Usable evidence with issues to review" : "Stock or sales evidence is incomplete")}</span>
-      </li>)}</ul>
-    </section>
-    <p className="nextstep"><b>{t("Next step:")}</b> {t("Continue with the usable rows, or download the problem list and correct your file first.")}</p>
-    <nav className="food-tabs" aria-label={t("Food categories")}>
-      {["All foods", ...categories].map(item => <button type="button" key={item} className={category === item ? "food-tabs__active" : ""} aria-pressed={category === item} onClick={() => setCategory(item)}>{t(item)} <span>{item === "All foods" ? products.length : products.filter(product => product.category === item).length}</span></button>)}
-    </nav>
-    {counts.review + counts.missing > 0 && <section className="attention">
-      <div className="attention__head">
-        <div className="attention__heading"><span className="attention__icon" aria-hidden="true">!</span><div><h2>{attention.length} {t("products need your attention")}</h2><p>{t("Review data issues and stock age before continuing.")}</p></div></div>
-        <div className="attention__filters">
-          <label className="attention__search"><input type="search" aria-label={t("Search by product name or code")} placeholder={t("Search by product name or code")} value={search} onChange={e => setSearch(e.target.value)} /></label>
-          <label className="attention__sort"><select aria-label={t("Sort products")} value={sort} onChange={e => setSort(e.target.value)}><option value="age">{t("Sort by: stock age (oldest)")}</option><option value="name">{t("Sort by: product name")}</option><option value="status">{t("Sort by: issue type")}</option></select></label>
-        </div>
+    <section className="rd-stats" aria-label={t("Product readiness summary")}>{(["ready", "review", "missing"] as const).map(item => <button className={"rd-stat rd-stat--" + item} type="button" key={item} aria-pressed={status === item} onClick={() => { setStatus(status === item ? null : item); setExpanded(false); }}>
+      <span className="rd-stat__icon" aria-hidden="true">{item === "ready" ? "✓" : item === "review" ? "!" : "×"}</span><span><b className="num rd-stat__number">{counts[item]}</b> <b>{t(item === "ready" ? "products ready" : item === "review" ? "need review" : "missing data")}</b><small>{t(NOTES[item])}</small></span>
+    </button>)}</section>
+    <section className="rd-card rd-products" aria-labelledby="readiness-products-title">
+      <div className="rd-products__head"><div><h2 id="readiness-products-title">{t("Products by category")}</h2><p>{t("Categories are suggested from product names. Products to check are listed first.")}</p><span className="sr-only">{derived.length} {t("products checked")}</span></div>
+        <label className="rd-search"><span aria-hidden="true">⌕</span><input type="search" value={search} onChange={event => { setSearch(event.currentTarget.value); setExpanded(false); }} placeholder={t("Search name or code")} aria-label={t("Search name or code")} /></label>
       </div>
-      <div className="pcards">{attention.map(p => <article className={`pcard pcard--${p.status}`} key={p.key}>
-        <header className="pcard__head"><div><b className="pcard__name">{p.name}</b><span className="pcard__code">SKU: {p.code}{p.pack ? ` · ${p.pack}` : ""}</span></div><span className={`pill ${p.status === "missing" ? "pill--red" : "pill--amber"}`}>{t(LABELS[p.status])}</span></header>
-        <div className="pcard__facts"><div><span className="pcard__key">{t("Last stock count")}</span><b>{p.stock?.stockAsOfDate ?? "—"}</b></div><div><span className="pcard__key">{t("Stock age")}</span><b>{p.stock?.freshness.ageDays === undefined ? "—" : t(`${p.stock.freshness.ageDays} days`)}</b></div></div>
-        <WeeklySales timeline={p.timeline} />
-        <p className={`pcard__why pcard__why--${p.status}`}><span aria-hidden="true">i</span><span>{t(p.reasons[0] ?? "Review the available evidence before planning.")}</span></p>
-        <details className="pcard__details"><summary className="btn btn--small btn--ghost pcard__action">{t("View details →")}</summary><p>{t("Product")}: {p.name} · {p.code}</p>{p.reasons.map(reason => <p key={reason}>{t(reason)}</p>)}<p>{t("Correct your file and upload again where needed. Original cells remain unchanged.")}</p></details>
+      <div className="rd-tabs" role="tablist" aria-label={t("Food categories")}>{categories.map((item, index) => <button key={item ?? "all"} type="button" role="tab" id={"readiness-category-" + index} aria-selected={category === item} tabIndex={category === item ? 0 : -1} aria-controls="readiness-product-panel" onClick={() => { setCategory(item); setExpanded(false); }} onKeyDown={event => {
+        const next = event.key === "ArrowRight" ? (index + 1) % categories.length : event.key === "ArrowLeft" ? (index + categories.length - 1) % categories.length : event.key === "Home" ? 0 : event.key === "End" ? categories.length - 1 : -1;
+        if (next < 0) return; event.preventDefault(); setCategory(categories[next]); setExpanded(false); document.getElementById("readiness-category-" + next)?.focus();
+      }}>{t(item ?? "All")}<span>{item ? derived.filter(product => product.category === item).length : derived.length}</span></button>)}</div>
+      {status && <p className="rd-showing">{t("Showing:")} <b>{t(LABELS[status])}</b> <button type="button" className="btn--link" onClick={() => setStatus(null)}>{t("Clear")}</button></p>}
+      <div id="readiness-product-panel" className="rd-product-grid" role="tabpanel" aria-labelledby={"readiness-category-" + categories.indexOf(category)}>{visible.map(product => <article className={"pcard rd-product pcard--" + product.status} key={product.key}>
+        <header><div><b>{product.name}</b><small className="num pcard__code">SKU: {product.code}{product.pack ? " · " + product.pack : ""}</small></div><span className={"rd-pill rd-pill--" + product.status}>{t(LABELS[product.status])}</span></header>
+        <div className="rd-product__facts"><div><small>{t("Last stock count")}</small><b className="num">{product.stock?.stockAsOfDate ?? "—"}</b></div><div><small>{t("Stock age")}</small><b>{product.stock?.freshness.ageDays === undefined ? "—" : t(String(product.stock.freshness.ageDays) + " days")}</b></div></div>
+        <WeeklySales product={product} date={snapshot.analysisDate} />
+        <p className={"rd-product__note rd-product__note--" + product.status}>{t(product.reasons[0] ?? "Complete data, no major issues")}</p>
+        <button type="button" className="btn btn--ghost btn--small" aria-label={t("View details") + ": " + product.name + " · " + product.code} onClick={() => openProduct(product)}>{t("View details →")}</button>
       </article>)}</div>
-      {attention.length === 0 && <p className="empty" role="status">{t("No matching products.")}</p>}
-    </section>}
-    {ready.length > 0 && <details className="readylist" open><summary><span className="readylist__tick" aria-hidden="true">✓</span><span><b>{ready.length} {t(ready.length === 1 ? "product is ready" : "products are ready")}</b><span className="readylist__note">{t("Complete data, no major issues")}</span></span></summary>
-      <div className="table-scroll"><table className="dtable dtable--ready"><thead><tr><th>{t("Product")}</th><th>{t("Last stock count")}</th><th>{t("Stock age")}</th><th>{t("Weekly sales")}</th><th>{t("Status")}</th></tr></thead><tbody>{ready.map(p => <tr key={p.key}><td><b>{p.name}</b><span className="cell-detail num">{p.code}{p.pack ? ` · ${p.pack}` : ""}</span></td><td>{p.stock?.stockAsOfDate ?? "—"}</td><td>{t(`${p.stock?.freshness.ageDays} days`)}</td><td><WeeklySales timeline={p.timeline} /></td><td><span className="pill pill--confirmed">{t("Ready")}</span></td></tr>)}</tbody></table></div>
-    </details>}
+      {matches.length === 0 && <p className="rd-empty" role="status">{t("No matching products.")}</p>}
+      {matches.length > 6 && <button type="button" className="btn btn--ghost rd-more" onClick={() => setExpanded(!expanded)}>{t(expanded ? "Show fewer products" : "Show all products")} ({matches.length})</button>}
+    </section>
+    <dialog ref={dialog} className="rd-dialog" aria-labelledby="readiness-product-dialog-title" onClose={() => setSelected(null)}><button type="button" className="btn btn--ghost btn--small rd-dialog__close" onClick={() => dialog.current?.close()}>{t("Close")}</button>
+      {selected && <><h2 id="readiness-product-dialog-title">{selected.name}</h2><p className="num">SKU: {selected.code}{selected.pack ? " · " + selected.pack : ""}</p><span className={"rd-pill rd-pill--" + selected.status}>{t(LABELS[selected.status])}</span>
+        <h3>{t("What to check")}</h3><ul>{(selected.reasons.length ? selected.reasons : ["Complete data, no major issues"]).map(reason => <li key={reason}>{t(reason)}</li>)}</ul>
+        <h3>{t("Weekly sales")}</h3><table><thead><tr><th>{t("Week of")}</th><th>{t("Units sold")}</th></tr></thead><tbody>{weeksFor(selected, snapshot.analysisDate).map(({ start, evidence }) => <tr key={start}><td className="num">{start}</td><td className="num">{evidence?.netQuantity ?? t("Missing — not zero sales")}</td></tr>)}</tbody></table>
+      </>}
+    </dialog>
   </>;
 }

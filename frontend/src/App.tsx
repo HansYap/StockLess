@@ -10,6 +10,7 @@ import { ImpactDashboard } from "./screens/ImpactDashboard.tsx";
 import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from "./purchase-plan/model.ts";
 import {
   MappingConflictError,
+  READINESS_POLICY_VERSION,
   getReadinessBlockers,
   clearActiveSession,
   createEmptySession,
@@ -23,7 +24,6 @@ import {
   type ConfirmedDateFormat,
   type CsvProgress,
   type DateFormatConfirmation,
-  type DuplicateDecision,
   type DemandForecastReview,
   type MappingProposalResult,
   type MappingState,
@@ -90,7 +90,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [dateConfirmations, setDateConfirmations] = useState<readonly DateFormatConfirmation[]>([]);
-  const [duplicateDecisions, setDuplicateDecisions] = useState<Readonly<Record<string, DuplicateDecision>>>({});
   const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
   const [savedDatasets, setSavedDatasets] = useState<readonly SavedDatasetSummary[]>([]);
   const [selectedSaved, setSelectedSaved] = useState<SavedDataset | null>(null);
@@ -138,9 +137,9 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     if (!activeSavedId || !dataset || lastSavedEnvelope.current === envelope) return;
     lastSavedEnvelope.current = envelope;
     void persistWork(activeSavedId, {
-      envelope, analysisDate, dateConfirmations, duplicateDecisions, readiness, forecast,
+      envelope, analysisDate, dateConfirmations, readiness, forecast,
     });
-  }, [activeSavedId, dataset, envelope, analysisDate, dateConfirmations, duplicateDecisions, readiness, forecast, persistWork]);
+  }, [activeSavedId, dataset, envelope, analysisDate, dateConfirmations, readiness, forecast, persistWork]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -174,7 +173,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setReadinessLoading(false);
     setReadinessError(null);
     setDateConfirmations([]);
-    setDuplicateDecisions({});
     setIssueFilter(null);
     resetForecastEvidence();
     setReached((current) => current > 2 ? 2 : current);
@@ -182,7 +180,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
   const executeReadiness = useCallback(async (
     confirmations: readonly DateFormatConfirmation[] = dateConfirmations,
-    decisions: Readonly<Record<string, DuplicateDecision>> = duplicateDecisions,
     navigate = false,
     activeEnvelope = envelope,
   ) => {
@@ -198,14 +195,13 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       const snapshot = await runReadinessCheckInWorker(dataset, activeEnvelope.session.mapping, {
         analysisDate,
         dateConfirmations: confirmations,
-        duplicateDecisions: decisions,
       }, controller.signal);
       if (readinessRun.current !== runId) return;
       resetForecastEvidence();
       setReadiness(snapshot);
       if (activeSavedId) void persistWork(activeSavedId, {
         envelope: activeEnvelope, analysisDate, dateConfirmations: confirmations,
-        duplicateDecisions: decisions, readiness: snapshot, forecast: null,
+        readiness: snapshot, forecast: null,
       });
       if (navigate) goTo(3);
     } catch (error) {
@@ -215,7 +211,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       if (readinessAbort.current === controller) readinessAbort.current = null;
       if (readinessRun.current === runId) setReadinessLoading(false);
     }
-  }, [activeSavedId, analysisDate, dataset, dateConfirmations, duplicateDecisions, envelope, goTo, persistWork, resetForecastEvidence]);
+  }, [activeSavedId, analysisDate, dataset, dateConfirmations, envelope, goTo, persistWork, resetForecastEvidence]);
 
   const executeForecast = useCallback(async () => {
     if (!readiness) return;
@@ -260,9 +256,9 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     lastSavedEnvelope.current = saved.envelope;
     setAnalysisDate(saved.analysisDate);
     setDateConfirmations(saved.dateConfirmations);
-    setDuplicateDecisions(saved.duplicateDecisions);
-    setReadiness(saved.readiness);
-    setForecast(saved.forecast);
+    const restoredReadiness = saved.readiness?.policyVersion === READINESS_POLICY_VERSION ? saved.readiness : null;
+    setReadiness(restoredReadiness);
+    setForecast(restoredReadiness ? saved.forecast : null);
     setPurchaseDrafts(saved.purchaseDrafts);
     setProposals(null);
     setProductKey(null);
@@ -270,7 +266,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setReadinessError(null);
     setForecastError(null);
     setActiveSavedId(id);
-    const furthest: StepId = saved.forecast && saved.readiness ? 4 : saved.readiness ? 3 : 2;
+    const furthest: StepId = saved.forecast && restoredReadiness ? 4 : restoredReadiness ? 3 : 2;
     setReached(furthest);
     goTo(2);
     setSessionNotice(`${saved.shopName} / ${saved.datasetName} opened.`);
@@ -374,8 +370,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       Object.freeze({ sourceColumnId, format, confirmationId: globalThis.crypto.randomUUID() }),
     ]);
     setDateConfirmations(next);
-    setDuplicateDecisions({});
-    void executeReadiness(next, {});
+    void executeReadiness(next);
   }, [dateConfirmations, executeReadiness]);
 
   const handleClearSession = useCallback(() => {
@@ -489,9 +484,9 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setMappingSubmitting(true);
     try {
       if (activeSavedId) await persistWork(activeSavedId, { envelope: activeEnvelope, analysisDate });
-      await executeReadiness(dateConfirmations, duplicateDecisions, true, activeEnvelope);
+      await executeReadiness(dateConfirmations, true, activeEnvelope);
     } finally { mappingSubmit.current = false; setMappingSubmitting(false); }
-  }, [activeSavedId, analysisDate, dateConfirmations, duplicateDecisions, envelope, executeReadiness, persistWork]);
+  }, [activeSavedId, analysisDate, dateConfirmations, envelope, executeReadiness, persistWork]);
 
   const handleConfirmAllAndContinue = useCallback(async () => {
     if (mappingSubmit.current) return;
@@ -516,7 +511,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       onNavigate={goTo}
       sourceMode={envelope.session.sourceMode}
       sourceName={dataset?.sourceName}
-      notice={step === 2 ? null : sessionNotice}
+      notice={step === 2 || step === 3 ? null : sessionNotice}
       onClear={dataset ? handleClearSession : undefined}
     >
       {saveError && <p role="alert">{saveError} {retrySave.current && <button type="button" onClick={() => void retrySave.current?.()}>Retry</button>}</p>}
@@ -599,6 +594,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
           dataset={dataset}
           mapping={envelope.session.mapping}
           snapshot={readiness}
+          onClear={handleClearSession}
           dateConfirmations={dateConfirmations}
           checking={readinessLoading}
           error={readinessError}
@@ -622,7 +618,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
             type="button"
             className="btn btn--primary"
             disabled={readinessLoading}
-            onClick={() => void executeReadiness(dateConfirmations, duplicateDecisions)}
+            onClick={() => void executeReadiness(dateConfirmations)}
             aria-busy={readinessLoading}
           >
             {t(readinessLoading && <span className="btn__spinner" aria-hidden="true" />)}

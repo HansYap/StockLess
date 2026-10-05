@@ -31,7 +31,7 @@ test("replacement uses the new file once and preserves dated decision evidence a
     id: "dataset-1", shopName: "Aina's shop", datasetName: "Sales",
     shopKey: "aina's shop", nameKey: "sales", createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-03T00:00:00Z", envelope: original,
-    analysisDate: "2026-01-02", dateConfirmations: [], duplicateDecisions: {},
+    analysisDate: "2026-01-02", dateConfirmations: [],
     readiness: { id: "old-snapshot" } as ReadinessSnapshot,
     forecast: { snapshotId: "old-snapshot" } as DemandForecastReview,
     purchaseDrafts: {}, supplierTerms: { Vendor: "7 days" },

@@ -41,6 +41,10 @@ function sourceRowProduct(snapshot: ReadinessSnapshot, sourceRow: number): strin
 
 /** Converts an internal issue code to the text shown on screen. */
 function issueLabel(issueCode: string): string {
+  if (issueCode === "DUPLICATE_CANDIDATE") return "Duplicate rows handled automatically";
+  if (issueCode === "DUPLICATE_CONFIRMED") return "Repeated row left out";
+  if (issueCode === "UNUSUAL_SALE") return "Unusually large sale";
+  if (issueCode === "PRODUCT_IDENTITY_CONFLICT") return "Product identifiers to check";
   return issueCode.toLowerCase().replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
@@ -70,7 +74,7 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
     rowsSafelyNormalized: snapshot.reconciliation.rowsSafelyNormalized,
   });
 
-  const records = snapshot.issues.map((issue): ReportRecord => Object.freeze({
+  const records: ReportRecord[] = snapshot.issues.map((issue): ReportRecord => Object.freeze({
     "Row number": String(issue.sourceRow),
     Product: issue.productKey ?? issue.originalProductHint ?? sourceRowProduct(snapshot, issue.sourceRow),
     "What the problem is": issueLabel(issue.issueCode),
@@ -78,6 +82,16 @@ export function createCorrectionReport(snapshot: ReadinessSnapshot): CorrectionR
     "Why it is a problem": issue.reason,
     "What to do about it": issue.correctiveAction,
     "Whether that row was used or left out": rowOutcome(sourceRowState(snapshot, issue.sourceRow)),
+  }));
+
+  for (const event of snapshot.normalizations) records.push(Object.freeze({
+    "Row number": String(event.sourceRow),
+    Product: sourceRowProduct(snapshot, event.sourceRow),
+    "What the problem is": "Safe tidy-up: " + issueLabel(event.normalizationType),
+    "Value StockLess saw": event.originalValue,
+    "Why it is a problem": `Column ${event.sourceColumn}: ${JSON.stringify(event.originalValue)} → ${JSON.stringify(event.resultingValue)}`,
+    "What to do about it": "Nothing to fix. Original values are preserved.",
+    "Whether that row was used or left out": rowOutcome(sourceRowState(snapshot, event.sourceRow)),
   }));
 
   const csvText = recordsToCsv(records, snapshot.sourceMode);

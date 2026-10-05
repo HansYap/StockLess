@@ -61,9 +61,11 @@ export function ReadinessCharts({ snapshot, filter, onFilter }: {
   const excluded = snapshot.rows.filter(row => row.useState === "excluded");
   const excludedByKind = Object.fromEntries(kinds.map(kind => [kind, 0])) as Record<ReadinessIssueFilter, number>;
   let otherExcluded = 0;
+  let duplicateExcluded = 0;
   for (const row of excluded) {
     const kind = kinds.find(candidate => snapshot.issues.some(issue => issue.sourceRow === row.sourceRow && issueMatches(issue, candidate)));
     if (kind) excludedByKind[kind] += 1;
+    else if (snapshot.issues.some(issue => issue.sourceRow === row.sourceRow && issue.issueCode === "DUPLICATE_CONFIRMED")) duplicateExcluded += 1;
     else otherExcluded += 1;
   }
   // A reconciled row is counted once in the donut, even if it has several issues.
@@ -71,6 +73,7 @@ export function ReadinessCharts({ snapshot, filter, onFilter }: {
   const legend = [
     { label: "Usable rows", count: rowsUsed, color: "#0f9e8c" },
     ...kinds.map(kind => ({ label: FILTER_META[kind].label, count: excludedByKind[kind], color: FILTER_META[kind].color })),
+    ...(duplicateExcluded ? [{ label: "Duplicate rows", count: duplicateExcluded, color: "#6e9d89" }] : []),
     ...(otherExcluded ? [{ label: "Other", count: otherExcluded, color: "#95a5aa" }] : []),
   ];
   let cumulative = 0;
@@ -94,7 +97,7 @@ export function ReadinessCharts({ snapshot, filter, onFilter }: {
 
     <div className="verdict readiness-verdict" aria-label={t("Readiness result")}>
       <div className="verdict__cell verdict__cell--go"><span className="verdict__label">{t("Can continue")}</span><span className="verdict__value">{rowsUsed.toLocaleString("en")}</span><span className="verdict__note">{t("rows passed every check and will be used.")}</span></div>
-      <div className="verdict__cell verdict__cell--fix"><span className="verdict__label">{t("Must fix")}</span><span className="verdict__value">{rowsExcluded.toLocaleString("en")}</span><span className="verdict__note">{t("rows are left out until corrected in your file.")}</span></div>
+      <div className="verdict__cell verdict__cell--fix"><span className="verdict__label">{t("Must fix")}</span><span className="verdict__value">{(rowsExcluded - duplicateExcluded).toLocaleString("en")}</span><span className="verdict__note">{t("rows are left out until corrected in your file.")}</span></div>
       <div className="verdict__cell verdict__cell--next"><b>{t("Next step:")}</b><p className="verdict__next">{t("Continue with the usable rows, or download the problem list and correct your file first.")}</p></div>
     </div>
 

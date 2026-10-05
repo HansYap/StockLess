@@ -28,7 +28,7 @@
 .frame--workflow .step__line { top: 36px; left: calc(50% + 18px); width: calc(100% - 36px); background: var(--line); }
 .frame--workflow .step:last-child .step__line { display: none; }
 .frame--workflow .page { width: 100%; max-width: none; padding: 0; align-items: stretch; gap: 0; }
-.frame--workflow .page > :not(.upload-screen):not(.mapping-screen) { width: calc(100% - 80px); max-width: 1100px; margin: 16px auto; }
+.frame--workflow .page > :not(.upload-screen):not(.mapping-screen):not(.readiness-screen) { width: calc(100% - 80px); max-width: 1100px; margin: 16px auto; }
 
 .frame--workflow .step--done .step__line { background: var(--teal); }
 @media (max-width: 900px) {
@@ -38,6 +38,6 @@
   .frame--workflow .workspace-home-link span { display: none; }
   .frame--workflow .step__button { min-width: 0; }
   .frame--workflow .step__label { font-size: 12px; }
-  .frame--workflow .page > :not(.upload-screen):not(.mapping-screen) { width: calc(100% - 32px); }
+  .frame--workflow .page > :not(.upload-screen):not(.mapping-screen):not(.readiness-screen) { width: calc(100% - 32px); }
 }
 @media (max-width: 420px) { .frame--workflow .workflow-language { padding: 0 6px; } .frame--workflow .workflow-language select { max-width: 120px; } }

@@ -40,17 +40,17 @@ export function AppShell({
 }: AppShellProps) {
   useLanguage();
   return (
-    <div className={`frame${current <= 2 ? " frame--workflow" : ""}`}>
+    <div className={`frame${current <= 3 ? " frame--workflow" : ""}`}>
       <WorkspaceDecor />
       <header className="topbar">
-        {current <= 2 ? (
+        {current <= 3 ? (
           <a className="brand" href="#home" aria-label="StockLess"><Logo height={36} /></a>
         ) : (
           <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label={t("StockLess — upload")}>
             <Logo />
           </button>
         )}
-        {t(sourceMode && current !== 2 && (
+        {t(sourceMode && current !== 2 && current !== 3 && (
           <div className="session-status" aria-label={t("Active session")}>
             <span className={`pill ${sourceMode === "sample" ? "pill--amber" : "pill--teal"}`}>
               {t(sourceMode === "sample" ? "Sample data" : "Retailer file")}
@@ -63,7 +63,7 @@ export function AppShell({
           </div>
         ))}
         <a className="workspace-home-link" href="#home" aria-label={t("Homepage")}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></svg><span>{t("Homepage")}</span></a>
-        <LanguageSwitcher compact={current <= 2} />
+        <LanguageSwitcher compact={current <= 3} />
       </header>
 
       <nav className="stepper" aria-label={t("Progress")}>

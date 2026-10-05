@@ -21,7 +21,7 @@ import type {
 } from "./contracts.ts";
 import { formatIsoDate, parseConfirmedDate, parseIsoDate } from "./dates.ts";
 import { evaluateStockFreshness } from "./freshness.ts";
-import { buildProductKey } from "./identity.ts";
+import { detectIdentityConflicts, buildProductKey } from "./identity.ts";
 import { getReadinessBlockers } from "./mapping.ts";
 
 const CONFIRMABLE_DATE_FORMATS: readonly ConfirmedDateFormat[] = Object.freeze([
@@ -32,6 +32,8 @@ const CONFIRMABLE_DATE_FORMATS: readonly ConfirmedDateFormat[] = Object.freeze([
   "DD-MM-YYYY",
   "MM-DD-YYYY",
 ]);
+
+export const READINESS_POLICY_VERSION = "stockless-readiness-v2";
 
 interface MappedColumn {
   readonly id: string;
@@ -220,6 +222,36 @@ function lengthPrefixed(value: string): string {
   return `${new TextEncoder().encode(value).byteLength}:${value}`;
 }
 
+/** Conservative review-only rule. It never removes or rewrites a sale. */
+export const UNUSUAL_SALE_POLICY = Object.freeze({ minimumRecords: 8, minimumDates: 4, medianMultiplier: 10, madMultiplier: 6, minimumExcess: 20 });
+
+function median(values: readonly number[]): number {
+  const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function addSaleAdvisories(drafts: readonly RowDraft[], issues: DataIssue[]): void {
+  const products = new Map<string, RowDraft[]>();
+  for (const row of drafts) {
+    if (!row.productKey || row.useState !== "used" || !(row.interpretedValues.quantitySold! > 0)) continue;
+    const rows = products.get(row.productKey) ?? [];
+    rows.push(row); products.set(row.productKey, rows);
+  }
+  for (const rows of products.values()) {
+    if (rows.length < UNUSUAL_SALE_POLICY.minimumRecords || new Set(rows.map(row => row.interpretedValues.transactionDate)).size < UNUSUAL_SALE_POLICY.minimumDates) continue;
+    const quantities = rows.map(row => row.interpretedValues.quantitySold!);
+    const centre = median(quantities), deviation = median(quantities.map(value => Math.abs(value - centre)));
+    const threshold = Math.max(centre * UNUSUAL_SALE_POLICY.medianMultiplier, centre + UNUSUAL_SALE_POLICY.madMultiplier * deviation, centre + UNUSUAL_SALE_POLICY.minimumExcess);
+    for (const row of rows.filter(row => row.interpretedValues.quantitySold! > threshold)) {
+      const issue = addIssue(issues, { sourceRow: row.sourceRow, productKey: row.productKey, originalProductHint: row.originalProductHint,
+        issueCode: "UNUSUAL_SALE", field: "quantity_sold", observedValue: String(row.interpretedValues.quantitySold),
+        reason: "This sale is far larger than this product's usual recorded sales.",
+        correctiveAction: "Check that the quantity is right. This sale is still counted.", resolutionState: "unresolved" });
+      row.issueIds.push(issue.id);
+    }
+  }
+}
+
 /** Calculates the exact duplicate fingerprint for all normalized source cells. */
 async function duplicateFingerprint(values: readonly string[]): Promise<string> {
   const bytes = new TextEncoder().encode(values.map(lengthPrefixed).join(""));
@@ -260,8 +292,13 @@ function buildProductStockEvidence(
 
   const evidence: ProductStockEvidence[] = [];
   for (const [productKey, rows] of [...byProduct.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-    const stockRows = rows.filter((row) => row.interpretedValues.currentStock !== undefined);
-    const dateRows = rows.filter((row) => row.interpretedValues.stockAsOfDate !== undefined);
+    const datedCounts = rows.filter((row) => row.interpretedValues.currentStock !== undefined
+      && row.interpretedValues.stockAsOfDate !== undefined
+      && row.interpretedValues.stockAsOfDate <= analysisDate);
+    const latestDate = datedCounts.map((row) => row.interpretedValues.stockAsOfDate!).sort().at(-1);
+    const selectedRows = latestDate ? datedCounts.filter((row) => row.interpretedValues.stockAsOfDate === latestDate) : rows;
+    const stockRows = selectedRows.filter((row) => row.interpretedValues.currentStock !== undefined);
+    const dateRows = selectedRows.filter((row) => row.interpretedValues.stockAsOfDate !== undefined);
     const stockValues = [...new Set(stockRows.map((row) => row.interpretedValues.currentStock!))];
     const dateValues = [...new Set(dateRows.map((row) => row.interpretedValues.stockAsOfDate!))];
     const reasonCodes = new Set<string>();
@@ -301,7 +338,8 @@ function buildProductStockEvidence(
       }
     }
 
-    const productIssues = issues.filter((issue) => issue.productKey === productKey);
+    const selectedSourceRows = new Set(selectedRows.map((row) => row.sourceRow));
+    const productIssues = issues.filter((issue) => issue.productKey === productKey && selectedSourceRows.has(issue.sourceRow));
     for (const issue of productIssues) {
       const currentStockIssue = issue.field === "current_stock"
         && ["INVALID_CURRENT_STOCK", "MISSING_CURRENT_STOCK"].includes(issue.issueCode);
@@ -816,7 +854,7 @@ export async function runReadinessCheck(
         productKey: row.productKey,
         originalProductHint: row.originalProductHint,
         issueCode: "DUPLICATE_CANDIDATE",
-        observedValue: fingerprint,
+        observedValue: members.map(member => member.sourceRow).join(", "),
         reason: "Every source cell matches another record after permitted representation normalization.",
         correctiveAction: "StockLess kept the latest matching source row automatically.",
         resolutionState: "resolved",
@@ -831,11 +869,25 @@ export async function runReadinessCheck(
         productKey: row.productKey,
         originalProductHint: row.originalProductHint,
         issueCode: "DUPLICATE_CONFIRMED",
-        observedValue: fingerprint,
+        observedValue: String(members[members.length - 1].sourceRow),
         reason: `This row matches the latest source row ${members[members.length - 1].sourceRow} and was left out automatically.`,
         correctiveAction: "Remove the repeated source record if the source spreadsheet should be corrected.",
         resolutionState: "resolved",
       });
+      row.issueIds.push(issue.id);
+    }
+  }
+
+  addSaleAdvisories(drafts, issues);
+  const draftBySourceRow = new Map(drafts.map(row => [row.sourceRow, row]));
+  for (const conflict of detectIdentityConflicts(dataset, mapping)) {
+    for (const sourceRow of conflict.sourceRows) {
+      const row = draftBySourceRow.get(sourceRow);
+      if (!row) continue;
+      const issue = addIssue(issues, { sourceRow, productKey: row.productKey, originalProductHint: row.originalProductHint,
+        issueCode: "PRODUCT_IDENTITY_CONFLICT", observedValue: conflict.values.join(" / "),
+        reason: conflict.code === "CODE_TO_MULTIPLE_VARIANTS" ? "One product code is used for different product names or pack sizes." : "The same product name and pack size appear under different codes.",
+        correctiveAction: "Check the product names, codes and pack sizes in your file. Original identifiers are preserved.", resolutionState: "unresolved" });
       row.issueIds.push(issue.id);
     }
   }
@@ -869,6 +921,7 @@ export async function runReadinessCheck(
 
   return Object.freeze({
     id: globalThis.crypto.randomUUID(),
+    policyVersion: READINESS_POLICY_VERSION,
     sourceMode: dataset.sourceMode,
     sourceName: dataset.sourceName,
     sourceSha256: dataset.sourceSha256,

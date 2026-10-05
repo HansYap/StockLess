@@ -45,7 +45,7 @@ export interface EstimateProductDemandOptions {
 }
 
 /** Returns the eight Monday starts belonging to complete weeks before the origin. */
-function previousCompleteWeekStarts(originDate: string): readonly string[] {
+export function previousCompleteWeekStarts(originDate: string): readonly string[] {
   const currentWeekStart = isoWeekStart(originDate);
   return Object.freeze(Array.from(
     { length: EPIC3_POLICY.labelWindowWeeks },

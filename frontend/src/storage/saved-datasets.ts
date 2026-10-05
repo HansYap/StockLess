@@ -1,5 +1,5 @@
 import type {
-  DateFormatConfirmation, DemandForecastReview, DuplicateDecision,
+  DateFormatConfirmation, DemandForecastReview,
   ProductPurchaseInputs, ProductPurchasePlan, ReadinessSnapshot, SessionEnvelope,
 } from "../engine.ts";
 import type { PurchaseDrafts } from "../purchase-plan/model.ts";
@@ -17,7 +17,6 @@ export interface SavedDataset {
   readonly envelope: SessionEnvelope;
   readonly analysisDate: string;
   readonly dateConfirmations: readonly DateFormatConfirmation[];
-  readonly duplicateDecisions: Readonly<Record<string, DuplicateDecision>>;
   readonly readiness: ReadinessSnapshot | null;
   readonly forecast: DemandForecastReview | null;
   readonly purchaseDrafts: PurchaseDrafts;
@@ -119,7 +118,7 @@ export async function createSavedDataset(
   const saved: SavedDataset = {
     id: globalThis.crypto.randomUUID(), shopName, datasetName,
     shopKey: key(shopName), nameKey: key(datasetName), createdAt: now, updatedAt: now,
-    envelope, analysisDate, dateConfirmations: [], duplicateDecisions: {},
+    envelope, analysisDate, dateConfirmations: [],
     readiness: null, forecast: null, purchaseDrafts: {}, supplierTerms: {}, decisions: [], outcomes: [],
   };
   try {
@@ -132,8 +131,7 @@ export async function createSavedDataset(
 }
 
 export type SavedWork = Pick<SavedDataset,
-  "envelope" | "analysisDate" | "dateConfirmations" | "duplicateDecisions" |
-  "readiness" | "forecast" | "purchaseDrafts" | "supplierTerms">;
+  "envelope" | "analysisDate" | "dateConfirmations" | "readiness" | "forecast" | "purchaseDrafts" | "supplierTerms">;
 
 const pendingMutations = new Map<string, Promise<unknown>>();
 
@@ -171,7 +169,7 @@ export function replaceDatasetContents(current: SavedDataset, replacement: Sessi
   requireImport(replacement);
   return {
     ...current, envelope: replacement, readiness: null, forecast: null,
-    analysisDate, dateConfirmations: [], duplicateDecisions: {}, updatedAt: now,
+    analysisDate, dateConfirmations: [], updatedAt: now,
   };
 }
 

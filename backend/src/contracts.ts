@@ -265,6 +265,8 @@ export type DataIssueCode =
   | "CONFLICTING_PLANNED_ORDER"
   | "CONFLICTING_INCOMING_STOCK"
   | "INVALID_EXPIRY_DATE"
+  | "UNUSUAL_SALE"
+  | "PRODUCT_IDENTITY_CONFLICT"
   | "DUPLICATE_CANDIDATE"
   | "DUPLICATE_CONFIRMED";
 
@@ -307,13 +309,11 @@ export interface ValidatedRow {
   readonly issueIds: readonly string[];
 }
 
-export type DuplicateDecision = "keep_both" | "treat_as_duplicate";
-
 export interface DuplicateGroup {
   readonly fingerprint: string;
   readonly sourceRows: readonly number[];
   readonly productKeys: readonly string[];
-  readonly decision: DuplicateDecision | "unresolved";
+  readonly decision: "treat_as_duplicate" | "unresolved";
 }
 
 export interface ReconciliationSummary {
@@ -369,10 +369,11 @@ export interface PurchaseFileEvidence {
 export interface ReadinessOptions {
   readonly analysisDate: string;
   readonly dateConfirmations?: readonly DateFormatConfirmation[];
-  readonly duplicateDecisions?: Readonly<Record<string, DuplicateDecision>>;
 }
 
 export interface ReadinessSnapshot {
+  /** Missing on older saved snapshots, which must be rechecked before reuse. */
+  readonly policyVersion?: string;
   readonly id: string;
   readonly sourceMode: SourceMode;
   readonly sourceName: string;

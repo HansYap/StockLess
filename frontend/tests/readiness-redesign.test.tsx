@@ -34,10 +34,10 @@ describe("Readiness product overview", () => {
   it("separates clean products from incomplete histories and searches by displayed SKU", () => {
     const { snapshot } = makeEvidence();
     render(<ReadinessOverview snapshot={snapshot} timelines={buildProductTimelines(snapshot)} />);
+    expect(screen.getByText("3 products checked").textContent).toContain("3");
+    expect(document.querySelectorAll(".pcard")).toHaveLength(3);
     const summary = screen.getByRole("region", { name: "Product readiness summary" });
-    expect(within(summary).getByText("3 products checked").textContent).toContain("3");
-    expect(document.querySelectorAll(".pcard")).toHaveLength(2);
-    expect(document.querySelectorAll(".dtable--ready tbody tr")).toHaveLength(1);
+    expect(within(summary).getByRole("button", { name: /1 products ready/ })).toBeTruthy();
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "SKU 000202" } });
     expect(document.querySelectorAll(".pcard")).toHaveLength(1);
     expect(document.querySelector(".pcard__code")?.textContent).toContain("000202");
@@ -51,7 +51,7 @@ describe("Readiness product overview", () => {
     render(<ReadinessOverview snapshot={input} timelines={buildProductTimelines(input)} />);
     const card = [...document.querySelectorAll(".pcard")].find(card => card.textContent?.includes("000202"))!;
     expect(card.className).toContain("pcard--missing");
-    expect(card.querySelector(".pill")?.textContent).toBe("数据缺失");
+    expect(card.querySelector(".rd-pill")?.textContent).toBe("数据不全");
     expect(card.querySelectorAll(".spark__bar--missing")).toHaveLength(2);
     expect(card.querySelector(".spark")?.getAttribute("aria-label")).toContain("缺失");
   });

@@ -3268,3 +3268,409 @@ Object.assign(messages, {
     "Semua lajur telah dipadankan."
   ]
 });
+
+// Readiness design and live-data adaptations.
+Object.assign(messages, {
+  "Step 3 of 4": [
+    "第 3 步 / 共 4 步",
+    "Langkah 3 / 4"
+  ],
+  "Sample": [
+    "示例",
+    "Sampel"
+  ],
+  "Your data stays on your device": [
+    "数据只留在您的设备上",
+    "Data anda tak keluar dari peranti ini"
+  ],
+  "Your data is mostly ready": [
+    "数据基本没问题",
+    "Data anda hampir siap"
+  ],
+  "products ready": [
+    "个商品没问题",
+    "produk sedia"
+  ],
+  "Complete data, no major issues": [
+    "数据完整，没有大问题",
+    "Data lengkap, tiada masalah besar"
+  ],
+  "need review": [
+    "个要看一下",
+    "perlu disemak"
+  ],
+  "Usable, with something to check": [
+    "可以用，但有地方要确认",
+    "Boleh guna, tapi ada perkara perlu disemak"
+  ],
+  "missing data": [
+    "个数据不全",
+    "data tak cukup"
+  ],
+  "Can't be planned yet": [
+    "暂时没法规划",
+    "Belum boleh dirancang"
+  ],
+  "What we found": [
+    "检查结果",
+    "Apa yang kami jumpa"
+  ],
+  "Download list": [
+    "下载问题清单",
+    "Muat turun senarai"
+  ],
+  "Dates we couldn't read": [
+    "看不懂的日期",
+    "Tarikh yang tak dapat dibaca"
+  ],
+  "Rows with no product": [
+    "没有商品的行",
+    "Baris tanpa produk"
+  ],
+  "Stock counts to check": [
+    "要确认的库存数",
+    "Kiraan stok yang perlu disemak"
+  ],
+  "Other things to check": [
+    "其他要留意的地方",
+    "Perkara lain untuk disemak"
+  ],
+  "Safe tidy-ups applied": [
+    "已自动帮您整理",
+    "Kami dah kemaskan untuk anda"
+  ],
+  "Left out": [
+    "未计入",
+    "Tidak dikira"
+  ],
+  "Still counted": [
+    "照常计入",
+    "Tetap dikira"
+  ],
+  "Done": [
+    "已处理",
+    "Selesai"
+  ],
+  "Unknown product": [
+    "不明商品",
+    "Produk tak diketahui"
+  ],
+  "Add filter": [
+    "筛选",
+    "Tapis"
+  ],
+  "Category": [
+    "类别",
+    "Kategori"
+  ],
+  "Issue type": [
+    "问题类型",
+    "Jenis masalah"
+  ],
+  "Status": [
+    "状态",
+    "Status"
+  ],
+  "Remove filter": [
+    "移除筛选",
+    "Buang penapis"
+  ],
+  "Nothing matches these filters.": [
+    "没有符合筛选条件的项目。",
+    "Tiada yang padan dengan penapis ini."
+  ],
+  "Products by category": [
+    "按类别看商品",
+    "Produk ikut kategori"
+  ],
+  "Search name or code": [
+    "搜索名称或代码",
+    "Cari nama atau kod"
+  ],
+  "Show fewer": [
+    "收起部分内容",
+    "Tunjukkan kurang"
+  ],
+  "Showing:": [
+    "只显示：",
+    "Ditunjukkan:"
+  ],
+  "Clear": [
+    "清除",
+    "Buang"
+  ],
+  "All": [
+    "全部",
+    "Semua"
+  ],
+  "Beverages": [
+    "饮品",
+    "Minuman"
+  ],
+  "Staples": [
+    "米面油糖",
+    "Barang dapur asas"
+  ],
+  "Snacks": [
+    "零食饼干",
+    "Snek & biskut"
+  ],
+  "Fresh & dairy": [
+    "鲜食与奶类",
+    "Segar & tenusu"
+  ],
+  "Cooking & canned": [
+    "调味与罐头",
+    "Masakan & tin"
+  ],
+  "Non-food": [
+    "非食品",
+    "Bukan makanan"
+  ],
+  "Ready": [
+    "没问题",
+    "Sedia"
+  ],
+  "Missing data": [
+    "数据不全",
+    "Data tak cukup"
+  ],
+  "Ready for planning": [
+    "可以开始规划",
+    "Sedia untuk dirancang"
+  ],
+  "Rows used": [
+    "已使用的行",
+    "Baris digunakan"
+  ],
+  "products are ready to plan": [
+    "项商品已可规划",
+    "produk sedia untuk dirancang"
+  ],
+  "Missing weeks are never counted as zero sales.": [
+    "没有数据的那几周不会被当成零销量。",
+    "Minggu tanpa data tak dianggap sebagai jualan sifar."
+  ],
+  "Checked in your browser. Your file isn't changed.": [
+    "只在浏览器里检查，原文件不会被改动。",
+    "Disemak dalam pelayar anda. Fail asal tak diubah."
+  ],
+  "← Back to matching": [
+    "← 返回栏位对应",
+    "← Kembali ke padanan lajur"
+  ],
+  "Continue to purchase planning →": [
+    "继续规划进货 →",
+    "Teruskan ke perancangan belian →"
+  ],
+  "Last stock count": [
+    "上次盘点",
+    "Kiraan stok terakhir"
+  ],
+  "Stock age": [
+    "多久前点的",
+    "Umur kiraan stok"
+  ],
+  "Weekly sales": [
+    "每周销量",
+    "Jualan mingguan"
+  ],
+  "View details →": [
+    "查看详情 →",
+    "Lihat butiran →"
+  ],
+  "Close": [
+    "关闭",
+    "Tutup"
+  ],
+  "What to check": [
+    "要看的地方",
+    "Apa perlu disemak"
+  ],
+  "Week of": [
+    "那一周",
+    "Minggu"
+  ],
+  "Units sold": [
+    "卖出件数",
+    "Unit dijual"
+  ],
+  "Show the underlying numbers and charts": [
+    "看详细数字和图表",
+    "Lihat angka dan carta terperinci"
+  ],
+  "Problems and tidy-ups": [
+    "问题与整理",
+    "Masalah dan kemas kini"
+  ],
+  "Product": [
+    "商品",
+    "Produk"
+  ],
+  "Observed value": [
+    "原本写的",
+    "Nilai asal"
+  ],
+  "The sale date is later than the analysis date.": [
+    "销售日期在分析日期之后。",
+    "Tarikh jualan selepas tarikh analisis."
+  ],
+  "Categories are suggested from product names. Products to check are listed first.": [
+    "分类由商品名称推测。需要检查的商品排在前面。",
+    "Kategori dicadangkan daripada nama produk. Produk untuk disemak disenaraikan dahulu."
+  ],
+  "Other / unknown": [
+    "其他／未知",
+    "Lain-lain / tidak diketahui"
+  ],
+  "We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.": [
+    "我们检查了每一行。以下列出问题和处理方法。您可以先使用有效记录，稍后修正文件。",
+    "Kami menyemak setiap baris. Masalah dan tindakan disenaraikan di bawah. Teruskan dengan baris yang boleh digunakan dan betulkan fail kemudian."
+  ],
+  "Your data needs corrections": [
+    "您的数据需要修正",
+    "Data anda perlu dibetulkan"
+  ],
+  "rows to fix in your file": [
+    "行需要在文件中修正",
+    "baris perlu dibetulkan dalam fail"
+  ],
+  "rows left out of": [
+    "行未计入，总行数为",
+    "baris diketepikan daripada"
+  ],
+  "Your file isn't changed": [
+    "原始文件未被更改",
+    "Fail anda tidak diubah"
+  ],
+  "stock checks": [
+    "项库存检查",
+    "semakan stok"
+  ],
+  "completed items": [
+    "项已完成事项",
+    "item selesai"
+  ],
+  "← All filters": [
+    "← 所有筛选",
+    "← Semua penapis"
+  ],
+  "Show fewer products": [
+    "显示较少商品",
+    "Tunjukkan kurang produk"
+  ],
+  "Show all products": [
+    "显示所有商品",
+    "Tunjukkan semua produk"
+  ],
+  "Show all findings": [
+    "显示所有发现",
+    "Tunjukkan semua penemuan"
+  ],
+  "Quantities to check": [
+    "需要检查的数量",
+    "Kuantiti untuk disemak"
+  ],
+  "Confirm date formats to use these rows": [
+    "确认日期格式以使用这些行",
+    "Sahkan format tarikh untuk menggunakan baris ini"
+  ],
+  "Choose the format used by this whole column. Ambiguous dates are excluded until confirmed.": [
+    "选择整列使用的日期格式。含糊的日期在确认前被排除。",
+    "Pilih format bagi seluruh lajur ini. Tarikh kabur diketepikan sehingga disahkan."
+  ],
+  "products can be planned with a note to review": [
+    "项商品可规划，但需要查看提示",
+    "produk boleh dirancang dengan nota untuk disemak"
+  ],
+  "products need more data before planning": [
+    "项商品在规划前需要更多数据",
+    "produk memerlukan lebih banyak data sebelum dirancang"
+  ],
+  "Duplicate rows handled automatically": [
+    "重复行已自动处理",
+    "Baris pendua dikendalikan secara automatik"
+  ],
+  "duplicate groups": [
+    "组重复行",
+    "kumpulan pendua"
+  ],
+  "repeated rows left out": [
+    "行重复记录未计入",
+    "baris pendua diketepikan"
+  ],
+  "Every finding retains its source rows and original evidence.": [
+    "每项发现均保留来源行和原始记录。",
+    "Setiap penemuan mengekalkan baris sumber dan bukti asal."
+  ],
+  "Download all row evidence": [
+    "下载所有行记录",
+    "Muat turun semua bukti baris"
+  ],
+  "No problems found.": [
+    "未发现问题。",
+    "Tiada masalah ditemui."
+  ],
+  "Fewer than four of the last eight complete weeks have sales records.": [
+    "最近八个完整周中，有销售记录的周少于四个。",
+    "Kurang daripada empat minggu dalam lapan minggu lengkap terakhir mempunyai rekod jualan."
+  ],
+  "This sale is far larger than this product's usual recorded sales.": [
+    "此笔销量远高于该商品通常的销售记录。",
+    "Jualan ini jauh lebih besar daripada jualan biasa produk ini."
+  ],
+  "Check that the quantity is right. This sale is still counted.": [
+    "检查数量是否正确。此笔销售仍然计入。",
+    "Semak sama ada kuantiti betul. Jualan ini masih dikira."
+  ],
+  "One product code is used for different product names or pack sizes.": [
+    "同一商品编码用于不同商品名称或包装规格。",
+    "Satu kod produk digunakan untuk nama produk atau saiz pek yang berbeza."
+  ],
+  "The same product name and pack size appear under different codes.": [
+    "相同商品名称和包装规格使用不同编码。",
+    "Nama produk dan saiz pek yang sama muncul di bawah kod berbeza."
+  ],
+  "Check the product names, codes and pack sizes in your file. Original identifiers are preserved.": [
+    "检查商品名称、编码和包装规格。原始标识保持不变。",
+    "Semak nama, kod dan saiz pek dalam fail. Pengecam asal dikekalkan."
+  ],
+  "Handled automatically. Your file is unchanged.": [
+    "已自动处理。原始文件未被更改。",
+    "Dikendalikan secara automatik. Fail anda tidak berubah."
+  ],
+  "Nothing to fix. Original values are preserved.": [
+    "无需修正。原始值已保留。",
+    "Tiada yang perlu dibetulkan. Nilai asal dikekalkan."
+  ],
+  "Used the confirmed date format.": [
+    "使用了已确认的日期格式。",
+    "Format tarikh yang disahkan digunakan."
+  ],
+  "Extra spaces removed.": [
+    "已移除多余空格。",
+    "Ruang tambahan dibuang."
+  ],
+  "Line endings normalised.": [
+    "已统一换行符。",
+    "Pengakhiran baris diseragamkan."
+  ],
+  "No usable stock count date.": [
+    "没有可用的库存清点日期。",
+    "Tiada tarikh kiraan stok yang boleh digunakan."
+  ],
+  "Count your stock again and update the count date in your file.": [
+    "重新清点库存，并更新文件中的清点日期。",
+    "Kira stok semula dan kemas kini tarikh kiraan dalam fail."
+  ],
+  "Stock was counted {0} days ago.": [
+    "库存清点于 {0} 天前。",
+    "Stok dikira {0} hari lalu."
+  ],
+  "Identical rows: kept source row {0} and left out {1} repeated row(s).": [
+    "相同行：保留来源行 {0}，并排除 {1} 行重复记录。",
+    "Baris serupa: baris sumber {0} dikekalkan dan {1} baris pendua diketepikan."
+  ]
+});
+
+Object.assign(messages, {"Apply filters": ["应用筛选", "Gunakan penapis"]});
