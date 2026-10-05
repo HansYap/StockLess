@@ -20,9 +20,9 @@
   --text-body:16px; --text-secondary:15px; --text-description:14px;
   --text-eyebrow:13px; --text-label:12px;
   --shadow-card:0 10px 30px rgba(22,49,59,.05);
-  --display:"Manrope",-apple-system,BlinkMacSystemFont,sans-serif;
-  --body:"Source Sans 3",-apple-system,BlinkMacSystemFont,sans-serif;
-  --data:"Inter",ui-monospace,monospace;
+  --display:"Manrope Variable",-apple-system,BlinkMacSystemFont,sans-serif;
+  --body:"Source Sans 3 Variable",-apple-system,BlinkMacSystemFont,sans-serif;
+  --data:"Inter Variable",ui-monospace,monospace;
 }
 *{box-sizing:border-box}
 html,body,#root{margin:0;min-height:100%}

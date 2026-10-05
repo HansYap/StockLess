@@ -8,8 +8,6 @@
     "build": "node scripts/run.mjs build",
     "preview": "node scripts/run.mjs preview",
     "typecheck": "node scripts/run.mjs typecheck",
-    "export:homepage": "node scripts/export-homepage.mjs",
-    "export:ui-preview": "node scripts/export-ui-preview.mjs",
     "test": "node scripts/test.mjs"
   },
   "dependencies": {

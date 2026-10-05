@@ -54,11 +54,11 @@ describe("first-visit bulk confirmation", () => {
 describe("persistent language choice across the frontend", () => {
   it("updates homepage copy and dynamic results while retaining slider values", () => {
     const { unmount } = render(<HomePage />);
-    fireEvent.change(screen.getByRole("slider", {name:"Your planned order"}), { target: { value: "44" } });
+    fireEvent.change(screen.getByRole("slider", {name:"Your order"}), { target: { value: "44" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Language" }), { target: { value: "zh" } });
-    expect(screen.getByText("此计划高于范围。")).toBeTruthy();
-    expect(screen.getByText("您将拥有 53 个单位，高于 7–28 的四周范围。部分库存可能在变旧之前仍未售出。")).toBeTruthy();
-    expect((screen.getByRole("slider", {name:"您计划的订购量"}) as HTMLInputElement).value).toBe("44");
+    expect(screen.getAllByText("这次进得有点多。").length).toBeGreaterThan(0);
+    expect(screen.getByText("这样下单您会有 52 件——比生意最好的一个月（21）还多。进 10 件就够应付预计销量。")).toBeTruthy();
+    expect((screen.getByRole("slider", {name:"您的订单"}) as HTMLInputElement).value).toBe("44");
     expect(localStorage.getItem("stockless.language")).toBe("zh");
     expect(document.documentElement.lang).toBe("zh-Hans");
     unmount();
