@@ -2,10 +2,10 @@ import { t, useLanguage } from "../i18n/index.ts";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { excelToCsvBytes } from "./excel-import.ts";
+import "./upload.css";
 import {
   CsvImportError,
   PRIVACY_NOTICE,
-  UPLOAD_ATTRIBUTE_GUIDE,
   UPLOAD_REQUIREMENTS,
   addCalendarDays,
   calendarDaysBetween,
@@ -102,10 +102,19 @@ export function UploadScreen({
   const [finishingSeconds, setFinishingSeconds] = useState(0);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [compactTitle, setCompactTitle] = useState(false);
+  const continueRef = useRef<HTMLButtonElement>(null);
 
   const megabyteLimit = Math.round(UPLOAD_REQUIREMENTS.maxBytes / (1024 * 1024));
-  const requiredAttributes = UPLOAD_ATTRIBUTE_GUIDE.filter((item) => item.requirement === "required");
-  const optionalAttributes = UPLOAD_ATTRIBUTE_GUIDE.filter((item) => item.requirement === "optional");
+
+  useEffect(() => {
+    const update = () => setCompactTitle((compact) => window.scrollY > 140 || (compact && window.scrollY >= 40));
+    window.addEventListener("scroll", update, { passive: true });
+    update();
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+  useEffect(() => { if (selectedFile) continueRef.current?.focus(); }, [selectedFile]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
   useEffect(() => {
@@ -184,195 +193,150 @@ export function UploadScreen({
     setFailure(null);
     setBusy(false);
     setProgress(null);
+    setSelectedFile(null);
     onCancel();
+  }
+
+  function selectFile(file: File) {
+    if (busy) return;
+    setFailure(null);
+    const code = !/\.(csv|xlsx|xls)$/i.test(file.name) ? "UNSUPPORTED_FILE_TYPE"
+      : file.size > UPLOAD_REQUIREMENTS.maxBytes ? "FILE_TOO_LARGE" : null;
+    if (code) {
+      const rejection = createCsvImportError(code, file.name);
+      setSelectedFile(null);
+      setFailure({ message: rejection.message, recovery: rejection.recovery });
+      return;
+    }
+    setSelectedFile(file);
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
     const file = event.dataTransfer.files[0];
-    if (file) void handleFile(file);
+    if (file) selectFile(file);
   }
 
   return (
-    <>
-      <p className="eyebrow">{t("Start with what you already have")}</p>
-      <h1 className="title">{t("Upload your existing sales file.")}</h1>
-      <p className="lede">{t(UPLOAD_REQUIREMENTS.coreDescription)}</p>
-
-      <div className="s1-grid">
-        <div>
-          <h2 className="card-title card-title--sprout">{t("What do you need to get started?")}</h2>
-          <p className="card-sub attribute-guide__intro">
-            {t("Start with the three required attributes. Optional attributes unlock additional insights.")}</p>
-
-          <AttributeSection
-            id="required-data"
-            title={t("Required data")}
-            items={requiredAttributes}
-            startIndex={0}
-          />
-          <details className="optional-fields optional-fields--collapsible">
-            <summary>{t("Optional data")} <span>{t("Show fields that add more detail")}</span></summary>
-            <AttributeSection
-              id="optional-data"
-              title={t("Optional data")}
-              items={optionalAttributes}
-              startIndex={requiredAttributes.length}
-            />
-          </details>
+    <div className="upload-screen">
+      <header className={compactTitle ? "upload-hero upload-hero--compact" : "upload-hero"}>
+        <div className="upload-wrap upload-hero__inner">
+          <p className="upload-hero__eyebrow"><span aria-hidden="true">🌱</span> {t("Step 1 of 4")}</p>
+          <h1>{t("Upload your sales file")}</h1>
+          <p className="upload-hero__lede">{t("Use the CSV or Excel export from your POS, marketplace or spreadsheet. Column names don't need to match ours.")}</p>
         </div>
-
-        <div className="card upload-card">
-          <div
-            className={`dropzone${dragging ? " dropzone--active" : ""}${failure ? " dropzone--error" : ""}`}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={handleDrop}
-          >
-            <div className="csv-badge" aria-hidden="true"><span>{t("CSV / XLS")}</span></div>
-
-            {t(busy ? (
-              <>
-                <h3>{t(progress ? PHASE_LABEL[progress.phase] : "Reading the file")}</h3>
-                <p>
-                  {t(progress && progress.total > 0
-                    ? `${Math.min(100, Math.round((progress.processed / progress.total) * 100))}% complete${progress.phase === "complete" ? ` · still working (${finishingSeconds}s)` : ""}`
-                    : "Working in this browser…")}
-                </p>
-                <div
-                  className="progress"
-                  role="progressbar"
-                  aria-label={t("Import progress")}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={progress && progress.total > 0
-                    ? Math.min(100, Math.round((progress.processed / progress.total) * 100))
-                    : 0}
-                >
-                  <span
-                    className="progress__fill"
-                    style={{
-                      width: progress && progress.total > 0
-                        ? `${Math.min(100, (progress.processed / progress.total) * 100)}%`
-                        : "10%",
-                    }}
-                  />
+      </header>
+      <main className="upload-wrap upload-main">
+        <div className="upload-grid">
+          <section className="upload-card upload-drop" aria-label={t("Upload")}>
+            <div className={"upload-zone" + (dragging ? " upload-zone--active" : "") + (failure ? " upload-zone--error" : "")}
+              onDragOver={(event) => { event.preventDefault(); if (!busy) setDragging(true); }}
+              onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
+              onDrop={handleDrop} aria-busy={busy}>
+              <div className="upload-file-badge" aria-hidden="true"><span>CSV /<br />XLS</span></div>
+              {busy ? <>
+                <h2>{t(progress ? PHASE_LABEL[progress.phase] : "Reading the file")}</h2>
+                <p role="status">{t(progress && progress.total > 0
+                  ? Math.min(100, Math.round(progress.processed / progress.total * 100)) + "% complete" + (progress.phase === "complete" ? " · still working (" + finishingSeconds + "s)" : "")
+                  : "Working in this browser…")}</p>
+                <div className="progress" role="progressbar" aria-label={t("Import progress")}
+                  aria-valuemin={0} aria-valuemax={100}
+                  aria-valuenow={progress && progress.total > 0 ? Math.min(100, Math.round(progress.processed / progress.total * 100)) : 0}>
+                  <span className="progress__fill" style={{ width: progress && progress.total > 0 ? Math.min(100, progress.processed / progress.total * 100) + "%" : "10%" }} />
                 </div>
-                <button type="button" className="btn btn--ghost btn--small" onClick={cancelImport}>
-                  {t("Cancel")}</button>
-              </>
-            ) : (
-              <>
-                <h3>{t("Drop your CSV or Excel file here")}</h3>
+                <button type="button" className="btn btn--ghost" onClick={cancelImport}>{t("Cancel")}</button>
+              </> : <>
+                <h2>{t("Drop your CSV or Excel file here")}</h2>
                 <p>{t("Use the export from your POS, marketplace or spreadsheet.")}</p>
-                <div className="dropzone__actions">
-                  <button type="button" className="btn btn--primary" onClick={() => inputRef.current?.click()}>
-                    {t("Choose CSV or Excel file")}</button>
-                  <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>
-                    {t("Use sample file")}</button>
+                <div className="upload-actions">
+                  <button type="button" className="btn btn--primary" onClick={() => inputRef.current?.click()}>{t("Choose CSV or Excel file")}</button>
+                  <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>{t("Use sample file")}</button>
                 </div>
-                <p className="dropzone__limits">
-                  {t(".csv, .xlsx or .xls")} {t("up to ")}{t(megabyteLimit)} {t("MiB ·")}{t(" ")}{t(UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en"))} {t("rows ·")}{t(" ")}{t("Excel uses the first worksheet with data")}</p>
-<ol className="value-chain" aria-label={t("What your file turns into")}><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6ZM14 3v5h4M9 12h6M9 16h6"/></svg><span className="value-chain__label">{t("Your sales data")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 21h18M5 20V12h3v8M11 20V7h3v13M17 20V3h3v17"/></svg><span className="value-chain__label">{t("Demand insights")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 7 9-4 9 4v10l-9 4-9-4ZM3 7l9 4 9-4M12 11v10"/></svg><span className="value-chain__label">{t("Smarter restocking")}</span></span></li><li><span className="value-chain__step"><svg className="value-chain__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 4C5 3 2 9 5 16c7 8 15-2 15-12ZM4 21 16 8"/></svg><span className="value-chain__label">{t("Less waste")}</span></span></li></ol>
-              </>
-            ))}
-
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-              hidden
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void handleFile(file);
-                event.target.value = "";
-              }}
-            />
-          </div>
-
-          {t(failure && (
-            <div className="alert alert--error" role="alert">
+                <p className="upload-limits">{t(".csv, .xlsx or .xls")} {t("up to ")}{megabyteLimit} {t("MiB ·")} {UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en")} {t("rows ·")} {t("Excel uses the first worksheet with data")}</p>
+                <ol className="upload-flow" aria-label={t("What happens to your file")}>
+                  {FLOW.map(([icon, label]) => <li key={label}><UploadIcon name={icon} /><span>{t(label)}</span></li>)}
+                </ol>
+              </>}
+              <input ref={inputRef} type="file" aria-label={t("Choose CSV or Excel file")}
+                accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                hidden disabled={busy} onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) selectFile(file);
+                  event.target.value = "";
+                }} />
+            </div>
+            {selectedFile && !busy && <div className="upload-picked">
+              <span className="upload-picked__icon" aria-hidden="true">{selectedFile.name.split(".").pop()?.toUpperCase()}</span>
+              <div className="upload-picked__details"><b>{selectedFile.name}</b><small>{(selectedFile.size / 1024).toFixed(selectedFile.size < 102400 ? 1 : 0)} KB</small></div>
+              <span className="upload-tag" role="status">{t("Ready to match")}</span>
+              <button ref={continueRef} type="button" className="btn btn--primary" onClick={() => void handleFile(selectedFile)}>{t("Continue to matching →")}</button>
+            </div>}
+            {failure && <div className="alert alert--error" role="alert">
               <span className="alert__icon" aria-hidden="true">!</span>
-              <div>
-                <p className="alert__title">{t(failure.message)}</p>
-                <p className="alert__body">{t(failure.recovery)}</p>
-              </div>
+              <div><p className="alert__title">{t(failure.message)}</p><p className="alert__body">{t(failure.recovery)}</p></div>
+            </div>}
+            <div className="upload-privacy">
+              <span className="upload-privacy__tick" aria-hidden="true">✓</span>
+              <div><b>{t("Your data stays on your device.")}</b><p>{t(PRIVACY_NOTICE.beforeUpload)}</p></div>
             </div>
-          ))}
-
-          <div className="privacy">
-            <span className="privacy__tick" aria-hidden="true">✓</span>
-            <p>
-              <b>{t("Your data stays on your device.")}</b>
-              <span>{t(PRIVACY_NOTICE.beforeUpload)}</span>
-            </p>
-          </div>
-
-          {t(savedMatchingCount > 0 && (
-            <div className="saved-setup" aria-label={t("Saved column matching")}>
-              <div>
-                <b>
-                  {t(savedMatchingCount)} {t("saved column ")}{t(savedMatchingCount === 1 ? "matching" : "matchings")}
-                </b>
-                <span>{t("Only column headings and matching rules are stored for returning use.")}</span>
-              </div>
-              <button
-                type="button"
-                className="btn btn--small btn--ghost"
-                disabled={deletingSavedMatchings}
-                onClick={onDeleteSavedMatchings}
-              >
-                {t(deletingSavedMatchings ? "Deleting…" : "Delete saved matching")}
-              </button>
-            </div>
-          ))}
+            {savedMatchingCount > 0 && <div className="saved-setup" aria-label={t("Saved column matching")}>
+              <div><b>{savedMatchingCount} {t("saved column ")}{t(savedMatchingCount === 1 ? "matching" : "matchings")}</b>
+                <span>{t("Only column headings and matching rules are stored for returning use.")}</span></div>
+              <button type="button" className="btn btn--small btn--ghost" disabled={deletingSavedMatchings} onClick={onDeleteSavedMatchings}>
+                {t(deletingSavedMatchings ? "Deleting…" : "Delete saved matching")}</button>
+            </div>}
+          </section>
+          <aside className="upload-guidance" aria-label={t("Required and optional columns")}>
+            <section className="upload-card upload-needed">
+              <h2><span aria-hidden="true">🌱</span> {t("Your file needs three columns")}</h2>
+              <p>{t("You'll pair them up in the next step.")}</p>
+              <ul>{REQUIRED_COLUMNS.map(([icon, title, description, example]) => <li key={title}>
+                <span className="upload-guidance__icon"><UploadIcon name={icon} /></span>
+                <span className="upload-guidance__text"><b>{t(title)}</b><small>{t(description)}</small></span>
+                <span className="upload-example">{example}</span>
+              </li>)}</ul>
+            </section>
+            <section className="upload-card upload-optional">
+              <h2><span aria-hidden="true">🪴</span> {t("Optional columns add more")}</h2>
+              <ul>{OPTIONAL_COLUMNS.map(([icon, title, description, tag]) => <li key={title}>
+                <span className="upload-guidance__icon"><UploadIcon name={icon} /></span>
+                <span className="upload-guidance__text"><b>{t(title)}</b><small>{t(description)}</small></span>
+                {tag && <span className="upload-tag upload-tag--muted">{t(tag)}</span>}
+              </li>)}</ul>
+            </section>
+          </aside>
         </div>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
 
-function AttributeSection({
-  id,
-  title,
-  items,
-  startIndex,
-}: {
-  readonly id: string;
-  readonly title: string;
-  readonly items: typeof UPLOAD_ATTRIBUTE_GUIDE;
-  readonly startIndex: number;
-}) {
-  useLanguage();
-  return (
-    <section className="attribute-section" aria-labelledby={id}>
-      <div className="attribute-section__head">
-        <h3 id={id}>{t(title)}</h3>
-        <span className="pill pill--grey">{t(items.length)} {t("attributes")}</span>
-      </div>
-      <div className="attribute-list">
-        {t(items.map((item, index) => (
-          <article className="attribute-card" key={item.id}>
-            <div className="attribute-card__head">
-              <span className="attribute-card__number">{t(String(startIndex + index + 1).padStart(2, "0"))}</span>
-              <h4>{t(item.label)}</h4>
-              <span className={`attribute-mark attribute-mark--${item.requirement}`}>
-                {t(item.requirement === "required" ? "Required" : "Optional")}
-              </span>
-            </div>
-            <p>{t(item.description)}</p>
-            {t(item.acceptedForms && (
-              <ol className="accepted-forms" aria-label={t("Two accepted ways to name a product")}>
-                {t(item.acceptedForms.map((form) => <li key={form}>{t(form)}</li>))}
-              </ol>
-            ))}
-          </article>
-        )))}
-      </div>
-    </section>
-  );
+const REQUIRED_COLUMNS = [
+  ["calendar", "Sale date", "Each sale or return", "2026-02-02"],
+  ["barcode", "Product", "Code, or name + pack size", "MM0001"],
+  ["cart", "Quantity sold", "Returns as negatives", "2"],
+] as const;
+const OPTIONAL_COLUMNS = [
+  ["box", "Stock on hand + count date", "See how many weeks stock will last", null],
+  ["document", "Planned orders, incoming stock", "Check an order before you place it", null],
+  ["expiry", "Expiry dates", "Flag batches close to expiry", null],
+  ["cost", "Unit cost", "Price your impact in ringgit", "Not yet available"],
+  ["truck", "Supplier details", "Minimum order, case size, lead time", "Typed in Step 4"],
+] as const;
+const FLOW = [["document", "Your sales data"], ["chart", "Demand insights"], ["box", "Smarter restocking"], ["leaf", "Less waste"]] as const;
+const ICON_PATHS = {
+  calendar: "M4 5h16v15H4ZM4 10h16M8 3v4m8-4v4",
+  barcode: "M4 5v14M7 5v14M10 5v14M14 5v14M17 5v14M20 5v14",
+  cart: "M3 4h2l2.2 10.5h10.9L20 8H6.2M10.4 19a1.4 1.4 0 1 1-2.8 0 1.4 1.4 0 1 1 2.8 0m8 0a1.4 1.4 0 1 1-2.8 0 1.4 1.4 0 1 1 2.8 0",
+  box: "m3 7 9-4 9 4v10l-9 4-9-4ZM3 7l9 4 9-4M12 11v10",
+  document: "M6 3h8l4 4v14H6ZM14 3v5h4M9 12h6M9 16h6",
+  expiry: "M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9m8-18c0 5-8 5-8 9s8 4 8 9",
+  cost: "M21 12a9 9 0 1 1-18 0 9 9 0 1 1 18 0M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .9-3 2s1.3 1.7 3 2 3 .9 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2m0 8v2",
+  truck: "M3 6h11v10H3ZM14 9h4l3 3v4h-7M8.6 17.5a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 1 1 3.2 0m10 0a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 1 1 3.2 0",
+  chart: "M3 21h18M5 20V12h3v8M11 20V7h3v13M17 20V3h3v17",
+  leaf: "M20 4C5 3 2 9 5 16c7 8 15-2 15-12ZM4 21 16 8",
+} as const;
+function UploadIcon({ name }: { readonly name: keyof typeof ICON_PATHS }) {
+  return <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICON_PATHS[name]} /></svg>;
 }

@@ -49,6 +49,9 @@ describe("Excel sales import", () => {
     });
     render(<UploadScreen onSource={onSource} onCancel={() => {}} savedMatchingCount={0} deletingSavedMatchings={false} onDeleteSavedMatchings={() => {}} />);
     fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    expect(onSource).not.toHaveBeenCalled();
+    expect(screen.getByText("retailer.xlsx")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Continue to matching →" }));
     await waitFor(() => expect(onSource).toHaveBeenCalledOnce());
     expect(onSource.mock.calls[0][1]).toBe("retailer.xlsx");
     expect(onSource.mock.calls[0][3]).toBe("text/csv;converted-from=excel");

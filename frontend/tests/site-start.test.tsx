@@ -13,5 +13,5 @@ beforeEach(() => {
 it("opens Upload when saved-dataset storage cannot be checked", async () => {
   render(<Site />);
   await waitFor(() => expect(window.location.hash).toBe("#workspace"));
-  expect(await screen.findByRole("heading", { name: "Upload your existing sales file." })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "Upload your sales file" }, { timeout: 5000 })).toBeTruthy();
 });

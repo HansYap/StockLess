@@ -39,12 +39,16 @@ export function AppShell({
 }: AppShellProps) {
   useLanguage();
   return (
-    <div className="frame">
+    <div className={`frame${current === 1 ? " frame--upload" : ""}`}>
       <WorkspaceDecor />
       <header className="topbar">
-        <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label={t("StockLess — upload")}>
-          <Logo />
-        </button>
+        {current === 1 ? (
+          <a className="brand" href="#home" aria-label="StockLess"><Logo height={36} /></a>
+        ) : (
+          <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label={t("StockLess — upload")}>
+            <Logo />
+          </button>
+        )}
         {t(sourceMode && (
           <div className="session-status" aria-label={t("Active session")}>
             <span className={`pill ${sourceMode === "sample" ? "pill--amber" : "pill--teal"}`}>
@@ -57,8 +61,8 @@ export function AppShell({
             ))}
           </div>
         ))}
-        <a className="workspace-home-link" href="#home"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></svg>{t("Homepage")}</a>
-        <LanguageSwitcher />
+        <a className="workspace-home-link" href="#home" aria-label={t("Homepage")}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></svg><span>{t("Homepage")}</span></a>
+        <LanguageSwitcher compact={current === 1} />
       </header>
 
       <nav className="stepper" aria-label={t("Progress")}>

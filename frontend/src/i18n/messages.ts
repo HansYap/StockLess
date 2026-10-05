@@ -3085,3 +3085,105 @@ Object.assign(messages, {
   "Filter": ["筛选", "Tapis"],
   "Other": ["其他", "Lain-lain"],
 });
+
+Object.assign(messages, {
+  "Step 1 of 4": [
+    "第 1 步 / 共 4 步",
+    "Langkah 1 / 4"
+  ],
+  "Upload your sales file": [
+    "上传您的销售记录",
+    "Muat naik fail jualan anda"
+  ],
+  "Use the CSV or Excel export from your POS, marketplace or spreadsheet. Column names don't need to match ours.": [
+    "直接用 POS 系统、网店或 Excel 导出的 CSV / Excel 文件就可以，栏位名称不必和我们一样。",
+    "Guna fail CSV atau Excel yang dieksport dari sistem POS, kedai online atau hamparan anda. Nama lajur tak perlu sama macam kami."
+  ],
+  "Ready to match": [
+    "可以开始对应栏位了",
+    "Sedia untuk dipadankan"
+  ],
+  "Continue to matching →": [
+    "下一步 →",
+    "Teruskan →"
+  ],
+  "Your file needs three columns": [
+    "文件里需要有这三栏",
+    "Fail anda perlu ada tiga lajur ini"
+  ],
+  "You'll pair them up in the next step.": [
+    "下一步会请您一一对应。",
+    "Anda akan padankannya dalam langkah seterusnya."
+  ],
+  "Each sale or return": [
+    "每一笔销售或退货",
+    "Setiap jualan atau barang dipulangkan"
+  ],
+  "Code, or name + pack size": [
+    "商品代码，或名称加规格",
+    "Kod produk, atau nama + saiz pek"
+  ],
+  "Returns as negatives": [
+    "退货用负数表示",
+    "Barang dipulangkan ditulis sebagai negatif"
+  ],
+  "Optional columns add more": [
+    "多几栏，结果更完整",
+    "Lajur tambahan, hasil lebih lengkap"
+  ],
+  "Stock on hand + count date": [
+    "现有库存 + 盘点日期",
+    "Stok sedia ada + tarikh kira stok"
+  ],
+  "See how many weeks stock will last": [
+    "看库存还能卖几周",
+    "Tahu stok cukup untuk berapa minggu"
+  ],
+  "Planned orders, incoming stock": [
+    "计划进货、在途库存",
+    "Pesanan dirancang, stok dalam perjalanan"
+  ],
+  "Check an order before you place it": [
+    "下单前先检查一遍",
+    "Semak pesanan sebelum anda buat"
+  ],
+  "Flag batches close to expiry": [
+    "提醒快过期的批次",
+    "Kenal pasti barang yang hampir luput"
+  ],
+  "Unit cost": [
+    "进货单价",
+    "Kos seunit"
+  ],
+  "Price your impact in ringgit": [
+    "用令吉算出您省了多少",
+    "Kira impak anda dalam ringgit"
+  ],
+  "Minimum order, case size, lead time": [
+    "最低订量、每箱数量、送货天数",
+    "Pesanan minimum, saiz kotak, tempoh penghantaran"
+  ],
+  "Typed in Step 4": [
+    "在第 4 步填写",
+    "Isi di Langkah 4"
+  ],
+  "What happens to your file": [
+    "您的文件会变成什么",
+    "Apa yang berlaku pada fail anda"
+  ],
+  "Required and optional columns": [
+    "必需和可选栏位",
+    "Lajur wajib dan pilihan"
+  ],
+  "Not yet available": [
+    "暂未提供",
+    "Belum tersedia"
+  ]
+});
+
+Object.assign(messages, {
+  "Your CSV or Excel file is processed in this browser and no account is required. If you save a dataset, StockLess keeps its records, settings and plans in this browser. Your file is not uploaded to an AI or API service.": [
+    "CSV 或 Excel 文件只在此浏览器中处理，无需账户。如果您保存数据集，StockLess 会将其记录、设置和计划保存在此浏览器中。文件不会上传至 AI 或 API 服务。",
+    "Fail CSV atau Excel anda diproses dalam pelayar ini tanpa akaun. Jika anda menyimpan set data, StockLess menyimpan rekod, tetapan dan rancangannya dalam pelayar ini. Fail anda tidak dimuat naik ke perkhidmatan AI atau API."
+  ]
+});
