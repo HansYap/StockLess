@@ -38,6 +38,8 @@ export interface EvaluatePurchasePlanOptions {
   readonly inputs?: ProductPurchaseInputs;
   readonly currentStockSource?: PurchaseInputSource;
   readonly expiry?: ExpiryCheckInput;
+  /** Visual preview only: an empty order stays empty in inputs and saved plans. */
+  readonly previewEmptyOrder?: boolean;
 }
 
 export interface BuildPurchasePlanReviewOptions {
@@ -209,8 +211,9 @@ function auditPurchase(
   inputs: ProductPurchaseInputs,
   analysisDate: string,
   currentStockSource: PurchaseInputSource,
+  previewEmptyOrder = false,
 ): PurchaseAuditResult {
-  if (inputs.plannedOrder.state === "empty") return Object.freeze({ state: "not_planned" });
+  if (inputs.plannedOrder.state === "empty" && !previewEmptyOrder) return Object.freeze({ state: "not_planned" });
 
   const cannotReason = cannotJudgeReason(demand, stock, analysisDate);
   if (cannotReason) {
@@ -225,7 +228,9 @@ function auditPurchase(
 
   const range = requireRange(demand);
   const incomingStock = effectiveIncoming(inputs.incomingStock);
-  const plannedOrder = inputs.plannedOrder;
+  const plannedOrder = inputs.plannedOrder.state === "value"
+    ? figure(inputs.plannedOrder.value, inputs.plannedOrder.source)
+    : figure(0, "worked out by StockLess");
   const available = stock!.currentStock! + incomingStock.value + plannedOrder.value;
   const availableText = formatQuantity(available);
 
@@ -313,6 +318,7 @@ export function evaluateProductPurchasePlan(
       inputs,
       options.analysisDate,
       options.currentStockSource ?? "from your file",
+      options.previewEmptyOrder,
     ),
     expiry: checkExpiry(options.expiry, options.analysisDate),
     purchasePolicyVersion: EPIC5_POLICY_VERSION,

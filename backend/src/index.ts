@@ -12,4 +12,5 @@ export * from "./timeline.ts";
 export * from "./demand.ts";
 export * from "./forecast.ts";
 export * from "./purchase-plan.ts";
+export * from "./supplier-order.ts";
 export * from "./correction-report.ts";

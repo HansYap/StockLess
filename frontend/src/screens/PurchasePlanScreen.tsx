@@ -1,443 +1,139 @@
-import { t, useLanguage, getLocale } from "../i18n/index.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  evaluateProductPurchasePlan,
-  type DemandForecastReview,
-  type ReadinessSnapshot,
-  type ProductPurchaseInputs,
-  type ExpiryCheckInput,
-} from "../engine.ts";
-import {
-  evaluatePurchaseProduct,
-  joinPurchaseEvidence,
-  type PurchaseDrafts,
-  type PurchaseEvaluator,
-  type PurchaseProduct,
-} from "../purchase-plan/model.ts";
-import {
-  DataLabel,
-  ProductPurchaseDialog,
-} from "../purchase-plan/ProductPurchaseDialog.tsx";
+import { t, useLanguage } from "../i18n/index.ts";
+import { evaluateProductPurchasePlan, type DemandForecastReview, type ReadinessSnapshot, type ProductPurchaseInputs, type ExpiryCheckInput, type ProductPurchasePlan, type SupplierOrderTerms } from "../engine.ts";
+import { evaluatePurchaseProduct, joinPurchaseEvidence, purchaseGroup, purchaseGroupLabels, type PurchaseDrafts, type PurchaseEvaluator, type PurchaseProduct, type PurchaseGroup } from "../purchase-plan/model.ts";
+import { ProductPurchasePanel } from "../purchase-plan/ProductPurchasePanel.tsx";
+import { purchaseDate } from "../purchase-plan/PurchaseDemandChart.tsx";
 import { numberText } from "../purchase-plan/SourceTag.tsx";
-import {
-  purchasePlanFilename,
-  serializePurchasePlanCsv,
-} from "../purchase-plan/purchase-plan-export.ts";
+import { purchasePlanFilename, serializePurchasePlanCsv } from "../purchase-plan/purchase-plan-export.ts";
 import "../purchase-plan/purchase-plan.css";
-import "../purchase-plan/step4-design.css";
-import { calculatePotentialExcess } from "./ImpactDashboard.tsx";
 
+export type SupplierDrafts = Readonly<Record<string, SupplierOrderTerms | undefined>>;
 interface Props {
-  snapshot: ReadinessSnapshot;
-  forecast: DemandForecastReview;
-  drafts: PurchaseDrafts;
-  selectedKey: string | null;
-  onSelect: (key: string | null) => void;
-  onDraftChange: (key: string, inputs: ProductPurchaseInputs) => void;
-  onBack: () => void;
-  onImpact?: () => void;
-  evaluatePurchase?: PurchaseEvaluator;
-  expiryByProduct?: Readonly<Record<string, ExpiryCheckInput | undefined>>;
+  snapshot: ReadinessSnapshot; forecast: DemandForecastReview; drafts: PurchaseDrafts;
+  selectedKey: string | null; onSelect: (key: string | null) => void;
+  onDraftChange: (key: string, inputs: ProductPurchaseInputs) => void; onBack: () => void; onImpact?: () => void;
+  evaluatePurchase?: PurchaseEvaluator; expiryByProduct?: Readonly<Record<string, ExpiryCheckInput | undefined>>;
+  supplierDrafts?: SupplierDrafts; onSupplierChange?: (key: string, terms: SupplierOrderTerms) => void;
 }
-
 interface PlanCacheEntry {
-  readonly product: PurchaseProduct;
-  readonly inputs: ProductPurchaseInputs;
-  readonly expiry: ExpiryCheckInput;
-  readonly evaluator: PurchaseEvaluator;
-  readonly analysisDate: string;
-  readonly result: ReturnType<typeof evaluatePurchaseProduct>;
+  product: PurchaseProduct; inputs: ProductPurchaseInputs; expiry: ExpiryCheckInput;
+  evaluator: PurchaseEvaluator; analysisDate: string; result: ProductPurchasePlan | undefined;
 }
+const groups: readonly { id: PurchaseGroup; label: string; help: string; icon: string }[] = [
+  { id: "order_needed", label: "Order needed", help: "Below expected demand", icon: "🛒" },
+  { id: "check_order", label: "Check order", help: "More than the busiest month", icon: "⚠" },
+  { id: "balanced", label: "Balanced", help: "Within expected demand", icon: "✓" },
+  { id: "need_data", label: "Need data", help: "Can't be judged yet", icon: "×" },
+];
+const rank: Record<PurchaseGroup, number> = { check_order: 0, order_needed: 1, balanced: 2, need_data: 3 };
 
-export function PurchasePlanScreen({
-  snapshot,
-  forecast,
-  drafts,
-  selectedKey,
-  onSelect,
-  onDraftChange,
-  onBack,
-  onImpact,
-  evaluatePurchase = evaluateProductPurchasePlan,
-  expiryByProduct,
-}: Props) {
-  const language = useLanguage();
-  const copy = (en: string, zh: string, ms: string) => language === "zh" ? zh : language === "ms" ? ms : en;
+export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, onSelect, onDraftChange, onBack, onImpact, evaluatePurchase = evaluateProductPurchasePlan, expiryByProduct, supplierDrafts, onSupplierChange }: Props) {
+  useLanguage();
   const [query, setQuery] = useState("");
-  const [orderingOnly, setOrderingOnly] = useState(false);
-  const [group, setGroup] = useState<"all" | "order_needed" | "check_order" | "balanced" | "need_data">("all");
-  const products = useMemo(
-    () => joinPurchaseEvidence(snapshot, forecast),
-    [snapshot, forecast],
-  );
-  const planCache = useRef(new Map<string, PlanCacheEntry>());
-  // Only Epic 5 depends on purchase drafts; readiness and Epic 3 evidence are stable.
-  const plans = useMemo(
-    () => {
-      const nextCache = new Map<string, PlanCacheEntry>();
-      const nextPlans = new Map<string, ReturnType<typeof evaluatePurchaseProduct>>();
-      for (const product of products) {
-        const inputs = drafts[product.key] ?? product.fileInputs;
-        const expiry = expiryByProduct?.[product.key] ?? product.fileExpiry;
-        const cached = planCache.current.get(product.key);
-        const result = cached
-          && cached.product === product
-          && cached.inputs === inputs
-          && cached.expiry === expiry
-          && cached.evaluator === evaluatePurchase
-          && cached.analysisDate === snapshot.analysisDate
-          ? cached.result
-          : evaluatePurchaseProduct(
-              product,
-              snapshot.analysisDate,
-              inputs,
-              evaluatePurchase,
-              expiry,
-            );
-        nextPlans.set(product.key, result);
-        nextCache.set(product.key, {
-          product,
-          inputs,
-          expiry,
-          evaluator: evaluatePurchase,
-          analysisDate: snapshot.analysisDate,
-          result,
-        });
-      }
-      planCache.current = nextCache;
-      return nextPlans;
-    },
-    [
-      products,
-      snapshot.analysisDate,
-      drafts,
-      evaluatePurchase,
-      expiryByProduct,
-    ],
-  );
-  const inputsFor = (product: (typeof products)[number]) =>
-    drafts[product.key] ?? product.fileInputs;
-  const groupFor = (product: PurchaseProduct) => {
-    const audit = plans.get(product.key)?.audit;
-    if (audit?.state === "verdict") {
-      if (audit.verdict === "Overstock risk") return "check_order";
-      if (audit.verdict === "Looks balanced") return "balanced";
-      return "order_needed";
-    }
-    return plans.get(product.key)?.estimatedRestock.state === "available" ? "order_needed" : "need_data";
-  };
-  const groups = [
-    { id: "order_needed", label: "Order needed", help: "No order entered yet, or below expected demand" },
-    { id: "check_order", label: "Check your order", help: "More than even the busiest expected month" },
-    { id: "balanced", label: "Looks balanced", help: "Within expected demand" },
-    { id: "need_data", label: "Need more data", help: "StockLess could not judge these yet" },
-  ] as const;
-  const avoidedLines = calculatePotentialExcess(snapshot, forecast, drafts);
-  const avoidedUnits = avoidedLines.reduce((sum, item) => sum + item.units, 0);
-  const hasPlans = products.some(
-    (product) => inputsFor(product).plannedOrder.state === "value",
-  );
-  const visible = products.filter(
-    (product) =>
-      `${product.name} ${product.sku ?? ""}`
-        .toLowerCase()
-        .includes(query.trim().replace(/^sku\s*:?\s*/i, "").toLowerCase()) &&
-      (group === "all" || groupFor(product) === group) &&
-      (!orderingOnly ||
-        !hasPlans ||
-        inputsFor(product).plannedOrder.state === "value"),
-  );
-  const plannableCount = products.filter(product => plans.get(product.key)?.estimatedRestock.state === "available").length;
-  const enteredCount = products.filter(product => inputsFor(product).plannedOrder.state === "value").length;
-  const autoSelected = useRef(false);
+  const [group, setGroup] = useState<PurchaseGroup | "all">("all");
+  const [expanded, setExpanded] = useState(false);
+  const detailColumn = useRef<HTMLElement>(null);
+  const [compactHero, setCompactHero] = useState(false);
   useEffect(() => {
-    if (!autoSelected.current && !selectedKey && products.length > 0) {
-      autoSelected.current = true;
-      onSelect(products[0].key);
-    }
-  }, [onSelect, products, selectedKey]);
-  const selected = products.find((product) => product.key === selectedKey);
-  const selectedIndex = visible.findIndex((product) => product.key === selectedKey);
-  const layoutRef = useRef<HTMLDivElement>(null);
-  const listScrollRef = useRef<HTMLDivElement>(null);
-  const [detailHeight, setDetailHeight] = useState<number | null>(null);
-  useEffect(() => {
-    const detail = layoutRef.current?.querySelector<HTMLElement>(".purchase-detail, .pp-panel--empty");
-    if (!detail) return;
-    const updateHeight = () => {
-      const height = Math.ceil(detail.getBoundingClientRect().height);
-      if (height > 0) setDetailHeight(height);
+    let compact = false;
+    const onScroll = () => {
+      if (!compact && window.scrollY > 140) { compact = true; setCompactHero(true); }
+      else if (compact && window.scrollY < 40) { compact = false; setCompactHero(false); }
     };
-    updateHeight();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(detail);
-    return () => observer.disconnect();
-  }, [selected?.key]);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const [localTerms, setLocalTerms] = useState<SupplierDrafts>({});
+  const terms = supplierDrafts ?? localTerms;
+  const products = useMemo(() => joinPurchaseEvidence(snapshot, forecast), [snapshot, forecast]);
+  const planCache = useRef(new Map<string, PlanCacheEntry>());
+  const plans = useMemo(() => {
+    const nextCache = new Map<string, PlanCacheEntry>(), nextPlans = new Map<string, ProductPurchasePlan | undefined>();
+    for (const product of products) {
+      const inputs = drafts[product.key] ?? product.fileInputs, expiry = expiryByProduct?.[product.key] ?? product.fileExpiry;
+      const cached = planCache.current.get(product.key);
+      const result = cached && cached.product === product && cached.inputs === inputs && cached.expiry === expiry && cached.evaluator === evaluatePurchase && cached.analysisDate === snapshot.analysisDate
+        ? cached.result : evaluatePurchaseProduct(product, snapshot.analysisDate, inputs, evaluatePurchase, expiry, true);
+      nextPlans.set(product.key, result);
+      nextCache.set(product.key, { product, inputs, expiry, evaluator: evaluatePurchase, analysisDate: snapshot.analysisDate, result });
+    }
+    planCache.current = nextCache;
+    return nextPlans;
+  }, [products, snapshot.analysisDate, drafts, evaluatePurchase, expiryByProduct]);
+  const inputsFor = (product: PurchaseProduct) => drafts[product.key] ?? product.fileInputs;
+  const sorted = useMemo(() => [...products].sort((a, b) => rank[purchaseGroup(plans.get(a.key))] - rank[purchaseGroup(plans.get(b.key))] || (a.sku ?? a.key).localeCompare(b.sku ?? b.key)), [products, plans]);
+  const filtered = (search: string, selectedGroup: PurchaseGroup | "all") => {
+    const term = search.trim().replace(/^sku\s*:?\s*/i, "").toLocaleLowerCase();
+    return sorted.filter(product => `${product.title} ${product.pack ?? ""} ${product.name} ${product.sku ?? ""}`.toLocaleLowerCase().includes(term) && (selectedGroup === "all" || purchaseGroup(plans.get(product.key)) === selectedGroup));
+  };
+  const visible = filtered(query, group), shown = expanded ? visible : visible.slice(0, 12);
+  const selected = products.find(product => product.key === selectedKey), selectedIndex = visible.findIndex(product => product.key === selectedKey);
+  const firstSelectedSnapshot = useRef<string | null>(null);
   useEffect(() => {
-    const list = listScrollRef.current;
-    const row = list?.querySelector<HTMLElement>("tr.selected");
-    if (!list || !row) return;
-    const listBounds = list.getBoundingClientRect();
-    const rowBounds = row.getBoundingClientRect();
-    if (rowBounds.top < listBounds.top) list.scrollTop += rowBounds.top - listBounds.top;
-    else if (rowBounds.bottom > listBounds.bottom) list.scrollTop += rowBounds.bottom - listBounds.bottom;
-  }, [selectedKey]);
-  const mismatchCount = products.filter((product) => product.issue).length;
+    if (firstSelectedSnapshot.current === snapshot.id) return;
+    firstSelectedSnapshot.current = snapshot.id;
+    setQuery(""); setGroup("all"); setExpanded(false); setLocalTerms({});
+    if (!selectedKey || !products.some(product => product.key === selectedKey)) onSelect(sorted[0]?.key ?? null);
+  }, [snapshot.id, products, sorted, selectedKey, onSelect]);
+  const changeFilter = (search: string, selectedGroup: PurchaseGroup | "all") => {
+    setQuery(search); setGroup(selectedGroup); setExpanded(false);
+    const next = filtered(search, selectedGroup);
+    if (!next.some(product => product.key === selectedKey)) onSelect(next[0]?.key ?? null);
+  };
+  const select = (key: string) => {
+    onSelect(key);
+    if (visible.findIndex(product => product.key === key) >= 12) setExpanded(true);
+  };
+  const next = () => { const product = visible[(Math.max(-1, selectedIndex) + 1) % visible.length]; if (product) select(product.key); };
+  const done = () => {
+    next();
+    detailColumn.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  };
+  const counts = Object.fromEntries(groups.map(item => [item.id, products.filter(product => purchaseGroup(plans.get(product.key)) === item.id).length]));
+  const checkedExcess = products.flatMap(product => {
+    const audit = plans.get(product.key)?.audit;
+    if (inputsFor(product).plannedOrder.state !== "value" || audit?.state !== "verdict") return [];
+    const units = Math.max(0, audit.figures.availableAfterOrder.value - audit.figures.demandHigh.value);
+    return units > 0 ? [units] : [];
+  });
+  const excess = checkedExcess.reduce((sum, units) => sum + units, 0);
+  const mismatchCount = products.filter(product => product.issue).length;
   function download() {
     const rows = [
-      [
-        "Product",
-        "SKU",
-        "Data label",
-        "Demand low",
-        "Demand high",
-        "Estimated restock",
-        "Planned order",
-        "Incoming stock",
-        "Purchase check",
-      ],
-      ...products.map((product) => {
-        const plan = plans.get(product.key),
-          input = inputsFor(product);
-        return [
-          product.name,
-          product.sku ?? "",
-          product.issue || product.demand?.label || "",
-          product.issue ? "" : (product.demand?.range?.low ?? ""),
-          product.issue ? "" : (product.demand?.range?.high ?? ""),
-          plan?.estimatedRestock.state === "available"
-            ? plan.estimatedRestock.quantity.value
-            : "",
-          input.plannedOrder.state === "value" ? input.plannedOrder.value : "",
-          input.incomingStock.state === "value"
-            ? input.incomingStock.value
-            : "",
-          plan?.audit.state === "verdict"
-            ? plan.audit.verdict
-            : plan?.audit.state === "cannot_judge"
-              ? plan.audit.label
-              : "",
-        ];
+      ["Source file", snapshot.sourceName], ["Analysis date", snapshot.analysisDate],
+      ["Product code", "Product", "Pack", "Data label", "Expected low (4 weeks)", "Expected high (4 weeks)", "In stock", "Stock count date", "Incoming", "Incoming source", "Your order", "Order source", "Suggested", "Check", "Case size", "Minimum order", "Lead time (days)"],
+      ...products.map(product => {
+        const plan = plans.get(product.key), input = inputsFor(product), supplier = terms[product.key];
+        const range = !product.issue && product.demand?.label !== "Cannot assess" ? product.demand?.range : undefined;
+        return [product.sku ?? "", product.title, product.pack ?? "", product.issue ?? product.demand?.label ?? "", range?.low ?? "", range?.high ?? "", product.stock?.currentStock ?? "", product.stock?.stockAsOfDate ?? "",
+          input.incomingStock.state === "value" ? input.incomingStock.value : "", input.incomingStock.state === "value" ? input.incomingStock.source : "", input.plannedOrder.state === "value" ? input.plannedOrder.value : "", input.plannedOrder.state === "value" ? input.plannedOrder.source : "",
+          plan?.estimatedRestock.state === "available" ? plan.estimatedRestock.quantity.value : "", input.plannedOrder.state === "empty" ? "No plan entered" : plan?.audit.state === "verdict" ? plan.audit.verdict : plan?.audit.state === "cannot_judge" ? plan.audit.label : product.issue ?? "", supplier?.caseSize ?? "", supplier?.minimumOrder ?? "", supplier?.leadTimeDays ?? ""];
       }),
     ];
-    const csv = serializePurchasePlanCsv(rows, snapshot.sourceMode);
-    const url = URL.createObjectURL(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = purchasePlanFilename(snapshot.sourceMode);
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    const url = URL.createObjectURL(new Blob([serializePurchasePlanCsv(rows, snapshot.sourceMode)], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = purchasePlanFilename(snapshot.sourceMode); link.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
   }
-  return (
-    <main className="purchase-plan">
-      <section className="pp-heading">
-          <p className="eyebrow">
-            {t("Purchase plan ·")}{t(" ")}
-            {new Date(`${snapshot.analysisDate}T00:00:00Z`).toLocaleDateString(
-              getLocale(),
-              {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-                timeZone: "UTC",
-              },
-            )}
-          </p>
-          <h1 className="page-title">
-            {t("Plan what to restock, then check it before you order.")}</h1>
-          <p className="lede">
-            {t("Start with StockLess's estimated quantity, enter what you intend to buy, and see whether the plan fits expected demand.")}</p>
-      </section>
-      <p className="privacy-note">
-        <span aria-hidden="true">▣</span>
-        <span>
-          <strong>{t("Your figures stay local.")}</strong> {t("Typed order quantities last for this visit only and are not sent to a supplier.")}</span>
-      </p>
-      <details className="pp-how"><summary>{t("How to plan an order")}</summary><section className="pp-how__body" aria-label={t("Purchase planning instructions")}>
-        <div className="pp-how__head">
-          <span className="pp-how__mark" aria-hidden="true">🌳</span>
-          <div>
-            <h2>{t("From sales data to your next order")}</h2>
-            <p>{t("Select a product below, then follow these three steps.")}</p>
-          </div>
-        </div>
-        <ol className="pp-how__steps">
-          {[
-            ["Review demand", "See past sales and the four-week range."],
-            ["Enter your quantities", "Add your planned order and incoming stock."],
-            ["Check before ordering", "Compare the plan with expected demand."],
-          ].map(([title, description]) => (
-            <li key={title}><span className="pp-how__n">{["Review demand", "Enter your quantities", "Check before ordering"].indexOf(title) + 1}</span><div><b>{t(title)}</b><span>{t(description)}</span></div></li>
-          ))}
-        </ol>
-      </section></details>
-      <section className="pp-glance" aria-label={t("Your next purchase, at a glance")}>
-        <div className="pp-glance__head"><span className="pp-glance__mark" aria-hidden="true">🌳</span><div><h2>{t("Your next purchase, at a glance")}</h2><p>{products.length} {t("products")} · {t("for the next 4 weeks")}</p></div></div>
-        <div className="pp-glance__tiles">
-          <div className="pp-tile"><b className="num">{plannableCount}</b><span>{t("Can plan")}</span><small>{t("Usable demand and stock evidence")}</small></div>
-          <div className="pp-tile pp-tile--warn"><b className="num">{products.length - plannableCount}</b><span>{t("Need more data")}</span><small>{t("Open a product to see the next action")}</small></div>
-          <div className="pp-tile"><b className="num">{enteredCount}</b><span>{t("Plans entered")}</span><small>{t("Included in the product totals")}</small></div>
-        </div>
-      </section>
-      <section className="pp-money" aria-labelledby="pp-money-title">
-        <div className="pp-money__head"><div><h2 id="pp-money-title">{t("What will this plan cost?")}</h2><p>{t("Money insights · design preview")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={onImpact}>{t("Open dashboard example →")}</button></div>
-        <div className="pp-impact"><span className="pp-impact__k">{copy("Potential excess stock", "潜在过量库存", "Stok berlebihan berpotensi")}</span><b className="pp-impact__v num">{avoidedLines.length ? numberText(avoidedUnits) : "—"} <small>{avoidedLines.length ? t("units") : ""}</small></b><span className="pp-impact__note">{avoidedLines.length ? copy(`Across ${avoidedLines.length} checked products`, `基于 ${avoidedLines.length} 件已核对商品`, `Berdasarkan ${avoidedLines.length} produk yang disemak`) : copy("No checked purchase plan yet", "尚无已核对的采购计划", "Belum ada pelan pembelian yang disemak")}</span></div>
-        <div className="pp-money__tiles">{["Planned purchase spending", "Incoming stock cost", "Potential excess-stock cost"].map(label => <div className="pp-cost" key={label}><span>{t(label)}</span><b aria-label={t("Not available")}>—</b><small>{t("Purchase cost and currency required")}</small></div>)}</div>
-        <p className="pp-money__note">{copy("Money figures need purchase cost and currency. The dashboard shows unit estimates from your current plan.", "金额需要采购单价和币种。Dashboard 显示您当前计划的件数估算。", "Angka wang memerlukan kos belian dan mata wang. Papan pemuka menunjukkan anggaran unit daripada pelan semasa anda.")}</p>
-      </section>
-      <p className="pp-next"><b>{t("Next step:")}</b> {t("Open a product, review the estimate, and enter the quantity you intend to order.")}</p>
-      {t(mismatchCount > 0 && (
-        <p className="evidence-warning" role="alert">
-          {t("Evidence mismatch affects ")}{t(mismatchCount)}{t(" ")}
-          {t(mismatchCount === 1 ? "product" : "products")}{t(". These products remain listed but cannot be evaluated. Return to readiness and refresh the forecast.")}</p>
-      ))}
-      <div className="pp-groups" role="group" aria-label={t("Filter by what each product needs")}>
-        {groups.map(item => <button type="button" key={item.id} className={`pp-group pp-group--${item.id}${group === item.id ? " pp-group--on" : ""}`} aria-pressed={group === item.id} onClick={() => setGroup(group === item.id ? "all" : item.id)}><b>{products.filter(product => groupFor(product) === item.id).length}</b><span>{t(item.label)}</span><small>{t(item.help)}</small></button>)}
-      </div>
-      <div className="pp-layout" ref={layoutRef}>
-      <section className="card list-card" style={{ maxHeight: selected ? detailHeight ?? undefined : 720 }}>
-        <div className="toolbar">
-          <label className="search">
-            <span className="visually-hidden">{t("Search products")}</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle
-                cx="11"
-                cy="11"
-                r="7"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path
-                d="m16.5 16.5 4 4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-            <input
-              type="search"
-              placeholder={t("Search by product name or SKU")}
-              autoComplete="off"
-              value={query}
-              onChange={(event) => setQuery(event.currentTarget.value)}
-            />
-          </label>
-          <label className="switch">
-            <input
-              type="checkbox"
-              disabled={!hasPlans}
-              checked={hasPlans && orderingOnly}
-              onChange={(event) => setOrderingOnly(event.currentTarget.checked)}
-            />
-            <span className="switch-track" aria-hidden="true" />
-            <span>{t("Only products I am ordering")}</span>
-          </label>
-        </div>
-        {t(!snapshot.purchaseFileEvidence?.expiryDateColumnConfirmed
-          && !Object.values(expiryByProduct ?? {}).some((input) => input?.columnConfirmed) && (
-          <p className="expiry-note">
-            {t("Expiry not checked — your file has no expiry dates")}</p>
-        ))}
-        <p className="pp-key"><span>{t("Key:")}</span><span className="source-tag source--file">{t("from your file")}</span><span className="source-tag source--worked">{t("worked out by StockLess")}</span><span className="source-tag source--input">{t("input by you")}</span></p>
-        <div className="table-scroll table-scroll--x" ref={listScrollRef} role="region" tabIndex={0} aria-label={t("Products to review")}>
-          <table className="dtable dtable--cards pp-table">
-            <thead>
-              <tr>
-                <th scope="col">{t("Product")}</th>
-                <th scope="col">{t("Expected demand")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((product) => {
-                const range =
-                  !product.issue && product.demand?.label !== "Cannot assess"
-                    ? product.demand?.range
-                    : undefined;
-                return (
-                  <tr
-                    key={product.key}
-                    className={`clickable-row${selectedKey === product.key ? " selected" : ""}`}
-                    onClick={() => onSelect(product.key)}
-                  >
-                    <td data-label={t("Product")}>
-                      <button
-                        className="product-button"
-                        type="button"
-                        aria-label={t(`Open purchase plan for ${product.name}, SKU ${product.sku || product.key}`)}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onSelect(product.key);
-                        }}
-                      >
-                        {product.name}
-                        <small>{t("SKU ")}{product.sku || "Not available"}</small>
-                        <DataLabel product={product} />
-                      </button>
-                    </td>
-                    <td data-label={t("Expected demand")}>
-                      <span className="range">
-                        {t(range
-                          ? `${numberText(range.low)}–${numberText(range.high)} units`
-                          : "No range")}
-                        <small>
-                          {t(range
-                            ? "for the next 4 weeks"
-                            : product.issue ||
-                              product.demand?.labelReason?.message)}
-                        </small>
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {t(!visible.length && (
-                <tr>
-                  <td colSpan={2} className="empty-row">
-                    {t(products.length
-                      ? "No products match"
-                      : "No products are available. Return to readiness to review your data.")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="list-footer">
-          <span role="status">
-            {t("Showing ")}{t(visible.length)} {t("of ")}{t(products.length)} {t("products. Counts above do not change when filtering.")}</span>
-          <button className="btn btn--ghost btn--small" type="button" onClick={download}>{t("↓ Download purchase summary")}</button>
-          <button
-            className="btn btn--ghost btn--small"
-            type="button"
-            onClick={onBack}
-          >
-            {t("← Back to readiness")}</button>
-        </div>
-      </section>
-      {selected ? (
-        <ProductPurchaseDialog
-          inline
-          key={selected.key}
-          product={selected}
-          plan={plans.get(selected.key)}
-          inputs={inputsFor(selected)}
-          analysisDate={snapshot.analysisDate}
-          onChange={(inputs) => onDraftChange(selected.key, inputs)}
-          onReviewData={() => { onSelect(null); onBack(); }}
-          onClose={() => onSelect(null)}
-          position={selectedIndex >= 0 ? selectedIndex : undefined}
-          total={visible.length}
-          onPrevious={selectedIndex > 0 ? () => onSelect(visible[selectedIndex - 1].key) : undefined}
-          onNext={selectedIndex >= 0 && selectedIndex < visible.length - 1 ? () => onSelect(visible[selectedIndex + 1].key) : undefined}
-        />
-      ) : <aside className="pp-panel pp-panel--empty" aria-label={t("Purchase details")}><span aria-hidden="true">🌳</span><h2>{t("Purchase details")}</h2><p>{t("Select a product to enter quantities and see its evidence and full calculation.")}</p></aside>}
-      </div>
-      {onImpact && <div className="purchase-impact-action"><button type="button" className="btn btn--primary" onClick={onImpact}>{t("See your impact →")}</button></div>}
-    </main>
-  );
+  return <main className="purchase-plan purchase-plan--new">
+    <section className={`pp-hero${compactHero ? " is-compact" : ""}`}><div className="pp-wrap pp-hero-box"><div className="pp-hero-main"><div><p className="pp-kicker"><span aria-hidden="true">🌳</span> {t("Step 4 of 4")}</p><h1>{t("Plan your next order")}</h1><p className="pp-hero-lede">{t(`For the next 4 weeks from ${purchaseDate(snapshot.analysisDate, true)}.`)} {t("Start from our estimate, type what you plan to buy, and we'll check it against expected demand.")}</p></div>
+      <button type="button" className="pp-excess" disabled={!onImpact} onClick={onImpact}><span className="pp-icon pp-icon--amber" aria-hidden="true">▣</span><span><small>{t("Possible excess stock")}</small><b className="num">{numberText(excess)} {t("units")}</b><small>{t(`in ${checkedExcess.length} ${checkedExcess.length === 1 ? "order" : "orders"}`)}</small></span><span className="pp-excess-go">{t("See impact →")}</span></button>
+    </div><div className="pp-hero-actions"><button type="button" className="pp-back" onClick={onBack}>{t("← Back to readiness")}</button><span className="pp-action-spacer" /><button type="button" className="btn btn--ghost" onClick={download}>{t("↓ Download plan")}</button><button type="button" className="btn btn--primary" disabled={!onImpact} onClick={onImpact}>{t("See your impact →")}</button></div></div></section>
+    <div className="pp-wrap pp-main">
+      {mismatchCount > 0 && <p className="notice notice--error" role="alert">{t(`Evidence mismatch affects ${mismatchCount} products. Return to readiness and refresh the forecast.`)}</p>}
+      <div className="pp-kpis" role="group" aria-label={t("Filter by what each product needs")}>{groups.map(item => <button key={item.id} type="button" className={`pp-kpi pp-kpi--${item.id}`} aria-pressed={group === item.id} onClick={() => changeFilter(query, group === item.id ? "all" : item.id)}><span className="pp-icon" aria-hidden="true">{item.icon}</span><span><b className="pp-kpi-number num">{counts[item.id]}</b> <b>{t(item.label)}</b><small>{t(item.help)}</small></span></button>)}</div>
+      <div className="pp-layout"><aside className="pp-detail-column" ref={detailColumn}>{selected ? <ProductPurchasePanel key={selected.key} product={selected} plan={plans.get(selected.key)} inputs={inputsFor(selected)} analysisDate={snapshot.analysisDate} terms={terms[selected.key] ?? {}} onTermsChange={nextTerms => onSupplierChange ? onSupplierChange(selected.key, nextTerms) : setLocalTerms(previous => ({ ...previous, [selected.key]: nextTerms }))} onChange={inputs => onDraftChange(selected.key, inputs)} onReviewData={onBack} position={selectedIndex >= 0 ? selectedIndex : undefined} total={visible.length} onPrevious={selectedIndex > 0 ? () => select(visible[selectedIndex - 1].key) : undefined} onNext={visible.length > 1 ? next : undefined} onDone={done} /> : <section className="pp-detail pp-empty"><h2>{t("Purchase details")}</h2><p>{t(visible.length ? "Select a product to enter quantities and review its evidence." : "No products match.")}</p></section>}
+        <div className="pp-privacy"><span className="pp-icon" aria-hidden="true">✓</span><div><b>{t("Your data stays on your device")}</b><p>{t("Quantities are never sent to a supplier.")}</p><small>{snapshot.sourceName} · {t(snapshot.sourceMode === "sample" ? "Sample data" : "Retailer file")}</small></div></div>
+      </aside><section className="pp-list" aria-label={t("Products to review")}><div className="pp-list-toolbar"><label className="pp-search"><span aria-hidden="true">⌕</span><input type="search" aria-label={t("Search name or code")} placeholder={t("Search name or code")} value={query} onChange={event => changeFilter(event.currentTarget.value, group)} /></label>{group !== "all" && <><span className="pp-filter-chip">{t(groups.find(item => item.id === group)!.label)} · {counts[group]}</span><button type="button" className="pp-link-button" onClick={() => changeFilter(query, "all")}>{t("Clear")}</button></>}</div>
+        <div className="pp-table-wrap"><table className="pp-table"><thead><tr>{["Product", "Expected, 4 weeks", "In stock", "Your order", "Check"].map(label => <th key={label} scope="col">{t(label)}</th>)}</tr></thead><tbody>{shown.map(product => {
+          const plan = plans.get(product.key), input = inputsFor(product), kind = purchaseGroup(plan);
+          const range = !product.issue && product.demand?.label !== "Cannot assess" ? product.demand?.range : undefined;
+          const expiry = plan?.expiry && "earliestDate" in plan.expiry ? plan.expiry.earliestDate : undefined;
+          return <tr key={product.key} className={selectedKey === product.key ? "is-selected" : ""} onClick={() => select(product.key)}><td><button type="button" className="pp-product-button" aria-label={t(`Open purchase plan for ${[product.title, product.pack].filter(Boolean).join(" · ")}, SKU ${product.sku || product.key}`)} aria-current={selectedKey === product.key ? "true" : undefined} onClick={event => { event.stopPropagation(); select(product.key); }}><b>{product.title}</b><small>{product.sku || t("Not available")}{product.pack ? ` · ${product.pack}` : ""}</small></button>{expiry && <small className="pp-row-expiry">◷ {t("Batch expires")} {purchaseDate(expiry)}</small>}</td><td className="num" data-label={t("Expected, 4 weeks")}>{range ? `${numberText(range.low)}–${numberText(range.high)}` : "—"}</td><td className="num" data-label={t("In stock")}>{product.stock?.currentStock === undefined ? "—" : numberText(product.stock.currentStock)}</td><td data-label={t("Your order")}><b className="num">{input.plannedOrder.state === "value" ? numberText(input.plannedOrder.value) : "—"}</b>{kind !== "balanced" && plan?.estimatedRestock.state === "available" && <small className="pp-row-suggestion">{t(`Suggested ${numberText(plan.estimatedRestock.quantity.value)}`)}</small>}</td><td><span className={`pp-pill pp-pill--${kind}`}>{t(purchaseGroupLabels[kind])}</span></td></tr>;
+        })}</tbody></table></div>
+        {visible.length === 0 && <p className="pp-list-none">{t("No products match.")}</p>}{visible.length > 12 && <button type="button" className="pp-list-more" onClick={() => setExpanded(!expanded)}>{t(expanded ? "Show fewer" : `Show all ${visible.length} products`)}</button>}
+        <p className="pp-list-count" role="status">{t(`Showing ${shown.length} of ${visible.length} matching products.`)} {t("Counts above do not change when filtering.")}</p>
+      </section></div>
+    </div>
+  </main>;
 }

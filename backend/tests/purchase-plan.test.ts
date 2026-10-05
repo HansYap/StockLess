@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { suggestSupplierOrder } from "../src/supplier-order.ts";
 
 import type {
   DemandForecastReview,
@@ -90,6 +91,46 @@ function inputs(planned: number | undefined, incoming?: number) {
       : createPurchaseQuantity(incoming, "input by you"),
   });
 }
+
+test("empty-order preview uses zero without changing saved inputs or dashboard audits", () => {
+  const empty = emptyProductPurchaseInputs();
+  const options = { analysisDate: ANALYSIS_DATE, stock: stock(), inputs: empty };
+  const normal = evaluateProductPurchasePlan(demand(), options);
+  const preview = evaluateProductPurchasePlan(demand(), { ...options, previewEmptyOrder: true });
+  assert.equal(normal.audit.state, "not_planned");
+  assert.equal(preview.audit.state, "verdict");
+  assert.equal(preview.inputs, empty);
+  assert.equal(preview.inputs.plannedOrder.state, "empty");
+  if (preview.audit.state === "verdict") {
+    assert.equal(preview.audit.verdict, "Needs review");
+    assert.deepEqual(preview.audit.figures.plannedOrder, { value: 0, source: "worked out by StockLess" });
+  }
+  const stale = evaluateProductPurchasePlan(demand(), { ...options, stock: stock(10, "2026-08-01"), previewEmptyOrder: true });
+  assert.equal(stale.audit.state, "cannot_judge");
+});
+
+test("supplier suggestions honour minimums, round cases, and never force an unnecessary order", () => {
+  const estimate = evaluateProductPurchasePlan(demand(), { analysisDate: ANALYSIS_DATE, stock: stock() }).estimatedRestock;
+  assert.deepEqual(suggestSupplierOrder(estimate, { caseSize: 12, minimumOrder: 25, leadTimeDays: 5 }, ANALYSIS_DATE), {
+    state: "available", quantity: 36, cases: 3, arrivalDate: "2026-09-19", beyondPlanningWindow: false,
+  });
+  const zero = evaluateProductPurchasePlan(demand(), { analysisDate: ANALYSIS_DATE, stock: stock(40) }).estimatedRestock;
+  assert.equal((suggestSupplierOrder(zero, { caseSize: 12, minimumOrder: 100 }, ANALYSIS_DATE) as { quantity: number }).quantity, 0);
+  const slow = suggestSupplierOrder(estimate, { leadTimeDays: 28 }, ANALYSIS_DATE);
+  assert.equal(slow.state === "available" && slow.beyondPlanningWindow, true);
+  const unknown = suggestSupplierOrder(estimate, {}, ANALYSIS_DATE);
+  assert.equal(unknown.state === "available" && unknown.arrivalDate, undefined);
+});
+
+test("supplier suggestions reject invalid terms, unavailable estimates and overflow", () => {
+  const estimate = evaluateProductPurchasePlan(demand(), { analysisDate: ANALYSIS_DATE, stock: stock() }).estimatedRestock;
+  for (const terms of [{ caseSize: 0 }, { minimumOrder: -1 }, { caseSize: 1.5 }, { leadTimeDays: 3651 }]) {
+    assert.equal(suggestSupplierOrder(estimate, terms, ANALYSIS_DATE).state, "unavailable");
+  }
+  assert.equal(suggestSupplierOrder(estimate, { caseSize: 600000, minimumOrder: 999999 }, ANALYSIS_DATE).state, "unavailable");
+  assert.equal(suggestSupplierOrder(undefined, {}, ANALYSIS_DATE).state, "unavailable");
+  assert.throws(() => suggestSupplierOrder(estimate, {}, "bad-date"), /valid analysis date/);
+});
 
 test("purchase fields accept only whole numbers from 0 to 999999", () => {
   const previous = createPurchaseQuantity(12, "from your file");

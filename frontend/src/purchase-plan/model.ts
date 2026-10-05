@@ -10,6 +10,7 @@ import {
   type ReadinessSnapshot,
   type ProductPurchaseInputs,
   type ExpiryCheckInput,
+  type ProductPurchasePlan,
 } from "../engine.ts";
 
 export type PurchaseDrafts = Readonly<
@@ -20,7 +21,9 @@ export type PurchaseEvaluator = typeof evaluateProductPurchasePlan;
 export interface PurchaseProduct {
   readonly key: string;
   readonly name: string;
+  readonly title: string;
   readonly sku?: string;
+  readonly pack?: string;
   readonly evidence?: DemandProductEvidence;
   readonly stock?: ProductStockEvidence;
   readonly demand?: ProductDemandEstimate;
@@ -80,12 +83,14 @@ export function joinPurchaseEvidence(
               : undefined;
     return {
       key,
+      title: row?.productName || row?.productCode || evidence.get(key)?.displayName || key,
       name:
         evidence.get(key)?.displayName ||
         [row?.productName, row?.packVariant].filter(Boolean).join(" · ") ||
         row?.productCode ||
         key,
       sku: row?.productCode,
+      pack: row?.packVariant,
       evidence: evidence.get(key),
       stock: stocks.get(key),
       demand,
@@ -102,6 +107,7 @@ export function evaluatePurchaseProduct(
   inputs: ProductPurchaseInputs,
   evaluate: PurchaseEvaluator,
   expiry?: ExpiryCheckInput,
+  previewEmptyOrder = false,
 ) {
   if (product.issue || !product.demand) return undefined;
   return evaluate(product.demand, {
@@ -109,5 +115,16 @@ export function evaluatePurchaseProduct(
     stock: product.stock,
     inputs,
     expiry,
+    previewEmptyOrder,
   });
 }
+
+export type PurchaseGroup = "order_needed" | "check_order" | "balanced" | "need_data";
+export function purchaseGroup(plan: ProductPurchasePlan | undefined): PurchaseGroup {
+  if (plan?.estimatedRestock.state !== "available" || plan.audit.state === "cannot_judge") return "need_data";
+  if (plan.audit.state !== "verdict") return "order_needed";
+  return plan.audit.verdict === "Overstock risk" ? "check_order" : plan.audit.verdict === "Looks balanced" ? "balanced" : "order_needed";
+}
+export const purchaseGroupLabels: Record<PurchaseGroup, string> = {
+  order_needed: "Order more", check_order: "Check order", balanced: "Balanced", need_data: "Need data",
+};

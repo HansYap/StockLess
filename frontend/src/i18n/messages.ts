@@ -1,3 +1,4 @@
+import { purchaseMessages } from "./purchase-refresh.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
 export const messages: Record<string, readonly [string, string]> = {
   "Language": [
@@ -3674,3 +3675,4 @@ Object.assign(messages, {
 });
 
 Object.assign(messages, {"Apply filters": ["应用筛选", "Gunakan penapis"]});
+Object.assign(messages, purchaseMessages);

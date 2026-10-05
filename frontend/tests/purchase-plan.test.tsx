@@ -1,347 +1,190 @@
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { PurchasePlanScreen } from "../src/screens/PurchasePlanScreen.tsx";
-import { DemandChart } from "../src/purchase-plan/DemandChart.tsx";
-import {
-  buildDemandReview,
-  evaluateProductPurchasePlan,
-} from "../src/engine.ts";
-import {
-  joinPurchaseEvidence,
-  type PurchaseDrafts,
-} from "../src/purchase-plan/model.ts";
+import { PurchaseDemandChart } from "../src/purchase-plan/PurchaseDemandChart.tsx";
+import { buildDemandReview, evaluateProductPurchasePlan, suggestSupplierOrder } from "../src/engine.ts";
+import { joinPurchaseEvidence, type PurchaseDrafts } from "../src/purchase-plan/model.ts";
 import { makeEvidence } from "./fixtures.ts";
 
-function Harness({
-  data,
-  evaluate = evaluateProductPurchasePlan,
-}: {
-  data?: ReturnType<typeof makeEvidence>;
-  evaluate?: typeof evaluateProductPurchasePlan;
-}) {
-  const [defaultData] = useState(makeEvidence);
-  const evidence = data ?? defaultData;
-  const [drafts, setDrafts] = useState<PurchaseDrafts>({});
-  const [selectedKey, onSelect] = useState<string | null>(null);
-  return (
-    <PurchasePlanScreen
-      {...evidence}
-      drafts={drafts}
-      selectedKey={selectedKey}
-      onSelect={onSelect}
-      onDraftChange={(key, inputs) =>
-        setDrafts((previous) => ({ ...previous, [key]: inputs }))
-      }
-      onBack={() => {}}
-      evaluatePurchase={evaluate}
-    />
-  );
+function Harness({ data, evaluate = evaluateProductPurchasePlan }: { data?: ReturnType<typeof makeEvidence>; evaluate?: typeof evaluateProductPurchasePlan }) {
+  const [defaultData] = useState(makeEvidence), evidence = data ?? defaultData;
+  const [drafts, setDrafts] = useState<PurchaseDrafts>({}), [selectedKey, onSelect] = useState<string | null>(null);
+  return <PurchasePlanScreen {...evidence} drafts={drafts} selectedKey={selectedKey} onSelect={onSelect} onDraftChange={(key, inputs) => setDrafts(previous => ({ ...previous, [key]: inputs }))} onBack={() => {}} evaluatePurchase={evaluate} />;
 }
-const open = (sku = "000101") =>
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: new RegExp(`Open purchase plan.*${sku}`),
-    }),
-  );
+const open = (sku = "000101") => fireEvent.click(screen.getByRole("button", { name: new RegExp(`Open purchase plan.*${sku}`) }));
+const detail = () => within(screen.getByRole("region", { name: "Same product name" }));
 
 describe("purchase planning", () => {
-  it("opens the HTML-style impact dashboard from the money section", () => {
+  it("routes both impact actions to the existing dashboard callback", () => {
     const onImpact = vi.fn();
     render(<PurchasePlanScreen {...makeEvidence()} drafts={{}} selectedKey={null} onSelect={() => {}} onDraftChange={() => {}} onBack={() => {}} onImpact={onImpact} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open dashboard example →" }));
-    expect(onImpact).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "See your impact →" }));
+    fireEvent.click(screen.getByRole("button", { name: /Possible excess stock.*See impact/ }));
+    expect(onImpact).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
-  it("routes a product needing more data back to readiness", () => {
-    const data = makeEvidence();
+  it("routes products needing more data back to readiness without quantity controls", () => {
     const onBack = vi.fn();
-    render(<PurchasePlanScreen {...data} drafts={{}} selectedKey="C" onSelect={() => {}} onDraftChange={() => {}} onBack={onBack} />);
-    const dialog = within(screen.getByRole("dialog"));
-    fireEvent.click(dialog.getByRole("button", { name: "Review data in Step 3 →" }));
+    render(<PurchasePlanScreen {...makeEvidence()} drafts={{}} selectedKey="C" onSelect={() => {}} onDraftChange={() => {}} onBack={onBack} />);
+    expect(screen.getByText("Can't judge this product yet")).toBeTruthy();
+    expect(screen.getByText(makeEvidence().forecast.products.find(product => product.productKey === "C")!.labelReason.message)).toBeTruthy();
+    expect(screen.queryByLabelText("Planned order")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Fix it in Step 3" }));
     expect(onBack).toHaveBeenCalledOnce();
   });
-  it("keeps invalid typed quantities visible without replacing the last valid quantity", () => {
-    render(<Harness />);
-    open();
-    const dialog = within(screen.getByRole("dialog"));
-    const exact = dialog.getByLabelText("Exact planned order quantity");
+  it("keeps invalid text visible and checks the last accepted quantity; slider and buttons resynchronise the text", () => {
+    render(<Harness />); open();
+    const exact = screen.getByLabelText("Exact planned order quantity");
     fireEvent.change(exact, { target: { value: "12" } });
-    expect((dialog.getByLabelText("Planned order") as HTMLInputElement).value).toBe("12");
     fireEvent.change(exact, { target: { value: "-4" } });
     expect(exact.getAttribute("aria-invalid")).toBe("true");
     expect((exact as HTMLInputElement).value).toBe("-4");
-    expect((dialog.getByLabelText("Planned order") as HTMLInputElement).value).toBe("12");
-    expect(dialog.getByRole("alert").textContent).toContain("last valid quantity");
-    fireEvent.change(exact, { target: { value: "0" } });
+    expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("12");
+    expect(screen.getByRole("alert").textContent).toContain("last valid quantity");
+    fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "8" } });
+    expect((exact as HTMLInputElement).value).toBe("8");
     expect(exact.getAttribute("aria-invalid")).toBe("false");
-    expect(dialog.getByLabelText("Planned order").getAttribute("aria-valuetext")).not.toBe("Not entered");
-    fireEvent.click(dialog.getByRole("button", { name: "Clear planned order" }));
-    expect(dialog.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
+    fireEvent.click(screen.getByRole("button", { name: "Increase planned order" }));
+    expect((exact as HTMLInputElement).value).toBe("9");
+    fireEvent.click(screen.getByRole("button", { name: "Decrease planned order" }));
+    expect((exact as HTMLInputElement).value).toBe("8");
   });
-  it("shows the live purchase check above the estimate in one detail card", () => {
-    render(<Harness />);
-    open();
-    const dialog = screen.getByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Planned order"), { target: { value: "4" } });
-    const hero = dialog.querySelector(".estimate-hero")!;
-    expect(hero.querySelector(".hero-concern")?.textContent).toMatch(/Looks balanced|Needs review|Overstock risk/);
-    expect(hero.textContent).toContain("Estimated restock");
-    expect(hero.compareDocumentPosition(dialog.querySelector(".order-panel")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  it("shows five planning columns and previews a blank order without persisting zero", () => {
+    render(<Harness />); open();
+    expect(screen.getAllByRole("columnheader").map(el => el.textContent)).toEqual(["Product", "Expected, 4 weeks", "In stock", "Your order", "Check"]);
+    expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
+    expect(screen.getByText("Preview only — no plan entered.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Exact planned order quantity"), { target: { value: "0" } });
+    expect(screen.queryByText("Preview only — no plan entered.")).toBeNull();
+    expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("0 units");
+    fireEvent.click(screen.getByRole("button", { name: "Clear planned order" }));
+    expect(screen.getByText("Preview only — no plan entered.")).toBeTruthy();
   });
-  it("shows the compact planning columns and opens the first product", () => {
+  it("selects by key when names are identical and preserves leading zeros", () => {
     render(<Harness />);
-    expect(
-      screen.getAllByRole("columnheader").map((el) => el.textContent),
-    ).toEqual(["Product", "Expected demand"]);
-    expect(
-      within(screen.getByRole("table")).queryByText(/Overstock risk|Needs review|Looks balanced|Cannot judge/),
-    ).toBeNull();
-    expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
-      true,
-    );
-    open();
-    const dialog = screen.getByRole("dialog");
-    const planned = within(dialog).getByLabelText("Planned order") as HTMLInputElement;
-    const incoming = within(dialog).getByLabelText("Incoming stock") as HTMLInputElement;
-    expect(planned.type).toBe("range");
-    expect(planned.value).toBe("0");
-    expect(planned.getAttribute("aria-valuetext")).toBe("Not entered");
-    expect(incoming.type).toBe("range");
-    expect(incoming.value).toBe("0");
-    expect(incoming.getAttribute("aria-valuetext")).toBe("Not entered");
-    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(4);
-    expect(within(dialog).getAllByText("Steady seller")).toHaveLength(1);
-    expect(
-      within(dialog).queryByRole("button", { name: /Use .* as my planned order/ }),
-    ).toBeNull();
-    expect(within(dialog).getByText("No plan entered")).toBeTruthy();
+    const row = screen.getByRole("button", { name: /Open purchase plan.*000202/ }).closest("tr")!;
+    fireEvent.click(row.querySelectorAll("td")[1]);
+    expect(detail().getByText(/000202 · Counted/)).toBeTruthy();
+    expect(detail().getByText("Only 6 of the last 8 weeks have records")).toBeTruthy();
   });
-  it("opens the clicked row by product key even when display names are identical", () => {
+  it("search and status filters select matching products, show an empty state and keep global counts", () => {
     render(<Harness />);
-    fireEvent.click(
-      within(screen.getByRole("table")).getByText("SKU 000202").closest("tr")!.querySelectorAll("td")[1],
-    );
-    expect(
-      within(screen.getByRole("dialog")).getByText(
-        "Purchase plan · SKU 000202",
-      ),
-    ).toBeTruthy();
-    expect(
-      within(screen.getByRole("dialog")).getByText("Limited"),
-    ).toBeTruthy();
-    expect(within(screen.getByRole("dialog")).getAllByText("Steady seller")).toHaveLength(1);
-  });
-  it("enables ordering after a plan, keeps totals unchanged, and restores disabled state after clearing the last plan", async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    const totals = screen.getByRole("region", { name: "Your next purchase, at a glance" }).querySelectorAll(".pp-tile");
-    const evidenceTotals = Array.from(totals).slice(0, 2).map(tile => tile.textContent);
-    open("000202");
-    fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "1" } });
-    expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
-      false,
-    );
-    await user.click(screen.getByRole("button", { name: "Done" }));
-    await user.click(screen.getByRole("checkbox"));
+    const groups = screen.getByRole("group", { name: "Filter by what each product needs" });
+    const counts = Array.from(groups.querySelectorAll(".pp-kpi-number")).map(el => el.textContent);
+    fireEvent.change(screen.getByLabelText("Search name or code"), { target: { value: "000202" } });
     expect(screen.getAllByRole("row")).toHaveLength(2);
-    expect(Array.from(screen.getByRole("region", { name: "Your next purchase, at a glance" }).querySelectorAll(".pp-tile")).slice(0, 2).map(tile => tile.textContent)).toEqual(evidenceTotals);
-    open("000202");
-    await user.click(screen.getByRole("button", { name: "Clear planned order" }));
-    await user.click(screen.getByRole("button", { name: "Done" }));
-    expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(
-      true,
-    );
+    expect(detail().getByText(/000202 · Counted/)).toBeTruthy();
+    fireEvent.click(within(groups).getByRole("button", { name: /Need data/ }));
+    expect(screen.queryByRole("region", { name: "Same product name" })).toBeNull();
+    expect(screen.getAllByText("No products match.").length).toBeGreaterThan(0);
+    expect(Array.from(groups.querySelectorAll(".pp-kpi-number")).map(el => el.textContent)).toEqual(counts);
+    fireEvent.change(screen.getByLabelText("Search name or code"), { target: { value: "" } });
+    expect(screen.getByRole("heading", { name: "Few records" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.getAllByRole("row")).toHaveLength(4);
   });
-  it("updates only the selected product as either slider moves", () => {
+  it("updates only the edited product and does not reevaluate plans when toggling evidence", () => {
     const evaluate = vi.fn(evaluateProductPurchasePlan);
-    render(<Harness evaluate={evaluate} />);
-    open();
-    const planned = screen.getByLabelText("Planned order") as HTMLInputElement;
-    expect(planned.min).toBe("0");
-    expect(planned.step).toBe("1");
-    expect(Number(planned.max)).toBeGreaterThanOrEqual(100);
-    const beforeMoving = evaluate.mock.calls.length;
-    fireEvent.change(screen.getByLabelText("Planned order"), {
-      target: { value: "23" },
-    });
-    expect(evaluate.mock.calls.length).toBe(beforeMoving + 1);
-    const calls = evaluate.mock.calls.length;
-    fireEvent.change(screen.getByLabelText("Incoming stock"), {
-      target: { value: "40" },
-    });
-    expect(evaluate.mock.calls.length).toBe(calls + 1);
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    render(<Harness evaluate={evaluate} />); open();
+    const count = evaluate.mock.calls.length;
+    fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "23" } });
+    expect(evaluate.mock.calls.length).toBe(count + 1);
+    fireEvent.change(screen.getByLabelText("Incoming stock"), { target: { value: "40" } });
+    expect(evaluate.mock.calls.length).toBe(count + 2);
+    fireEvent.click(screen.getByRole("button", { name: "Hide evidence" }));
+    expect(screen.queryByRole("img", { name: /Recorded sales/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show evidence" }));
+    expect(screen.getByRole("img", { name: /Recorded sales/ })).toBeTruthy();
+    expect(evaluate.mock.calls.length).toBe(count + 2);
     open("000202");
     expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
+    open(); expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("23");
   });
-  it("prefills confirmed file figures, preserves provenance, and uses mapped expiry", () => {
+  it("uses the suggested quantity explicitly and Done advances without discarding drafts", () => {
+    render(<Harness />); open();
+    const button = screen.getByRole("button", { name: /^Use suggested / });
+    const quantity = button.textContent!.match(/\d[\d,]*/)?.[0].replaceAll(",", "");
+    fireEvent.click(button);
+    expect((screen.getByLabelText("Exact planned order quantity") as HTMLInputElement).value).toBe(quantity);
+    expect(screen.getByText("This plan is within range.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Done, next product →" }));
+    open(); expect((screen.getByLabelText("Exact planned order quantity") as HTMLInputElement).value).toBe(quantity);
+  });
+  it("prefills confirmed file figures with provenance and mapped expiry", () => {
     const data = makeEvidence();
-    data.snapshot = {
-      ...data.snapshot,
-      purchaseFileEvidence: {
-        plannedOrderColumnConfirmed: true,
-        incomingStockColumnConfirmed: true,
-        expiryDateColumnConfirmed: true,
-        products: [{
-          productKey: "A",
-          plannedOrderQuantity: 20,
-          incomingStockQuantity: 3,
-          expiryDates: ["2026-09-20"],
-          reasonCodes: [],
-        }],
-      },
-    };
-    render(<Harness data={data} />);
-    expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(false);
-    open();
+    data.snapshot = { ...data.snapshot, purchaseFileEvidence: { plannedOrderColumnConfirmed: true, incomingStockColumnConfirmed: true, expiryDateColumnConfirmed: true, products: [{ productKey: "A", plannedOrderQuantity: 20, incomingStockQuantity: 3, expiryDates: ["2026-09-20"], reasonCodes: [] }] } };
+    render(<Harness data={data} />); open();
     expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("20");
     expect((screen.getByLabelText("Incoming stock") as HTMLInputElement).value).toBe("3");
-    expect(screen.getAllByText("from your file").length).toBeGreaterThan(2);
-    expect(within(screen.getByRole("dialog")).getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
+    expect(detail().getAllByText("from your file").length).toBeGreaterThan(1);
+    fireEvent.click(screen.getByRole("button", { name: /Expiry information/ }));
+    expect(detail().getByText(/Expires in 6 days/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "21" } });
-    expect(screen.getAllByText("input by you").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Clear planned order" }));
-    expect(screen.getByText("No plan entered")).toBeTruthy();
+    expect(detail().getByText("input by you")).toBeTruthy();
   });
-  it("shows No range and the reason for Cannot assess without demand figures or seller pattern", () => {
-    render(<Harness />);
-    open("000303");
-    const dialog = within(screen.getByRole("dialog"));
-    expect(dialog.getByText("No range")).toBeTruthy();
-    expect(
-      dialog.getByText("Only 3 of the last 8 weeks have records"),
-    ).toBeTruthy();
-    expect(dialog.queryByRole("img")).toBeNull();
-    expect(dialog.queryByText(/Steady seller|Occasional seller/)).toBeNull();
-    fireEvent.change(dialog.getByLabelText("Planned order"), {
-      target: { value: "10" },
-    });
-    const verdict = within(
-      dialog.getByRole("region", { name: "Purchase check" }),
-    );
-    expect(verdict.getByText("Cannot judge")).toBeTruthy();
-    expect(verdict.getByText("the product is Cannot assess.")).toBeTruthy();
-    expect(verdict.queryByText("Stock after order")).toBeNull();
-  });
-  it("surfaces every mismatched product without evaluating it", () => {
+  it("keeps insufficient and stale evidence unplannable instead of showing false estimates", () => {
     const data = makeEvidence();
-    data.forecast = {
-      ...data.forecast,
-      products: [
-        data.forecast.products[0],
-        { ...data.forecast.products[1], productKey: "ORPHAN" },
-      ],
-    };
+    data.snapshot = { ...data.snapshot, productStock: data.snapshot.productStock.map(stock => stock.productKey === "A" ? { ...stock, stockAsOfDate: "2026-08-01" } : stock) };
+    render(<Harness data={data} />); open();
+    expect(screen.getByText("the stock count date is more than 14 days old")).toBeTruthy();
+    expect(screen.queryByLabelText("Planned order")).toBeNull();
+    open("000303");
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Use suggested/ })).toBeNull();
+  });
+  it("surfaces all mismatches without calculating their plans", () => {
+    const data = makeEvidence(); data.forecast = { ...data.forecast, products: [data.forecast.products[0], { ...data.forecast.products[1], productKey: "ORPHAN" }] };
     const evaluate = vi.fn(evaluateProductPurchasePlan);
     render(<Harness data={data} evaluate={evaluate} />);
     expect(screen.getAllByRole("row")).toHaveLength(5);
-    expect(screen.getByRole("alert").textContent).toContain(
-      "Evidence mismatch",
-    );
+    expect(screen.getByRole("alert").textContent).toContain("Evidence mismatch");
     expect(evaluate).toHaveBeenCalledTimes(1);
-    expect(
-      joinPurchaseEvidence(data.snapshot, {
-        ...data.forecast,
-        snapshotId: "stale",
-      }).every((p) => p.issue),
-    ).toBe(true);
+    expect(joinPurchaseEvidence(data.snapshot, { ...data.forecast, snapshotId: "stale" }).every(product => product.issue)).toBe(true);
   });
-  it("displays injected expiry evidence and supports closing with native cancel", () => {
-    const data = makeEvidence();
-    const onSelect = vi.fn();
-    render(
-      <PurchasePlanScreen
-        {...data}
-        drafts={{}}
-        selectedKey="A"
-        onSelect={onSelect}
-        onDraftChange={() => {}}
-        onBack={() => {}}
-        expiryByProduct={{
-          A: { columnConfirmed: true, dates: ["2026-09-20"] },
-        }}
-      />,
-    );
-    expect(within(screen.getByRole("dialog")).getByText("Expires in 6 days (2026-09-20)")).toBeTruthy();
-    fireEvent(
-      screen.getByRole("dialog"),
-      new Event("cancel", { bubbles: false }),
-    );
-    expect(onSelect).toHaveBeenCalledWith(null);
+  it("keeps supplier terms per product and applies rounded cases only on request", () => {
+    render(<Harness />); open();
+    const initial = (screen.getByLabelText("Planned order") as HTMLInputElement).value;
+    fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
+    fireEvent.change(screen.getByLabelText("Case size"), { target: { value: "12" } });
+    fireEvent.change(screen.getByLabelText("Minimum order"), { target: { value: "36" } });
+    fireEvent.change(screen.getByLabelText("Lead time (days)"), { target: { value: "29" } });
+    expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe(initial);
+    expect(screen.getByText(/Delivery falls outside/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Use supplier quantity 36" }));
+    expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("36");
+    expect(screen.getByText("This plan looks too high.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Case size"), { target: { value: "0" } });
+    expect(screen.queryByRole("button", { name: /^Use supplier quantity/ })).toBeNull();
+    expect(screen.getByRole("alert").textContent).toContain("whole case size");
+    open("000202"); fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
+    expect((screen.getByLabelText("Case size") as HTMLInputElement).value).toBe("");
+    open(); fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
+    expect((screen.getByLabelText("Case size") as HTMLInputElement).value).toBe("12");
+    const product = joinPurchaseEvidence(makeEvidence().snapshot, makeEvidence().forecast)[0];
+    const plan = evaluateProductPurchasePlan(product.demand!, { analysisDate: "2026-09-14", stock: product.stock });
+    expect(suggestSupplierOrder(plan.estimatedRestock, { caseSize: 12, minimumOrder: 36 }, "2026-09-14")).toMatchObject({ quantity: 36 });
   });
 });
 
-describe("approved chart semantics", () => {
-  it("uses lines without ordinary dots for positive weeks and starts the forecast band exactly at Today", () => {
+describe("purchase evidence chart", () => {
+  it("uses eight complete calendar weeks, distinguishes zero from missing, and projects the existing range", () => {
     const { snapshot, forecast } = makeEvidence();
-    const weeks = buildDemandReview(snapshot).products.find(
-      (p) => p.productKey === "A",
-    )!.timeline.weeks;
-    const { container } = render(
-      <DemandChart
-        weeks={weeks}
-        range={forecast.products[0].range!}
-        name="Test"
-      />,
-    );
-    expect(container.querySelectorAll("circle")).toHaveLength(0);
-    expect(container.querySelector("polyline")?.getAttribute("stroke")).toBe(
-      "#16313B",
-    );
-    expect(screen.queryByTestId("missing-week")).toBeNull();
-    const today = screen.getByTestId("today-divider").getAttribute("x1");
-    expect(screen.getByTestId("forecast-band").getAttribute("d")).toMatch(
-      new RegExp(`^M ${today} `),
-    );
-    expect(screen.getByTestId("forecast-upper-bound").getAttribute("d")).not.toBe(
-      screen.getByTestId("forecast-lower-bound").getAttribute("d"),
-    );
-    expect(screen.getByTestId("forecast-centre").getAttribute("x1")).toBe(
-      today,
-    );
-    expect(screen.getByTestId("forecast-centre").getAttribute("y1")).not.toBe(
-      screen.getByTestId("forecast-centre").getAttribute("y2"),
-    );
-    expect(screen.getByText("Units per week")).toBeTruthy();
-    expect(screen.getByText("Expected weekly equivalent")).toBeTruthy();
-  });
-  it("shows orange dots only for genuine zero-sales weeks and a dashed marker only for missing weeks", () => {
-    const { snapshot, forecast } = makeEvidence();
-    const weeks = buildDemandReview(snapshot).products.find(
-      (p) => p.productKey === "B",
-    )!.timeline.weeks;
-    const altered = weeks.map((w, i) =>
-      i === 0
-        ? {
-            ...w,
-            state: "net_zero_with_activity" as const,
-            netQuantity: 0,
-            negativeQuantity: -4,
-          }
-        : i === 2
-          ? { ...w, netQuantity: -1 }
-          : w,
-    );
-    const { container } = render(
-      <DemandChart
-        weeks={altered}
-        range={forecast.products[1].range!}
-        name="Test"
-      />,
-    );
-    expect(container.querySelectorAll("circle")).toHaveLength(1);
-    expect(screen.getByTestId("zero-sales-dot").getAttribute("fill")).toBe(
-      "#D99120",
-    );
+    const weeks = buildDemandReview(snapshot).products.find(product => product.productKey === "B")!.timeline.weeks;
+    render(<PurchaseDemandChart weeks={weeks} range={forecast.products[1].range!} name="Test" analysisDate={snapshot.analysisDate} />);
     expect(screen.getAllByTestId("missing-week")).toHaveLength(2);
-    expect(screen.getByText("Data note:").parentElement?.textContent).toContain(
-      "sales and returns cancelled each other out",
-    );
-    expect(container.querySelector(".chart-legend")?.textContent).not.toContain(
-      "returns",
-    );
+    expect(screen.getAllByTestId("zero-sales-bar")).toHaveLength(1);
+    expect(screen.getAllByTestId("recorded-sales-bar")).toHaveLength(5);
+    expect(screen.getAllByTestId("forecast-week-band")).toHaveLength(4);
+    expect(screen.getByText("Weekly equivalent of expected demand")).toBeTruthy();
+  });
+  it("does not substitute old history for recent missing weeks and explains returns", () => {
+    const { snapshot, forecast } = makeEvidence();
+    const weeks = buildDemandReview(snapshot).products[0].timeline.weeks.map((week, i) => i === 0 ? { ...week, negativeQuantity: -2 } : week);
+    const view = render(<PurchaseDemandChart weeks={weeks} range={forecast.products[0].range!} name="Test" analysisDate={snapshot.analysisDate} />);
+    expect(screen.getByText(/Bars show positive sales/)).toBeTruthy();
+    view.rerender(<PurchaseDemandChart weeks={weeks} range={forecast.products[0].range!} name="Test" analysisDate="2027-09-14" />);
+    expect(screen.getAllByTestId("missing-week")).toHaveLength(8);
+    expect(screen.queryByTestId("recorded-sales-bar")).toBeNull();
   });
 });

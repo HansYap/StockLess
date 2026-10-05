@@ -5,7 +5,7 @@ import { SavedDataControls, SaveDatasetControls } from "./components/SavedDataCo
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
 import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessScreen.tsx";
-import { PurchasePlanScreen } from "./screens/PurchasePlanScreen.tsx";
+import { PurchasePlanScreen, type SupplierDrafts } from "./screens/PurchasePlanScreen.tsx";
 import { ImpactDashboard } from "./screens/ImpactDashboard.tsx";
 import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from "./purchase-plan/model.ts";
 import {
@@ -86,6 +86,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
   const [purchaseDrafts, setPurchaseDrafts] = useState<PurchaseDrafts>({});
+  const [supplierOrderDrafts, setSupplierOrderDrafts] = useState<SupplierDrafts>({});
   const [forecast, setForecast] = useState<DemandForecastReview | null>(null);
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
@@ -165,6 +166,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
   const resetReadinessEvidence = useCallback(() => {
     setPurchaseDrafts({});
+    setSupplierOrderDrafts({});
     setProductKey(null);
     readinessAbort.current?.abort();
     readinessAbort.current = null;
@@ -260,6 +262,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setReadiness(restoredReadiness);
     setForecast(restoredReadiness ? saved.forecast : null);
     setPurchaseDrafts(saved.purchaseDrafts);
+    setSupplierOrderDrafts({});
     setProposals(null);
     setProductKey(null);
     setShowImpact(false);
@@ -511,7 +514,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       onNavigate={goTo}
       sourceMode={envelope.session.sourceMode}
       sourceName={dataset?.sourceName}
-      notice={step === 2 || step === 3 ? null : sessionNotice}
+      notice={step === 2 || step === 3 || (step === 4 && !showImpact) ? null : sessionNotice}
+      workflowStyle={step !== 4 || !showImpact}
       onClear={dataset ? handleClearSession : undefined}
     >
       {saveError && <p role="alert">{saveError} {retrySave.current && <button type="button" onClick={() => void retrySave.current?.()}>Retry</button>}</p>}
@@ -648,6 +652,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
             setPurchaseDrafts(next);
             if (activeSavedId) void persistWork(activeSavedId, { purchaseDrafts: next });
           }}
+          supplierDrafts={supplierOrderDrafts}
+          onSupplierChange={(key, terms) => setSupplierOrderDrafts(previous => ({ ...previous, [key]: terms }))}
           selectedKey={productKey}
           onSelect={setProductKey}
           onBack={() => setStep(3)}

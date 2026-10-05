@@ -67,8 +67,8 @@ vi.mock("../src/screens/MappingScreen.tsx", () => ({
   ),
 }));
 vi.mock("../src/screens/ReadinessScreen.tsx", () => ({
-  ReadinessScreen: ({ onContinue }: { onContinue: () => void }) => (
-    <button onClick={onContinue}>Run test forecast</button>
+  ReadinessScreen: ({ onContinue, onClear }: { onContinue: () => void; onClear: () => void }) => (
+    <><button onClick={onContinue}>Run test forecast</button><button onClick={onClear}>Clear session</button></>
   ),
 }));
 
@@ -84,7 +84,7 @@ async function reachPurchase() {
   fireEvent.click(screen.getByText("Load test file"));
   fireEvent.click(await screen.findByText("Check test readiness"));
   fireEvent.click(await screen.findByText("Run test forecast"));
-  await screen.findByRole("heading", { name: "Plan what to restock, then check it before you order." });
+  await screen.findByRole("heading", { name: "Plan your next order" });
 }
 const open = () =>
   fireEvent.click(
@@ -106,7 +106,7 @@ describe("App forecast and draft lifecycle", () => {
       target: { value: "4" },
     });
     expect(runDemandForecastInWorker).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done, next product →" }));
     fireEvent.click(
       screen.getByRole("button", { name: "← Back to readiness" }),
     );
@@ -116,7 +116,7 @@ describe("App forecast and draft lifecycle", () => {
       (screen.getByLabelText("Planned order") as HTMLInputElement).value,
     ).toBe("20");
     expect(runDemandForecastInWorker).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "← Back to readiness" }));
     fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
     await reachPurchase();
     open();
@@ -124,13 +124,12 @@ describe("App forecast and draft lifecycle", () => {
       screen.getByLabelText("Planned order").getAttribute("aria-valuetext"),
     ).toBe("Not entered");
     expect(
-      screen.getByLabelText("Incoming stock").getAttribute("aria-valuetext"),
-    ).toBe("Not entered");
+      (screen.getByLabelText("Incoming stock") as HTMLInputElement).value,
+    ).toBe("");
     fireEvent.change(screen.getByLabelText("Planned order"), {
       target: { value: "9" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
-    fireEvent.click(screen.getByRole("button", { name: "StockLess — upload" }));
+    fireEvent.click(screen.getByRole("button", { name: /Upload/ }));
     await reachPurchase();
     open();
     await waitFor(() =>
