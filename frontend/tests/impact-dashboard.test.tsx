@@ -21,27 +21,42 @@ describe("impact dashboard", () => {
     expect(lines[0].units).toBeGreaterThan(0);
 
     const { container } = render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
-    expect(screen.getByText("Potential excess stock")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "See the impact of your purchase plan" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "What you could avoid" })).toBeTruthy();
     expect(screen.getByText((_, element) => element?.classList.contains("impact__lunits") === true && element.textContent === `${lines[0].units} units above expected demand`)).toBeTruthy();
-    expect(screen.getAllByText("Not yet available")).toHaveLength(2);
-    expect(container.querySelectorAll(".impact-faq__item")).toHaveLength(4);
+    expect(container.querySelector(".sx-badge__num")?.textContent).toBe(String(lines[0].units));
+    expect(container.querySelectorAll(".learn__item")).toHaveLength(4);
   });
 
-  it("opens one impact explanation at a time and lets it close", () => {
+  it("switches impact tabs and expands an explanation", () => {
     const { snapshot, forecast } = makeEvidence();
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{}} onBack={() => {}} />);
 
-    const excess = screen.getByRole("button", { name: /How is potential excess estimated/ });
-    const cost = screen.getByRole("button", { name: /How would cost saving be calculated/ });
-    expect(excess.getAttribute("aria-expanded")).toBe("false");
-    fireEvent.click(excess);
-    expect(excess.getAttribute("aria-expanded")).toBe("true");
-    fireEvent.click(cost);
-    expect(excess.getAttribute("aria-expanded")).toBe("false");
-    expect(cost.getAttribute("aria-expanded")).toBe("true");
-    const closedPanel = document.getElementById(excess.getAttribute("aria-controls")!);
-    expect(closedPanel?.getAttribute("aria-hidden")).toBe("true");
-    fireEvent.click(cost);
-    expect(cost.getAttribute("aria-expanded")).toBe("false");
+    const environment = screen.getByRole("tab", { name: /Environmental/ });
+    const business = screen.getByRole("tab", { name: /Business/ });
+    expect(environment.getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(business);
+    expect(business.getAttribute("aria-selected")).toBe("true");
+    expect(document.getElementById("sx-lens-biz")?.hidden).toBe(false);
+    const question = screen.getByText("How is potential excess estimated?");
+    fireEvent.click(question);
+    expect(question.closest("details")?.open).toBe(true);
+  });
+
+  it("counts balanced checked products in planned and expected stock totals", () => {
+    const { snapshot, forecast } = makeEvidence();
+    const drafts = Object.fromEntries(["A", "B"].map(key => [key, {
+      plannedOrder: { state: "value" as const, value: key === "A" ? 100 : 0, source: "input by you" as const },
+      incomingStock: { state: "empty" as const },
+    }]));
+    const lines = calculatePotentialExcess(snapshot, forecast, drafts);
+    expect(lines).toHaveLength(2);
+    expect(lines.some(line => line.units === 0)).toBe(true);
+    const planned = lines.reduce((total, line) => total + line.available, 0);
+    const excess = lines.reduce((total, line) => total + line.units, 0);
+    const { container } = render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
+    const beats = container.querySelectorAll(".sx-disc");
+    expect(Number(beats[0].textContent?.replaceAll(",", ""))).toBe(planned);
+    expect(Number(beats[1].textContent?.replaceAll(",", ""))).toBe(planned - excess);
   });
 });

@@ -42,18 +42,19 @@ export function AppShell({
 }: AppShellProps) {
   useLanguage();
   const workflow = workflowStyle ?? current <= 3;
+  const impactShell = current === 4 && !workflow;
   return (
-    <div className={`frame${workflow ? " frame--workflow" : ""}`}>
+    <div className={`frame${workflow ? " frame--workflow" : ""}${impactShell ? " frame--impact" : ""}`}>
       <WorkspaceDecor />
       <header className="topbar">
-        {workflow ? (
+        {workflow || impactShell ? (
           <a className="brand" href="#home" aria-label="StockLess"><Logo height={36} /></a>
         ) : (
           <button type="button" className="brand brand--button" onClick={() => onNavigate(1)} aria-label={t("StockLess — upload")}>
             <Logo />
           </button>
         )}
-        {t(sourceMode && !(workflow && current > 1) && (
+        {t(sourceMode && !impactShell && !(workflow && current > 1) && (
           <div className="session-status" aria-label={t("Active session")}>
             <span className={`pill ${sourceMode === "sample" ? "pill--amber" : "pill--teal"}`}>
               {t(sourceMode === "sample" ? "Sample data" : "Retailer file")}

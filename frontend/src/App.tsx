@@ -637,6 +637,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
           forecast={forecast}
           drafts={purchaseDrafts}
           onBack={() => setShowImpact(false)}
+          onNew={() => goTo(1)}
         />
       ))}
 
