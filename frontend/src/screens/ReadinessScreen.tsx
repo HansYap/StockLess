@@ -91,7 +91,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   const currentEvidencePage = Math.min(evidencePage, Math.max(0, Math.ceil(findings.length / 25) - 1));
   return <div className="readiness-screen">
     <section className={"rd-hero" + (compact ? " rd-hero--compact" : "")}><div className="rd-wrap">
-      <div className="rd-hero__inner"><div><p className="rd-eyebrow">🪴 {t("Step 3 of 4")}</p><h1>{t(title)}</h1><p className="rd-lede">{t("We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.")}</p></div>
+      <div className="rd-hero__inner"><div><p className="rd-eyebrow">🪴 {t("Step 3 of 3")}</p><h1>{t(title)}</h1><p className="rd-lede">{t("We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.")}</p></div>
         <div className="rd-file"><span className="rd-file__icon">{/\.xlsx?$/i.test(props.dataset.sourceName) ? "XLS" : "CSV"}</span><div><b>{props.dataset.sourceName}</b><small><span className={"rd-pill rd-pill--" + (props.dataset.sourceMode === "sample" ? "review" : "ready")}>{t(props.dataset.sourceMode === "sample" ? "Sample" : "Retailer file")}</span>{props.dataset.rows.length.toLocaleString()} {t("rows")} · {props.dataset.columns.length} {t("columns")}</small></div>{props.onClear && <button type="button" className="btn--link" onClick={props.onClear}>{t("Clear session")}</button>}</div>
       </div><div className="rd-actions"><button type="button" className="btn--link" onClick={props.onBack}>{t("← Back to matching")}</button><span className="rd-actions__spacer" /><span className="rd-actions__meta">{mustFix} {t("rows to fix in your file")}</span>{continueButton}</div>
     </div></section>

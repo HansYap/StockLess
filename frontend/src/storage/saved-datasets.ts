@@ -1,6 +1,6 @@
 import type {
   DateFormatConfirmation, DemandForecastReview,
-  ProductPurchaseInputs, ProductPurchasePlan, ReadinessSnapshot, SessionEnvelope,
+  ProductPurchaseInputs, ProductPurchasePlan, ReadinessSnapshot, SessionEnvelope, SupplierOrderTerms,
 } from "../engine.ts";
 import type { PurchaseDrafts } from "../purchase-plan/model.ts";
 import { withStore, withTransaction } from "./browser-db.ts";
@@ -21,6 +21,7 @@ export interface SavedDataset {
   readonly forecast: DemandForecastReview | null;
   readonly purchaseDrafts: PurchaseDrafts;
   readonly supplierTerms: Readonly<Record<string, string>>;
+  readonly supplierOrderDrafts?: Readonly<Record<string, SupplierOrderTerms | undefined>>;
   readonly decisions: readonly SavedDecision[];
   readonly outcomes: readonly SavedOutcome[];
 }
@@ -131,7 +132,7 @@ export async function createSavedDataset(
 }
 
 export type SavedWork = Pick<SavedDataset,
-  "envelope" | "analysisDate" | "dateConfirmations" | "readiness" | "forecast" | "purchaseDrafts" | "supplierTerms">;
+  "envelope" | "analysisDate" | "dateConfirmations" | "readiness" | "forecast" | "purchaseDrafts" | "supplierTerms" | "supplierOrderDrafts">;
 
 const pendingMutations = new Map<string, Promise<unknown>>();
 

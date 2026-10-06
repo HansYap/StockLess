@@ -129,7 +129,7 @@ describe("App forecast and draft lifecycle", () => {
     fireEvent.change(screen.getByLabelText("Planned order"), {
       target: { value: "9" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Upload/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Reupload", exact: true }));
     await reachPurchase();
     open();
     await waitFor(() =>

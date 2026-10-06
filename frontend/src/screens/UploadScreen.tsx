@@ -27,6 +27,7 @@ interface UploadScreenProps {
     signal: AbortSignal,
   ) => Promise<void>;
   readonly onCancel: () => void;
+  readonly updating?: boolean;
 }
 
 interface ImportFailure {
@@ -88,6 +89,7 @@ async function readFileBytes(
 export function UploadScreen({
   onSource,
   onCancel,
+  updating = false,
 }: UploadScreenProps) {
   useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -217,8 +219,8 @@ export function UploadScreen({
     <div className="upload-screen">
       <header className={compactTitle ? "upload-hero upload-hero--compact" : "upload-hero"}>
         <div className="upload-wrap upload-hero__inner">
-          <p className="upload-hero__eyebrow"><span aria-hidden="true">🌱</span> {t("Step 1 of 4")}</p>
-          <h1>{t("Upload your sales file")}</h1>
+          <p className="upload-hero__eyebrow"><span aria-hidden="true">🌱</span> {t("Step 1 of 3")}</p>
+          <h1>{t(updating ? "Reupload your sales file" : "Upload your sales file")}</h1>
           <p className="upload-hero__lede">{t("Use the CSV or Excel export from your POS, marketplace or spreadsheet. Column names don't need to match ours.")}</p>
         </div>
       </header>
@@ -246,7 +248,7 @@ export function UploadScreen({
                 <p>{t("Use the export from your POS, marketplace or spreadsheet.")}</p>
                 <div className="upload-actions">
                   <button type="button" className="btn btn--primary" onClick={() => inputRef.current?.click()}>{t("Choose CSV or Excel file")}</button>
-                  <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>{t("Use sample file")}</button>
+                  {!updating && <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>{t("Use sample file")}</button>}
                 </div>
                 <p className="upload-limits">{t(".csv, .xlsx or .xls")} {t("up to ")}{megabyteLimit} {t("MiB ·")} {UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en")} {t("rows ·")} {t("Excel uses the first worksheet with data")}</p>
                 <ol className="upload-flow" aria-label={t("What happens to your file")}>
@@ -311,6 +313,6 @@ const OPTIONAL_COLUMNS = [
   ["document", "Planned orders, incoming stock", "Check an order before you place it", null],
   ["expiry", "Expiry dates", "Flag batches close to expiry", null],
   ["cost", "Unit cost", "Price your impact in ringgit", "Not yet available"],
-  ["truck", "Supplier details", "Minimum order, case size, lead time", "Typed in Step 4"],
+  ["truck", "Supplier details", "Minimum order, case size, lead time", "Typed in purchase plan"],
 ] as const;
 const FLOW = [["document", "Your sales data"], ["chart", "Demand insights"], ["box", "Smarter restocking"], ["leaf", "Less waste"]] as const;

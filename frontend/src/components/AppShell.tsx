@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { SourceMode } from "../engine.ts";
 import { WorkspaceDecor } from "./WorkspaceDecor.tsx";
 import { Logo } from "./Logo.tsx";
+import { SavedWorkspaceSidebar, type SavedWorkspaceSidebarProps } from "./SavedWorkspaceSidebar.tsx";
 import "./workflow-shell.css";
 
 export type StepId = 1 | 2 | 3 | 4;
@@ -12,7 +13,6 @@ const STEPS: readonly { id: StepId; label: string }[] = [
   { id: 1, label: "Upload" },
   { id: 2, label: "Map columns" },
   { id: 3, label: "Check readiness" },
-  { id: 4, label: "Plan purchases" },
 ];
 
 interface AppShellProps {
@@ -26,9 +26,10 @@ interface AppShellProps {
   readonly onClear?: () => void;
   readonly children: ReactNode;
   readonly workflowStyle?: boolean;
+  readonly workspaceSidebar?: SavedWorkspaceSidebarProps;
 }
 
-/** Frames every screen with the brand bar and the four-step progress indicator. */
+/** Shares the header and preparation progress, with navigation for saved uploads. */
 export function AppShell({
   current,
   reached,
@@ -39,13 +40,35 @@ export function AppShell({
   onClear,
   children,
   workflowStyle,
+  workspaceSidebar,
 }: AppShellProps) {
   useLanguage();
   const workflow = workflowStyle ?? current <= 3;
   const impactShell = current === 4 && !workflow;
+  const content = <>
+      {current <= 3 && <nav className="stepper" aria-label={t("Progress")}>
+        <ol className="stepper__inner">
+          {STEPS.map((step) => {
+            const done = step.id < current;
+            const isCurrent = step.id === current;
+            return <li key={step.id} className={`step${done ? " step--done" : ""}${isCurrent ? " step--current" : ""}`}>
+              <button type="button" className="step__button" disabled={step.id > reached || isCurrent}
+                aria-current={isCurrent ? "step" : undefined} onClick={() => onNavigate(step.id)}>
+                <span className="step__plant" aria-hidden="true">{["🌱", "🌿", "🪴"][step.id - 1]}</span>
+                <span className="step__dot">{done ? "✓" : step.id}</span><span className="step__label">{t(step.label)}</span>
+              </button><span className="step__line" aria-hidden="true" />
+            </li>;
+          })}
+        </ol>
+      </nav>}
+      <div className="page">
+        {notice && <p className="notice notice--info" role="status">{t(notice)}</p>}
+        {children}
+      </div>
+    </>;
   return (
-    <div className={`frame${workflow ? " frame--workflow" : ""}${impactShell ? " frame--impact" : ""}`}>
-      <WorkspaceDecor />
+    <div className={`frame${workflow ? " frame--workflow" : ""}${impactShell ? " frame--impact" : ""}${workspaceSidebar ? " frame--saved-workspace" : ""}`}>
+      {!workspaceSidebar && <WorkspaceDecor />}
       <header className="topbar">
         {workflow || impactShell ? (
           <a className="brand" href="#home" aria-label="StockLess"><Logo height={36} /></a>
@@ -54,7 +77,7 @@ export function AppShell({
             <Logo />
           </button>
         )}
-        {t(sourceMode && !impactShell && !(workflow && current > 1) && (
+        {t(sourceMode && !workspaceSidebar && !impactShell && !(workflow && current > 1) && (
           <div className="session-status" aria-label={t("Active session")}>
             <span className={`pill ${sourceMode === "sample" ? "pill--amber" : "pill--teal"}`}>
               {t(sourceMode === "sample" ? "Sample data" : "Retailer file")}
@@ -67,42 +90,13 @@ export function AppShell({
           </div>
         ))}
         <a className="workspace-home-link" href="#home" aria-label={t("Homepage")}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></svg><span>{t("Homepage")}</span></a>
-        <LanguageSwitcher compact={workflow} />
+        <LanguageSwitcher compact={workflow || Boolean(workspaceSidebar)} />
       </header>
 
-      <nav className="stepper" aria-label={t("Progress")}>
-        <ol className="stepper__inner">
-          {t(STEPS.map((step) => {
-            const done = step.id < current;
-            const isCurrent = step.id === current;
-            const reachable = step.id <= reached;
-            return (
-              <li
-                key={step.id}
-                className={`step${done ? " step--done" : ""}${isCurrent ? " step--current" : ""}`}
-              >
-                <button
-                  type="button"
-                  className="step__button"
-                  disabled={!reachable || isCurrent}
-                  aria-current={isCurrent ? "step" : undefined}
-                  onClick={() => onNavigate(step.id)}
-                >
-                  <span className="step__plant" aria-hidden="true">{["🌱","🌿","🪴","🌳"][step.id - 1]}</span>
-                  <span className="step__dot">{t(done ? "✓" : step.id)}</span>
-                  <span className="step__label">{t(step.label)}</span>
-                </button>
-                <span className="step__line" aria-hidden="true" />
-              </li>
-            );
-          }))}
-        </ol>
-      </nav>
-
-      <div className="page">
-        {t(notice && <p className="notice notice--info" role="status">{t(notice)}</p>)}
-        {children}
-      </div>
+      {workspaceSidebar ? <div className="saved-workspace">
+        <SavedWorkspaceSidebar {...workspaceSidebar} />
+        <div className="saved-workspace__content"><WorkspaceDecor />{content}</div>
+      </div> : content}
     </div>
   );
 }

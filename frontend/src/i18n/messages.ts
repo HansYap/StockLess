@@ -1,4 +1,5 @@
 import { purchaseMessages } from "./purchase-refresh.ts";
+import { savedWorkspaceMessages } from "./saved-workspace.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
 export const messages: Record<string, readonly [string, string]> = {
   "Language": [
@@ -3676,3 +3677,4 @@ Object.assign(messages, {
 
 Object.assign(messages, {"Apply filters": ["应用筛选", "Gunakan penapis"]});
 Object.assign(messages, purchaseMessages);
+Object.assign(messages, savedWorkspaceMessages);
