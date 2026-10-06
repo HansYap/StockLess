@@ -1,0 +1,20 @@
+{
+  "scope": "Actual UploadScreen with synthetic boundary sample; keyboard PageDown while Cancel is available. One observed interaction, not exhaustive performance coverage.",
+  "before": {
+    "progress": "0",
+    "scrollY": 524,
+    "status": [
+      "Sample data loaded.",
+      "Working in this browser…"
+    ]
+  },
+  "after": {
+    "progress": "0",
+    "scrollY": 440.5,
+    "status": [
+      "Sample data loaded.",
+      "Working in this browser…"
+    ]
+  },
+  "responseMs": 27
+}

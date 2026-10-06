@@ -98,7 +98,7 @@ it("allows optional fields to be skipped and shows unused original headings", ()
   const unused = document.querySelector(".mapping-unused") as HTMLElement;
   expect(within(unused).getByText("Stock")).toBeTruthy();
   expect(within(unused).getByText("Unused")).toBeTruthy();
-  expect((screen.getByRole("combobox", { name: "Source column for Unit cost" }) as HTMLSelectElement).disabled).toBe(true);
+  expect((screen.getByRole("combobox", { name: "Source column for Unit cost" }) as HTMLSelectElement).disabled).toBe(false);
 });
 
 it("exposes a conflicting suggestion for a later step so the user can clear it", () => {

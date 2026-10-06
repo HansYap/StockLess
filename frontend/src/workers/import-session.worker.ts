@@ -4,6 +4,7 @@ import {
   CsvImportError,
   replaceSessionSource,
   type CsvProgress,
+  type ImportSourceMetadata,
   type SessionEnvelope,
   type SourceMode,
 } from "../engine.ts";
@@ -16,6 +17,7 @@ interface ImportRequest {
   readonly sourceName: string;
   readonly sourceMode: SourceMode;
   readonly mimeType?: string;
+  readonly sourceMetadata?: ImportSourceMetadata;
 }
 
 type ImportResponse =
@@ -37,6 +39,7 @@ workerScope.onmessage = (event: MessageEvent<ImportRequest>) => {
     sourceMode: request.sourceMode,
     sourceName: request.sourceName,
     mimeType: request.mimeType,
+    sourceMetadata: request.sourceMetadata,
     onProgress(progress) {
       const response: ImportResponse = { type: "progress", id: request.id, progress };
       workerScope.postMessage(response);

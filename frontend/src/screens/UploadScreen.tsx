@@ -1,7 +1,7 @@
 import { t, useLanguage } from "../i18n/index.ts";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
-import { excelToCsvBytes } from "./excel-import.ts";
+import { inspectExcelWorkbook, importExcelWorksheet, type ExcelWorksheet } from "./excel-import.ts";
 import "./upload.css";
 import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
 import {
@@ -13,6 +13,7 @@ import {
   createCsvImportError,
   parseIsoDate,
   type CsvProgress,
+  type ImportSourceMetadata,
   type SourceMode,
 } from "../engine.ts";
 
@@ -25,6 +26,7 @@ interface UploadScreenProps {
     mimeType: string | undefined,
     onProgress: (progress: CsvProgress) => void,
     signal: AbortSignal,
+    sourceMetadata?: ImportSourceMetadata,
   ) => Promise<void>;
   readonly onCancel: () => void;
   readonly updating?: boolean;
@@ -100,6 +102,10 @@ export function UploadScreen({
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [dragging, setDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [workbook, setWorkbook] = useState<{ bytes: Uint8Array; sheets: readonly ExcelWorksheet[] } | null>(null);
+  const [worksheetName, setWorksheetName] = useState("");
+  const chosenSheet = workbook?.sheets.find(sheet => sheet.name === worksheetName);
+
   const [compactTitle, setCompactTitle] = useState(false);
   const continueRef = useRef<HTMLButtonElement>(null);
 
@@ -129,6 +135,7 @@ export function UploadScreen({
     mimeType: string | undefined,
     expectedBytes: number,
     loadBytes: (signal: AbortSignal, onReadProgress: (processed: number) => void) => Promise<Uint8Array>,
+    sourceMetadata?: ImportSourceMetadata,
   ) {
     const controller = new AbortController();
     abortRef.current?.abort();
@@ -140,7 +147,7 @@ export function UploadScreen({
       const bytes = await loadBytes(controller.signal, (processed) => {
         setProgress({ phase: "decode", processed, total: expectedBytes });
       });
-      await onSource(bytes, name, mode, mimeType, setProgress, controller.signal);
+      await onSource(bytes, name, mode, mimeType, setProgress, controller.signal, sourceMetadata);
     } catch (error) {
       if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) {
         setFailure(null);
@@ -161,18 +168,22 @@ export function UploadScreen({
 
   async function handleFile(file: File) {
     const isExcel = /\.(xlsx|xls)$/i.test(file.name);
-    await run(file.name, "user", isExcel ? "text/csv;converted-from=excel" : file.type || undefined, file.size, async (signal, onReadProgress) => {
-      if (file.size > UPLOAD_REQUIREMENTS.maxBytes) {
-        throw createCsvImportError("FILE_TOO_LARGE", file.name);
-      }
-      const bytes = await readFileBytes(file, signal, onReadProgress);
-      if (signal.aborted) throw new DOMException("Import cancelled.", "AbortError");
-      if (!isExcel) return bytes;
-      setProgress({ phase: "decode", processed: file.size, total: file.size });
-      const csv = await excelToCsvBytes(bytes, file.name);
-      if (signal.aborted) throw new DOMException("Import cancelled.", "AbortError");
-      return csv;
-    });
+    if (isExcel) {
+      if (!workbook || !chosenSheet || chosenSheet.problem) return;
+      const controller = new AbortController(); abortRef.current = controller;
+      setBusy(true); setFailure(null); setProgress({ phase: "decode", processed: 0, total: file.size });
+      try {
+        const converted = await importExcelWorksheet(workbook.bytes, file.name, worksheetName, controller.signal,
+          () => setProgress({ phase: "parse", processed: 0, total: 0 }));
+        if (controller.signal.aborted) return;
+        await onSource(converted.bytes, file.name, "user", "text/csv;converted-from=excel", setProgress, controller.signal, converted.sourceMetadata);
+      } catch (error) {
+        if (!controller.signal.aborted) setFailure(error instanceof CsvImportError ? { message: error.message, recovery: error.recovery }
+          : { message: `The Excel workbook cannot be read: “${file.name}”`, recovery: "Choose another worksheet or correct the workbook." });
+      } finally { if (abortRef.current === controller) { abortRef.current = null; setBusy(false); setProgress(null); } }
+      return;
+    }
+    await run(file.name, "user", file.type || undefined, file.size, (signal, onReadProgress) => readFileBytes(file, signal, onReadProgress));
   }
 
   async function handleSample() {
@@ -191,12 +202,13 @@ export function UploadScreen({
     setBusy(false);
     setProgress(null);
     setSelectedFile(null);
+    setWorkbook(null); setWorksheetName("");
     onCancel();
   }
 
-  function selectFile(file: File) {
+  async function selectFile(file: File) {
     if (busy) return;
-    setFailure(null);
+    setFailure(null); setWorkbook(null); setWorksheetName("");
     const code = !/\.(csv|xlsx|xls)$/i.test(file.name) ? "UNSUPPORTED_FILE_TYPE"
       : file.size > UPLOAD_REQUIREMENTS.maxBytes ? "FILE_TOO_LARGE" : null;
     if (code) {
@@ -206,13 +218,27 @@ export function UploadScreen({
       return;
     }
     setSelectedFile(file);
+    if (!/\.(xlsx|xls)$/i.test(file.name)) return;
+    const controller = new AbortController(); abortRef.current = controller;
+    setBusy(true); setProgress({ phase: "decode", processed: 0, total: file.size });
+    try {
+      const bytes = await readFileBytes(file, controller.signal, processed => setProgress({ phase: "decode", processed, total: file.size }));
+      const sheets = await inspectExcelWorkbook(bytes, file.name, controller.signal, () => setProgress({ phase: "parse", processed: 0, total: 0 }));
+      if (controller.signal.aborted) return;
+      if (!sheets.some(sheet => !sheet.problem)) throw new CsvImportError("INVALID_UTF8", `No data found in the Excel workbook: “${file.name}”`, "Add a header row and sales records to a worksheet, then try again.");
+      setWorkbook({ bytes, sheets });
+      setWorksheetName(sheets.length === 1 ? sheets[0].name : "");
+    } catch (error) {
+      if (!controller.signal.aborted) { setSelectedFile(null); setFailure(error instanceof CsvImportError ? { message: error.message, recovery: error.recovery }
+        : { message: `The Excel workbook cannot be read: “${file.name}”`, recovery: "Correct the workbook and choose it again." }); }
+    } finally { if (abortRef.current === controller) { abortRef.current = null; setBusy(false); setProgress(null); } }
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
     const file = event.dataTransfer.files[0];
-    if (file) selectFile(file);
+    if (file) void selectFile(file);
   }
 
   return (
@@ -250,7 +276,7 @@ export function UploadScreen({
                   <button type="button" className="btn btn--primary" onClick={() => inputRef.current?.click()}>{t("Choose CSV or Excel file")}</button>
                   {!updating && <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>{t("Use sample file")}</button>}
                 </div>
-                <p className="upload-limits">{t(".csv, .xlsx or .xls")} {t("up to ")}{megabyteLimit} {t("MiB ·")} {UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en")} {t("rows ·")} {t("Excel uses the first worksheet with data")}</p>
+                <p className="upload-limits">{t(".csv, .xlsx or .xls")} {t("up to ")}{megabyteLimit} {t("MiB ·")} {UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en")} {t("rows ·")} {t("Choose which Excel worksheet to analyse")}</p>
                 <ol className="upload-flow" aria-label={t("What happens to your file")}>
                   {FLOW.map(([icon, label]) => <li key={label}><WorkflowIcon name={icon} /><span>{t(label)}</span></li>)}
                 </ol>
@@ -259,7 +285,7 @@ export function UploadScreen({
                 accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 hidden disabled={busy} onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) selectFile(file);
+                  if (file) void selectFile(file);
                   event.target.value = "";
                 }} />
             </div>
@@ -267,8 +293,13 @@ export function UploadScreen({
               <span className="upload-picked__icon" aria-hidden="true">{selectedFile.name.split(".").pop()?.toUpperCase()}</span>
               <div className="upload-picked__details"><b>{selectedFile.name}</b><small>{(selectedFile.size / 1024).toFixed(selectedFile.size < 102400 ? 1 : 0)} KB</small></div>
               <span className="upload-tag" role="status">{t("Ready to match")}</span>
-              <button ref={continueRef} type="button" className="btn btn--primary" onClick={() => void handleFile(selectedFile)}>{t("Continue to matching →")}</button>
+              <button ref={continueRef} type="button" className="btn btn--primary" disabled={!!workbook && (!chosenSheet || !!chosenSheet.problem)} onClick={() => void handleFile(selectedFile)}>{t("Continue to matching →")}</button>
             </div>}
+            {workbook && !busy && <section className="upload-sheet" aria-label={t("Worksheet preview")}>
+              <label htmlFor="upload-worksheet">{t("Worksheet")}</label><select id="upload-worksheet" value={worksheetName} onChange={event => setWorksheetName(event.target.value)}><option value="">{t("Choose a worksheet")}</option>{workbook.sheets.map(sheet => <option key={sheet.name} value={sheet.name}>{sheet.name} ({sheet.rowCount})</option>)}</select>
+              {chosenSheet?.problem && <p role="alert">{t(chosenSheet.problem)} {t("Choose another worksheet or correct the workbook.")}</p>}
+              {chosenSheet && !chosenSheet.problem && <><p>{chosenSheet.name} · {chosenSheet.rowCount} {t("rows")} · {t("Only this worksheet will be analysed.")}</p><div className="upload-sheet__table"><table><thead><tr>{chosenSheet.headers.map((header, i) => <th key={i}>{header}</th>)}</tr></thead><tbody>{chosenSheet.previewRows.map((row, i) => <tr key={i}>{row.map((value, j) => <td key={j}>{value}</td>)}</tr>)}</tbody></table></div></>}
+            </section>}
             {failure && <div className="alert alert--error" role="alert">
               <span className="alert__icon" aria-hidden="true">!</span>
               <div><p className="alert__title">{t(failure.message)}</p><p className="alert__body">{t(failure.recovery)}</p></div>
@@ -312,7 +343,7 @@ const OPTIONAL_COLUMNS = [
   ["box", "Stock on hand + count date", "See how many weeks stock will last", null],
   ["document", "Planned orders, incoming stock", "Check an order before you place it", null],
   ["expiry", "Expiry dates", "Flag batches close to expiry", null],
-  ["cost", "Unit cost", "Price your impact in ringgit", "Not yet available"],
+  ["cost", "Unit cost", "Purchase cost per unit in MYR; checked in Step 3", null],
   ["truck", "Supplier details", "Minimum order, case size, lead time", "Typed in purchase plan"],
 ] as const;
 const FLOW = [["document", "Your sales data"], ["chart", "Demand insights"], ["box", "Smarter restocking"], ["leaf", "Less waste"]] as const;

@@ -1,5 +1,6 @@
 import {
   buildDemandReview,
+  collectProductLabels,
   evaluateProductPurchasePlan,
   expiryInputFromFileEvidence,
   purchaseInputsFromFileEvidence,
@@ -11,6 +12,7 @@ import {
   type ProductPurchaseInputs,
   type ExpiryCheckInput,
   type ProductPurchasePlan,
+  type ProductLabels,
 } from "../engine.ts";
 
 export type PurchaseDrafts = Readonly<
@@ -28,8 +30,11 @@ export interface PurchaseProduct {
   readonly stock?: ProductStockEvidence;
   readonly demand?: ProductDemandEstimate;
   readonly issue?: string;
+  readonly issueKind?: "identity" | "evidence";
   readonly fileInputs: ProductPurchaseInputs;
   readonly fileExpiry: ExpiryCheckInput;
+  readonly readinessSnapshot?: ReadinessSnapshot;
+  readonly labels?: ProductLabels;
 }
 
 /** Presentation join only. All calculations stay behind engine.ts. Never join by display name. */
@@ -37,6 +42,7 @@ export function joinPurchaseEvidence(
   snapshot: ReadinessSnapshot,
   forecast: DemandForecastReview,
 ): PurchaseProduct[] {
+  const labels = collectProductLabels(snapshot);
   const evidence = new Map(
     buildDemandReview(snapshot).products.map((p) => [p.productKey, p]),
   );
@@ -70,7 +76,10 @@ export function joinPurchaseEvidence(
     const row = identities.get(key)?.interpretedValues;
     const demand = demands.get(key);
     const fileEvidence = purchaseFiles.get(key);
-    const issue = mismatch
+    const identityBlocked = snapshot.productLimitations.some(item => item.productKey === key && item.code === "IDENTITY_CONFLICT")
+      || snapshot.issues.some(item => item.productKey === key && item.issueCode === "PRODUCT_IDENTITY_CONFLICT" && item.resolutionState === "unresolved");
+    const issue = identityBlocked ? "Product identity is unresolved. Correct product names, codes and pack sizes in Step 3."
+      : mismatch
       ? "Forecast and readiness do not match. Return to readiness and run the forecast again."
       : duplicates.has(key)
         ? "More than one forecast was supplied for this product. Refresh the forecast."
@@ -95,8 +104,11 @@ export function joinPurchaseEvidence(
       stock: stocks.get(key),
       demand,
       issue,
+      issueKind: issue ? identityBlocked ? "identity" : "evidence" : undefined,
       fileInputs: purchaseInputsFromFileEvidence(fileEvidence),
       fileExpiry: expiryInputFromFileEvidence(snapshot.purchaseFileEvidence, key, fileEvidence),
+      readinessSnapshot: snapshot,
+      labels: labels.get(key),
     };
   });
 }

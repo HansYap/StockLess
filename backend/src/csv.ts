@@ -312,6 +312,9 @@ export async function parseCsvBytes(
   }
 
   const dataRecords = records.slice(1);
+  if (dataRecords.length === 0) {
+    throw new CsvImportError("INVALID_UTF8", `No records found: “${options.sourceName}”`, "Add a header row and at least one sales record.");
+  }
   if (dataRecords.length > maxRows) {
     throw createCsvImportError("ROW_LIMIT_EXCEEDED", options.sourceName);
   }
@@ -322,9 +325,15 @@ export async function parseCsvBytes(
   }
 
   const normalizations: NormalizationEvent[] = [];
-  const normalizedHeaders = header.map((value, index) => normalizeCell(value, 1, `column-${index}`, normalizations));
+  const sourceMetadata = options.sourceMetadata;
+  if (sourceMetadata && (sourceMetadata.sourceRowNumbers.length !== dataRecords.length
+    || !Number.isSafeInteger(sourceMetadata.headerRow) || sourceMetadata.headerRow < 1
+    || sourceMetadata.sourceRowNumbers.some((row, i, rows) => !Number.isSafeInteger(row) || row <= (rows[i - 1] ?? sourceMetadata.headerRow)))) {
+    throw new Error("Worksheet row provenance does not match its records.");
+  }
+  const normalizedHeaders = header.map((value, index) => normalizeCell(value, sourceMetadata?.headerRow ?? 1, `column-${index}`, normalizations));
   const rows: ParsedRow[] = dataRecords.map((record, recordIndex) => {
-    const sourceRow = recordIndex + 2;
+    const sourceRow = sourceMetadata?.sourceRowNumbers[recordIndex] ?? recordIndex + 2;
     const normalizedValues = record.map((value, columnIndex) =>
       normalizeCell(value, sourceRow, `column-${columnIndex}`, normalizations),
     );
@@ -355,8 +364,10 @@ export async function parseCsvBytes(
   return Object.freeze({
     sourceMode: options.sourceMode,
     sourceName: options.sourceName,
-    sourceByteLength: sourceBytes.byteLength,
-    sourceSha256,
+    sourceByteLength: sourceMetadata?.originalByteLength ?? sourceBytes.byteLength,
+    sourceSha256: sourceMetadata?.originalSha256 ?? sourceSha256,
+    worksheetName: sourceMetadata?.worksheetName,
+    headerRow: sourceMetadata?.headerRow ?? 1,
     delimiter,
     columns: Object.freeze(columns),
     rows: Object.freeze(rows),

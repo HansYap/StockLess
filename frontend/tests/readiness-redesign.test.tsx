@@ -50,8 +50,8 @@ describe("Readiness product overview", () => {
     const input = { ...snapshot, productStock: snapshot.productStock.filter(stock => stock.productKey !== "B") };
     render(<ReadinessOverview snapshot={input} timelines={buildProductTimelines(input)} />);
     const card = [...document.querySelectorAll(".pcard")].find(card => card.textContent?.includes("000202"))!;
-    expect(card.className).toContain("pcard--missing");
-    expect(card.querySelector(".rd-pill")?.textContent).toBe("数据不全");
+    expect(card.className).toContain("pcard--review");
+    expect(card.querySelector(".rd-pill")?.textContent).toBe("需查看");
     expect(card.querySelectorAll(".spark__bar--missing")).toHaveLength(2);
     expect(card.querySelector(".spark")?.getAttribute("aria-label")).toContain("缺失");
   });

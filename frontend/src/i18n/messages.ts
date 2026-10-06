@@ -1,3 +1,4 @@
+import { epic123Messages } from "./epic123.ts";
 import { purchaseMessages } from "./purchase-refresh.ts";
 import { savedWorkspaceMessages } from "./saved-workspace.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
@@ -3678,3 +3679,5 @@ Object.assign(messages, {
 Object.assign(messages, {"Apply filters": ["应用筛选", "Gunakan penapis"]});
 Object.assign(messages, purchaseMessages);
 Object.assign(messages, savedWorkspaceMessages);
+
+Object.assign(messages, epic123Messages);

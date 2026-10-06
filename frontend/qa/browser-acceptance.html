@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>StockLess browser acceptance</title>
+<style>body{font:16px/1.5 system-ui;max-width:960px;margin:24px auto;padding:16px}button,select,a{font:inherit;margin:8px 12px 8px 0;padding:10px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eef5f1;padding:16px}progress{width:100%}a{display:inline-block}</style></head>
+<body><h1>StockLess browser acceptance</h1>
+<p>Test-only page with synthetic records. Uses the real import Worker, mapping engine and IndexedDB storage. It does not modify the production homepage or Impact Dashboard.</p>
+<button id="save">Save synthetic dataset and plan</button><button id="restore">Restore saved dataset</button>
+<a id="reopen" hidden>Reopen this check</a><a id="workspace" hidden>Open saved plan in StockLess</a>
+<button id="capacity">Import exactly 10 MiB / 100,000 rows</button><button id="cancel-check">Check cancellation during parsing</button><button id="cancel" disabled>Cancel active import</button>
+<button id="limits">Check oversized and extra-row rejection</button><button id="model">Check model loading / manual mapping</button>
+<label>Manually match sale date <select id="manual-date"><option value="">Not matched yet</option></select></label><button id="manual">Confirm manual mapping</button>
+<button id="download">Download acceptance evidence</button><progress id="progress" value="0" max="1"></progress>
+<p id="status" role="status">Ready</p><pre id="results"></pre>
+<script type="module" src="/src/qa/browser-acceptance.ts"></script></body></html>

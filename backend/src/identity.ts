@@ -3,7 +3,29 @@ import type {
   IdentityEvidenceEvent,
   MappingState,
   ParsedDataset,
+  ReadinessSnapshot,
 } from "./contracts.ts";
+
+export interface ProductLabels {
+  readonly names: readonly string[];
+  readonly codes: readonly string[];
+  readonly packs: readonly string[];
+}
+
+/** Keeps all source labels, including excluded/conflicting rows, without changing identity. */
+export function collectProductLabels(snapshot: Pick<ReadinessSnapshot, "rows">): ReadonlyMap<string, ProductLabels> {
+  const groups = new Map<string, { names: Set<string>; codes: Set<string>; packs: Set<string> }>();
+  for (const row of snapshot.rows) {
+    if (!row.productKey) continue;
+    const labels = groups.get(row.productKey) ?? { names: new Set<string>(), codes: new Set<string>(), packs: new Set<string>() };
+    const values = row.interpretedValues;
+    for (const [kind, value] of [["names", values.productName], ["codes", values.productCode], ["packs", values.packVariant]] as const) {
+      if (value?.trim()) labels[kind].add(value.trim());
+    }
+    groups.set(row.productKey, labels);
+  }
+  return new Map([...groups].map(([key, labels]) => [key, Object.freeze({ names: Object.freeze([...labels.names]), codes: Object.freeze([...labels.codes]), packs: Object.freeze([...labels.packs]) })]));
+}
 
 /** Resolves a source-column identifier to its position in parsed rows. */
 function columnIndex(dataset: ParsedDataset, sourceColumnId: string | undefined): number | undefined {
@@ -28,7 +50,7 @@ export function buildProductKey(
 
   const productName = values.productName?.trim();
   const packVariant = values.packVariant?.trim();
-  return productName && packVariant ? `COMPOSITE|${productName}|${packVariant}` : undefined;
+  return productName && packVariant ? `COMPOSITE|${encodeURIComponent(productName)}|${encodeURIComponent(packVariant)}` : undefined;
 }
 
 /** Finds conflicting code and composite identities with their original row numbers. */
@@ -39,44 +61,34 @@ export function detectIdentityConflicts(
   const codeIndex = columnIndex(dataset, mapping.mappings.product_code?.sourceColumnId);
   const nameIndex = columnIndex(dataset, mapping.mappings.product_name?.sourceColumnId);
   const variantIndex = columnIndex(dataset, mapping.mappings.pack_variant?.sourceColumnId);
-  const codeToVariants = new Map<string, Map<string, number[]>>();
+  const codeToNames = new Map<string, Map<string, number[]>>();
+  const codeToPacks = new Map<string, Map<string, number[]>>();
   const compositeToCodes = new Map<string, Map<string, number[]>>();
-
+  function add(groups: Map<string, Map<string, number[]>>, key: string, value: string, sourceRow: number) {
+    const variants = groups.get(key) ?? new Map<string, number[]>();
+    const rows = variants.get(value) ?? [];
+    rows.push(sourceRow); variants.set(value, rows); groups.set(key, variants);
+  }
   for (const row of dataset.rows) {
     const code = rowValue(row.normalizedValues, codeIndex);
     const name = rowValue(row.normalizedValues, nameIndex);
     const variant = rowValue(row.normalizedValues, variantIndex);
-    const composite = name && variant ? `${name}|${variant}` : "";
-
-    if (code && composite) {
-      const variants = codeToVariants.get(code) ?? new Map<string, number[]>();
-      variants.set(composite, [...(variants.get(composite) ?? []), row.sourceRow]);
-      codeToVariants.set(code, variants);
-
-      const codes = compositeToCodes.get(composite) ?? new Map<string, number[]>();
-      codes.set(code, [...(codes.get(code) ?? []), row.sourceRow]);
-      compositeToCodes.set(composite, codes);
-    }
+    if (code && name) add(codeToNames, code, name, row.sourceRow);
+    if (code && variant) add(codeToPacks, code, variant, row.sourceRow);
+    if (code && name && variant) add(compositeToCodes, JSON.stringify([name, variant]), code, row.sourceRow);
   }
-
   const conflicts: IdentityConflict[] = [];
-  for (const [code, variants] of codeToVariants) {
-    if (variants.size > 1) {
-      conflicts.push(Object.freeze({
-        code: "CODE_TO_MULTIPLE_VARIANTS",
-        productHint: code,
+  for (const [groups, conflictCode] of [
+    [codeToNames, "CODE_TO_MULTIPLE_NAMES"],
+    [codeToPacks, "CODE_TO_MULTIPLE_PACKS"],
+    [compositeToCodes, "COMPOSITE_TO_MULTIPLE_CODES"],
+  ] as const) {
+    for (const [key, variants] of groups) {
+      if (variants.size > 1) conflicts.push(Object.freeze({
+        code: conflictCode,
+        productHint: key,
         sourceRows: Object.freeze([...variants.values()].flat().sort((a, b) => a - b)),
         values: Object.freeze([...variants.keys()].sort()),
-      }));
-    }
-  }
-  for (const [composite, codes] of compositeToCodes) {
-    if (codes.size > 1) {
-      conflicts.push(Object.freeze({
-        code: "COMPOSITE_TO_MULTIPLE_CODES",
-        productHint: composite,
-        sourceRows: Object.freeze([...codes.values()].flat().sort((a, b) => a - b)),
-        values: Object.freeze([...codes.keys()].sort()),
       }));
     }
   }

@@ -23,6 +23,7 @@ import { formatIsoDate, parseConfirmedDate, parseIsoDate } from "./dates.ts";
 import { evaluateStockFreshness } from "./freshness.ts";
 import { detectIdentityConflicts, buildProductKey } from "./identity.ts";
 import { getReadinessBlockers } from "./mapping.ts";
+import { readinessEvidenceKey, validateProductValues } from "./product-values.ts";
 
 const CONFIRMABLE_DATE_FORMATS: readonly ConfirmedDateFormat[] = Object.freeze([
   "DD/MM/YYYY",
@@ -33,7 +34,7 @@ const CONFIRMABLE_DATE_FORMATS: readonly ConfirmedDateFormat[] = Object.freeze([
   "MM-DD-YYYY",
 ]);
 
-export const READINESS_POLICY_VERSION = "stockless-readiness-v2";
+export const READINESS_POLICY_VERSION = "stockless-readiness-v3-e123";
 
 interface MappedColumn {
   readonly id: string;
@@ -832,7 +833,8 @@ export async function runReadinessCheck(
 
   const byFingerprint = new Map<string, RowDraft[]>();
   for (const row of drafts) {
-    byFingerprint.set(row.duplicateFingerprint, [...(byFingerprint.get(row.duplicateFingerprint) ?? []), row]);
+    const group = byFingerprint.get(row.duplicateFingerprint) ?? [];
+    group.push(row); byFingerprint.set(row.duplicateFingerprint, group);
   }
   const duplicateGroups: DuplicateGroup[] = [];
   const productLimitations: ProductLimitation[] = [];
@@ -846,6 +848,8 @@ export async function runReadinessCheck(
       sourceRows: Object.freeze(members.map((row) => row.sourceRow)),
       productKeys: Object.freeze([...new Set(members.map((row) => row.productKey).filter((value): value is string => Boolean(value)))].sort()),
       decision,
+      retainedSourceRow: members[members.length - 1].sourceRow,
+      excludedCopyCount: members.length - 1,
     }));
 
     for (const row of members) {
@@ -880,16 +884,38 @@ export async function runReadinessCheck(
 
   addSaleAdvisories(drafts, issues);
   const draftBySourceRow = new Map(drafts.map(row => [row.sourceRow, row]));
+  const conflictingRows = new Set<number>();
+  const conflictingProducts = new Set<string>();
   for (const conflict of detectIdentityConflicts(dataset, mapping)) {
     for (const sourceRow of conflict.sourceRows) {
       const row = draftBySourceRow.get(sourceRow);
       if (!row) continue;
+      conflictingRows.add(sourceRow);
+      if (row.productKey) conflictingProducts.add(row.productKey);
       const issue = addIssue(issues, { sourceRow, productKey: row.productKey, originalProductHint: row.originalProductHint,
         issueCode: "PRODUCT_IDENTITY_CONFLICT", observedValue: conflict.values.join(" / "),
-        reason: conflict.code === "CODE_TO_MULTIPLE_VARIANTS" ? "One product code is used for different product names or pack sizes." : "The same product name and pack size appear under different codes.",
+        field: conflict.code === "CODE_TO_MULTIPLE_NAMES" ? "product_name" : conflict.code === "CODE_TO_MULTIPLE_PACKS" ? "pack_variant" : "product_code",
+        reason: conflict.code === "CODE_TO_MULTIPLE_NAMES" ? "One product code is used for different product names." : conflict.code === "CODE_TO_MULTIPLE_PACKS" ? "One product code is used for different pack sizes." : "The same product name and pack size appear under different codes.",
         correctiveAction: "Check the product names, codes and pack sizes in your file. Original identifiers are preserved.", resolutionState: "unresolved" });
       row.issueIds.push(issue.id);
     }
+  }
+  // Hold back the entire ambiguous product, not only the rows exhibiting a clash.
+  for (const row of drafts) if (row.productKey && conflictingProducts.has(row.productKey)) {
+    row.useState = "excluded";
+    if (!conflictingRows.has(row.sourceRow)) {
+      const issue = addIssue(issues, { sourceRow: row.sourceRow, productKey: row.productKey, originalProductHint: row.originalProductHint,
+        issueCode: "PRODUCT_IDENTITY_CONFLICT", field: "product_code", observedValue: row.originalProductHint ?? row.productKey,
+        reason: "This product has an unresolved identity conflict in other source rows.", correctiveAction: "Correct the product identifiers and rerun Step 3.", resolutionState: "unresolved" });
+      row.issueIds.push(issue.id);
+    }
+  }
+  for (const productKey of [...conflictingProducts].sort()) productLimitations.push(Object.freeze({ productKey, code: "IDENTITY_CONFLICT", message: "Product names, codes or pack sizes conflict. Correct the source file and rerun Step 3." }));
+
+  const costs = validateProductValues(dataset, mapping, drafts, "unit_cost");
+  const weights = validateProductValues(dataset, mapping, drafts, "unit_weight_kg");
+  for (const issue of [...costs.issues, ...weights.issues]) {
+    issues.push(issue); draftBySourceRow.get(issue.sourceRow)?.issueIds.push(issue.id);
   }
 
   const productStock = buildProductStockEvidence(
@@ -925,6 +951,12 @@ export async function runReadinessCheck(
     sourceMode: dataset.sourceMode,
     sourceName: dataset.sourceName,
     sourceSha256: dataset.sourceSha256,
+    worksheetName: dataset.worksheetName,
+    headerRow: dataset.headerRow,
+    evidenceKey: readinessEvidenceKey(dataset, mapping, options),
+    currency: "MYR",
+    productCosts: costs.evidence,
+    productWeights: weights.evidence,
     analysisDate: options.analysisDate,
     rows,
     issues: Object.freeze([...issues]),

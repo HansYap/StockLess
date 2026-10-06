@@ -44,7 +44,7 @@ export function t<T>(value: T): T {
   return value;
 }
 const templates = Object.entries(messages).filter(([key]) => /\{\d+\}/.test(key)).sort(([a], [b]) => b.length - a.length).map(([key, values]) => ({
-  translateValues: /must be mapped|is mapped but|is visible but|available with Limited|available but one|positive value for|Source column for/.test(key),
+  translateValues: /must be mapped|is mapped but|is visible but|available with Limited|available but one|positive value for|Source column for|has no nonblank value|is not mapped and confirmed|must be a finite|has conflicting nonblank values|^Map \{0\}|^Correct \{0\}/.test(key),
   pattern: new RegExp("^" + key.split(/(\{\d+\})/).map(part => /^\{\d+\}$/.test(part) ? "(.*?)" : part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("") + "$"),
   values,
 }));

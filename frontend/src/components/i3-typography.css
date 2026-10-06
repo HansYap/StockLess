@@ -1,0 +1,55 @@
+/* I3 V3.1 roles apply to preparation, purchase and storage only.
+   Impact Dashboard retains its existing styles and tokens. */
+.frame.frame--i3 {
+  --text-page-title: 36px; --text-lead: 18px; --text-section-head: 20px;
+  --text-body: 15px; --text-secondary: 15px; --text-description: 13px;
+  --text-eyebrow: 13px; --text-label: 12px;
+  font: 400 15px/1.5 var(--body);
+}
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) { font-size: 15px; }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(p,li,label,.rd-finding,.rd-date-options > div,.pp-extra-body,.pp-incoming,.pp-check-head > span,.pp-order-step > span) { font: 400 15px/1.5 var(--body); }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(h1,.title) { font: 700 36px/1.2 var(--display); overflow-wrap: anywhere; }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new,.saved-management,.storage-explanation) h2 { font: 700 20px/1.35 var(--display); }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new,.saved-management) h3 { font: 700 20px/1.35 var(--display); }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(.upload-hero__lede,.mapping-lede,.rd-lede,.pp-hero-lede) { font: 400 18px/1.5 var(--body); }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new,.saved-management,.storage-explanation) :is(button,input,select,textarea) { font-family: var(--body); font-size: 15px; }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new,.saved-management,.storage-explanation) button { font-weight: 700; white-space: normal; height: auto; overflow-wrap: anywhere; }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(small,.pp-small-note,.pp-input-error,.rd-product__note,.mapping-warning,.upload-limits) { font: 400 13px/1.5 var(--body); white-space: normal; overflow-wrap: anywhere; }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(.upload-privacy p,.upload-needed > p,.rd-card__head p,.rd-products__head p,.rd-planning > p,.rd-privacy p,.pp-detail-sub,.pp-privacy p,.pp-list-count,.mapping-card__head p,.mapping-product__more p,.mapping-unused p,.mapping-privacy) { font: 400 13px/1.5 var(--body); }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(.source-tag,.upload-tag,.rd-pill,.pp-pill,.mapping-pill) { font: 800 11px/1.4 var(--body); white-space: normal; }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(.rd-eyebrow,.pp-kicker,.mapping-eyebrow,.upload-hero__eyebrow) { font: 800 13px/1.4 var(--display); }
+.frame.frame--i3 :is(.mapping-product__more,.mapping-additional) summary { font: 700 15px/1.5 var(--display); }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(th,.pp-legend,.rd-bar small) { font: 700 13px/1.4 var(--body); }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(td,.mapping-preview,.rd-observed) { font-size: 15px; }
+.frame.frame--i3 .purchase-plan--new :is(.pp-fc-value,.pp-stock-tick) { font: 600 15px/1.4 var(--data); }
+.frame.frame--i3 .purchase-plan--new :is(.pp-fc-dates,.pp-fc-mobile-labels,.pp-fc-future-label) { font: 700 13px/1.4 var(--body); white-space: normal; }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) .num { font: 600 15px/1.4 var(--data); }
+.frame.frame--i3 :is(.upload-screen,.mapping-screen,.readiness-screen,.purchase-plan--new) :is(.rd-stat__number,.pp-kpi-number,.pp-suggestion-number,.upload-stat b) { font: 800 40px/1.2 var(--display); }
+.frame.frame--i3 .purchase-plan--new .pp-suggestion-number small { font-size: 13px; }
+.frame.frame--i3 .readiness-screen .rd-bar { font: 600 15px/1.4 var(--data); }
+.frame.frame--i3 .readiness-screen .rd-bars { height: auto; gap: 6px; }
+.frame.frame--i3 .readiness-screen .rd-tabs { flex-wrap: wrap; }
+.frame.frame--i3 .readiness-screen .rd-tabs button { min-height: 46px; }
+.frame.frame--i3 .step__label { font: 700 13px/1.4 var(--body); white-space: normal; }
+.frame.frame--i3 .step__dot { font: 700 13px var(--display); }
+.frame.frame--i3 :is(.saved-management,.storage-explanation) { width: 100%; padding: 16px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+.frame.frame--i3 :is(.saved-management,.storage-explanation) summary { cursor: pointer; font: 700 20px/1.4 var(--display); overflow-wrap: anywhere; }
+.frame.frame--i3 .storage-explanation p { font: 400 13px/1.5 var(--body); }
+.frame.frame--i3 :is(.saved-management,.storage-explanation) .card { padding: 16px; }
+.frame.frame--i3 :is(.saved-management,.storage-explanation) li { margin-bottom: 8px; overflow-wrap: anywhere; }
+.frame.frame--i3 .product-labels { margin: 8px 0; font: 400 13px/1.5 var(--body); overflow-wrap: anywhere; }
+.frame.frame--i3 .purchase-plan--new .pp-excess { max-width: 420px; min-width: 0; align-items: flex-start; }
+.frame.frame--i3 .purchase-plan--new .pp-excess > span { min-width: 0; }
+.frame.frame--i3 .purchase-plan--new .pp-supplier-comparison { margin: 16px 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.frame.frame--i3 .purchase-plan--new .pp-supplier-comparison summary { cursor: pointer; font: 700 20px/1.4 var(--display); }
+.frame.frame--i3 .purchase-plan--new .pp-supplier-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 16px 0; }
+.frame.frame--i3 .purchase-plan--new .pp-supplier-options section { min-width: 0; }
+.frame.frame--i3 .purchase-plan--new .pp-supplier-options label { display: flex; flex-direction: column; margin: 8px 0; gap: 4px; }
+.frame.frame--i3 .purchase-plan--new .pp-supplier-options input { min-width: 0; width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
+.frame.frame--i3 .purchase-plan--new .pp-supplier-options p { margin: 8px 0; }
+@media (max-width: 640px) {
+  .frame.frame--i3 .purchase-plan--new .pp-supplier-options { grid-template-columns: 1fr; }
+  .frame.frame--i3 :is(.rd-hero__inner,.pp-hero-main) { align-items: flex-start; flex-wrap: wrap; }
+  .frame.frame--i3 .purchase-plan--new .pp-excess { max-width: 100%; }
+  .frame.frame--i3 .readiness-screen .rd-product-grid { grid-template-columns: 1fr; }
+}

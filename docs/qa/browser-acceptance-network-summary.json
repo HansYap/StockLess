@@ -1,0 +1,16 @@
+{
+  "capturedAt": "2026-10-06T17:35:05.015950+00:00",
+  "synthetic": true,
+  "scope": "Final semantic Worker fetch arguments in normal and intentional HTTP 503 modes, plus loopback QA HTTP request metadata; not a full-browser HAR capture. Historical HTTP records also include development reloads.",
+  "normalModelUsed": true,
+  "failedModelUsed": false,
+  "workerRequests": 8,
+  "allRequestsGet": true,
+  "allBodiesEmpty": true,
+  "allWorkerHeadersEmpty": true,
+  "allWorkerRequestsSameOrigin": true,
+  "sentinelLeaks": 0,
+  "localHttpRequests": 800,
+  "localHttpSentinelLeaks": 0,
+  "externalWorkerRequests": []
+}

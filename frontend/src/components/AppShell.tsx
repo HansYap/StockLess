@@ -6,6 +6,7 @@ import { WorkspaceDecor } from "./WorkspaceDecor.tsx";
 import { Logo } from "./Logo.tsx";
 import { SavedWorkspaceSidebar, type SavedWorkspaceSidebarProps } from "./SavedWorkspaceSidebar.tsx";
 import "./workflow-shell.css";
+import "./i3-typography.css";
 
 export type StepId = 1 | 2 | 3 | 4;
 
@@ -27,6 +28,7 @@ interface AppShellProps {
   readonly children: ReactNode;
   readonly workflowStyle?: boolean;
   readonly workspaceSidebar?: SavedWorkspaceSidebarProps;
+  readonly i3Typography?: boolean;
 }
 
 /** Shares the header and preparation progress, with navigation for saved uploads. */
@@ -41,6 +43,7 @@ export function AppShell({
   children,
   workflowStyle,
   workspaceSidebar,
+  i3Typography,
 }: AppShellProps) {
   useLanguage();
   const workflow = workflowStyle ?? current <= 3;
@@ -67,7 +70,7 @@ export function AppShell({
       </div>
     </>;
   return (
-    <div className={`frame${workflow ? " frame--workflow" : ""}${impactShell ? " frame--impact" : ""}${workspaceSidebar ? " frame--saved-workspace" : ""}`}>
+    <div className={`frame${i3Typography ? " frame--i3" : ""}${workflow ? " frame--workflow" : ""}${impactShell ? " frame--impact" : ""}${workspaceSidebar ? " frame--saved-workspace" : ""}`}>
       {!workspaceSidebar && <WorkspaceDecor />}
       <header className="topbar">
         {workflow || impactShell ? (

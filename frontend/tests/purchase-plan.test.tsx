@@ -27,7 +27,7 @@ describe("purchase planning", () => {
   it("routes products needing more data back to readiness without quantity controls", () => {
     const onBack = vi.fn();
     render(<PurchasePlanScreen {...makeEvidence()} drafts={{}} selectedKey="C" onSelect={() => {}} onDraftChange={() => {}} onBack={onBack} />);
-    expect(screen.getByText("Can't judge this product yet")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Unavailable" })).toBeTruthy();
     expect(screen.getByText(makeEvidence().forecast.products.find(product => product.productKey === "C")!.labelReason.message)).toBeTruthy();
     expect(screen.queryByLabelText("Planned order")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Fix it in Step 3" }));
@@ -50,16 +50,19 @@ describe("purchase planning", () => {
     fireEvent.click(screen.getByRole("button", { name: "Decrease planned order" }));
     expect((exact as HTMLInputElement).value).toBe("8");
   });
-  it("shows five planning columns and previews a blank order without persisting zero", () => {
+  it("shows five planning columns and leaves a blank order unassessed", () => {
     render(<Harness />); open();
     expect(screen.getAllByRole("columnheader").map(el => el.textContent)).toEqual(["Product", "Expected, 4 weeks", "In stock", "Your order", "Check"]);
     expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
-    expect(screen.getByText("Preview only — no plan entered.")).toBeTruthy();
+    expect(screen.getByText("No plan entered; stock after ordering and shortage are not assessed.")).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /^Stock after order:/ })).toBeNull();
     fireEvent.change(screen.getByLabelText("Exact planned order quantity"), { target: { value: "0" } });
-    expect(screen.queryByText("Preview only — no plan entered.")).toBeNull();
+    expect(screen.queryByText("No plan entered; stock after ordering and shortage are not assessed.")).toBeNull();
     expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("0 units");
+    expect(screen.getByRole("img", { name: /^Stock after order:/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Clear planned order" }));
-    expect(screen.getByText("Preview only — no plan entered.")).toBeTruthy();
+    expect(screen.getByText("No plan entered; stock after ordering and shortage are not assessed.")).toBeTruthy();
+    expect(screen.queryByRole("img", { name: /^Stock after order:/ })).toBeNull();
   });
   it("selects by key when names are identical and preserves leading zeros", () => {
     render(<Harness />);

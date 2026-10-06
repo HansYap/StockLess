@@ -24,6 +24,9 @@ export const CAPABILITY_LABELS: Readonly<Record<CapabilityId, string>> = Object.
   purchase_audit: "Purchase audit",
   expiry_aware_note: "Expiry-aware note",
   supplier_scenario: "Supplier scenario",
+  demand_range: "Four-week demand range",
+  purchase_cost: "Estimated purchase cost",
+  food_weight: "Validated food weight",
 });
 
 const CAPABILITY_REGISTRY: readonly CapabilityDefinition[] = Object.freeze([
@@ -32,9 +35,12 @@ const CAPABILITY_REGISTRY: readonly CapabilityDefinition[] = Object.freeze([
   { id: "recent_weekly_average", label: CAPABILITY_LABELS.recent_weekly_average, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold"] },
   { id: "stock_freshness", label: CAPABILITY_LABELS.stock_freshness, iterationEnabled: true, requiredFields: ["current_stock", "stock_as_of_date"] },
   { id: "weeks_of_cover", label: CAPABILITY_LABELS.weeks_of_cover, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold", "current_stock", "stock_as_of_date"] },
-  { id: "purchase_audit", label: CAPABILITY_LABELS.purchase_audit, iterationEnabled: true, requiredFields: ["current_stock", "stock_as_of_date"] },
+  { id: "demand_range", label: CAPABILITY_LABELS.demand_range, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold"] },
+  { id: "purchase_cost", label: CAPABILITY_LABELS.purchase_cost, iterationEnabled: true, requiredFields: ["unit_cost"] },
+  { id: "food_weight", label: CAPABILITY_LABELS.food_weight, iterationEnabled: true, requiredFields: ["unit_weight_kg"] },
+  { id: "purchase_audit", label: CAPABILITY_LABELS.purchase_audit, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold", "current_stock", "stock_as_of_date"] },
   { id: "expiry_aware_note", label: CAPABILITY_LABELS.expiry_aware_note, iterationEnabled: true, requiredFields: ["expiry_date"] },
-  { id: "supplier_scenario", label: CAPABILITY_LABELS.supplier_scenario, iterationEnabled: false, requiredFields: ["supplier_id_or_name", "supplier_lead_time_days", "pack_size"] },
+  { id: "supplier_scenario", label: CAPABILITY_LABELS.supplier_scenario, iterationEnabled: true, requiredFields: ["transaction_date", "quantity_sold", "current_stock", "stock_as_of_date"] },
 ]);
 
 export interface UploadAttributeGuide {

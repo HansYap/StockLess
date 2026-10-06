@@ -29,7 +29,7 @@ describe("Excel sales import", () => {
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([]), "Empty");
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([["SKU", "Quantity"], ["A1", 2]]), "Sales");
     const bytes = new Uint8Array(XLSX.write(book, { type: "array", bookType: "xlsx" }));
-    expect(new TextDecoder().decode(await excelToCsvBytes(bytes, "sales.xlsx"))).toContain("A1,2");
+    expect(new TextDecoder().decode(await excelToCsvBytes(bytes, "sales.xlsx"))).toContain('"A1","2"');
     const empty = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(empty, XLSX.utils.aoa_to_sheet([]), "Empty");
     await expect(excelToCsvBytes(new Uint8Array(XLSX.write(empty, { type: "array", bookType: "xlsx" })), "empty.xlsx"))
@@ -50,7 +50,9 @@ describe("Excel sales import", () => {
     render(<UploadScreen onSource={onSource} onCancel={() => {}} />);
     fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } });
     expect(onSource).not.toHaveBeenCalled();
-    expect(screen.getByText("retailer.xlsx")).toBeTruthy();
+    expect(await screen.findByText("retailer.xlsx")).toBeTruthy();
+    await screen.findByRole("combobox", { name: "Worksheet" });
+    await waitFor(() => expect((screen.getByRole("button", { name: "Continue to matching →" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "Continue to matching →" }));
     await waitFor(() => expect(onSource).toHaveBeenCalledOnce());
     expect(onSource.mock.calls[0][1]).toBe("retailer.xlsx");

@@ -4,6 +4,16 @@ import type {
 } from "./contracts.ts";
 
 export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> = {
+  unit_cost: {
+    field: "unit_cost", label: "Unit cost", description: "Purchase cost per unit in MYR, using the same unit as sales and stock. Checked in Step 3.",
+    status: "feature_dependent", valueKind: "non_negative_decimal", grain: "product", unlocks: ["Estimated purchase cost"],
+    aliases: ["unit cost", "purchase cost per unit", "cost price", "buying price", "kos seunit", "harga kos", "kos belian"], acquisitionSource: "file",
+  },
+  unit_weight_kg: {
+    field: "unit_weight_kg", label: "Weight per unit in kilograms", description: "Food weight in kilograms for one sales or stock unit.",
+    status: "feature_dependent", valueKind: "non_negative_decimal", grain: "product", unlocks: ["Validated food weight"],
+    aliases: ["unit weight kg", "weight per unit kg", "food weight kg", "berat seunit kg"], acquisitionSource: "file",
+  },
   transaction_date: {
     field: "transaction_date",
     label: "Sale date",
@@ -45,7 +55,7 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
     valueKind: "text",
     grain: "product",
     unlocks: ["Weekly product history", "Timeline gap evidence", "Recent weekly average", "Stock freshness", "Descriptive weeks of cover", "Purchase audit", "Expiry-aware note", "Supplier scenario"],
-    aliases: ["pack variant", "variant", "unit", "uom", "size", "pack", "unit size"],
+    aliases: ["pack variant", "pack size", "variant", "unit", "uom", "size", "pack", "unit size", "saiz pek"],
     acquisitionSource: "file",
   },
   quantity_sold: {
@@ -160,13 +170,13 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
   },
   pack_size: {
     field: "pack_size",
-    label: "Pack size",
+    label: "Supplier case size",
     description: "A numeric or well-defined pack size used for later pack rounding.",
     status: "later_locked",
     valueKind: "text",
     grain: "product",
     unlocks: ["Supplier scenario"],
-    aliases: ["pack size", "case size", "carton size", "units per pack"],
+    aliases: ["case size", "carton size", "units per pack"],
     acquisitionSource: "either",
   },
 };

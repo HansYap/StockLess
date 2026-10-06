@@ -190,7 +190,7 @@ function estimateRestock(
   analysisDate: string,
 ): RestockEstimate {
   const cannotReason = cannotJudgeReason(demand, stock, analysisDate);
-  if (cannotReason) return Object.freeze({ state: "unavailable", reason: cannotReason });
+  if (cannotReason) return Object.freeze({ state: "unavailable", reason: cannotReason, correctiveAction: cannotReason === "the product is Cannot assess" ? demand.historyEvidence?.correctiveAction ?? correctiveAction(cannotReason) : correctiveAction(cannotReason) });
 
   const range = requireRange(demand);
   const midpointTarget = Math.round((range.low + range.high) / 2);
@@ -341,7 +341,11 @@ export function buildPurchasePlanReview(
   const fileEvidenceByProduct = new Map(
     (snapshot.purchaseFileEvidence?.products ?? []).map((evidence) => [evidence.productKey, evidence]),
   );
-  const products = forecast.products.map((demand) => evaluateProductPurchasePlan(demand, {
+  const products = forecast.products.map((demand) => {
+    const identityBlocked = snapshot.productLimitations.some(item => item.productKey === demand.productKey && item.code === "IDENTITY_CONFLICT")
+      || snapshot.issues.some(issue => issue.productKey === demand.productKey && issue.issueCode === "PRODUCT_IDENTITY_CONFLICT" && issue.resolutionState === "unresolved");
+    const safeDemand: ProductDemandEstimate = identityBlocked ? { ...demand, label: "Cannot assess", pattern: undefined, range: undefined } : demand;
+    return evaluateProductPurchasePlan(safeDemand, {
     analysisDate: snapshot.analysisDate,
     stock: stockByProduct.get(demand.productKey),
     inputs: options.inputsByProduct?.[demand.productKey]
@@ -353,7 +357,8 @@ export function buildPurchasePlanReview(
         fileEvidenceByProduct.get(demand.productKey),
       ),
     currentStockSource: options.currentStockSourceByProduct?.[demand.productKey],
-  }));
+    });
+  });
 
   return Object.freeze({
     snapshotId: snapshot.id,

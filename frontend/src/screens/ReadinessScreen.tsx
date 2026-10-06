@@ -26,10 +26,15 @@ function downloadText(text: string, filename: string) {
   const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click();
   globalThis.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
-export function findingsCsv(findings: readonly Finding[], source: string, analysisDate: string): string {
-  const rows = [["StockLess file", source], ["Analysis date", analysisDate], ["Product", "Code", "Source rows", "Category", "Issue type", "Observed value", "What we found", "What to do", "Status"],
-    ...findings.map(item => [item.name, item.code, item.sourceRows.join(", "), item.category, item.type, item.observed, item.reason, item.action, OUTCOMES[item.status]])];
-  return "\uFEFF" + rows.map(row => row.map(value => '"' + safeSpreadsheetCell(value).replace(/"/g, '""') + '"').join(",")).join("\r\n") + "\r\n";
+export function findingsCsv(findings: readonly Finding[], source: string, analysisDate: string, worksheetName = "", sourceMode: "sample" | "user" = "user", filtered = false): string {
+  const rows = [["StockLess data source", sourceMode === "sample" ? "Sample data" : "Retailer file"], ["StockLess file", source, "Worksheet", worksheetName], ["Analysis date", analysisDate],
+    ["Correction summary", findings.length ? "Problems and handled records are listed below." : filtered ? "No problems match these filters." : "No problems found for this dataset."],
+    ["Product", "Code", "Source row", "Related source rows", "Category", "Issue type", "Observed value", "What we found", "What to do", "Status", "File", "Worksheet", "Field", "Source column", "Row usage"],
+    ...findings.flatMap(item => {
+      const evidence = item.rowEvidence ?? item.sourceRows.map(sourceRow => ({ sourceRow, used: item.status !== "out" }));
+      return (evidence.length ? evidence : [undefined]).map(row => [item.name, item.code, row?.sourceRow ?? "", item.sourceRows.join(", "), item.category, item.type, item.observed, item.reason, item.action, OUTCOMES[item.status], source, worksheetName, item.field ?? "row", item.sourceColumn ?? "", row ? row.used ? "Used" : "Left out" : "No source row"]);
+    })];
+  return "\uFEFF" + rows.map(row => row.map(value => '"' + safeSpreadsheetCell(String(value)).replace(/"/g, '""') + '"').join(",")).join("\r\n") + "\r\n";
 }
 function FindingGroup({ type, label, items }: { type: FindingType; label: string; items: readonly Finding[] }) {
   const [expanded, setExpanded] = useState(false);
@@ -99,7 +104,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
       {props.checking && <p className="notice notice--info" role="status">{t("Refreshing the readiness evidence locally…")}</p>}{props.error && <p className="notice notice--error" role="alert">{t(props.error)}</p>}{props.forecastError && <p className="notice notice--error" role="alert">{t(props.forecastError)}</p>}
       <ReadinessOverview snapshot={props.snapshot} timelines={timelines} products={products} />
       <div className="rd-layout"><section className="rd-card rd-findings" aria-labelledby="readiness-findings-title">
-        <div className="rd-card__head"><span className="rd-group-icon" aria-hidden="true">⌕</span><div><h2 id="readiness-findings-title">{t("What we found")}</h2><p>{props.snapshot.reconciliation.rowsExcluded} {t("rows left out of")} {props.snapshot.reconciliation.rowsIn.toLocaleString()} · {t("Your file isn't changed")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={() => downloadText(findingsCsv(shown, props.dataset.sourceName, props.snapshot.analysisDate), props.reportFilename.replace(/\.csv$/i, filtered ? "-filtered.csv" : ".csv"))}>{t("Download list")}</button></div>
+        <div className="rd-card__head"><span className="rd-group-icon" aria-hidden="true">⌕</span><div><h2 id="readiness-findings-title">{t("What we found")}</h2><p>{props.snapshot.reconciliation.rowsExcluded} {t("rows left out of")} {props.snapshot.reconciliation.rowsIn.toLocaleString()} · {t("Your file isn't changed")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={() => downloadText(findingsCsv(shown, props.dataset.sourceName, props.snapshot.analysisDate, props.dataset.worksheetName, props.snapshot.sourceMode, filtered), props.reportFilename.replace(/\.csv$/i, filtered ? "-filtered.csv" : ".csv"))}>{t("Download list")}</button></div>
         <div className="rd-filterbar"><div className="rd-add-filter" ref={popoverContainer}><button type="button" ref={filterButton} className="rd-filter-button" aria-expanded={popover} aria-controls="readiness-filter-menu" onClick={() => { setPopover(!popover); setField(null); setFilterSearch(""); }}>{t("Add filter")} +</button>
           {popover && <div className="rd-filter-menu" id="readiness-filter-menu" role="dialog" aria-label={t("Add filter")}><input ref={filterInput} type="search" aria-label={t("Search filters")} placeholder={t("Search filters")} value={filterSearch} onChange={event => setFilterSearch(event.currentTarget.value)} />
             {field && <button type="button" onClick={() => { setField(null); setFilterSearch(""); }}>{t("← All filters")}</button>}

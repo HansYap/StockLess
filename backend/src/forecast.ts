@@ -2,6 +2,7 @@ import type {
   DemandAssessmentReason,
   DemandForecastMethod,
   DemandForecastReview,
+  DemandHistoryEvidence,
   DemandPattern,
   DemandRangeEvidence,
   DemandReadinessLabel,
@@ -13,7 +14,7 @@ import type {
 import { addCalendarDays, isoWeekStart } from "./dates.ts";
 import { buildProductTimelines } from "./timeline.ts";
 
-export const EPIC3_POLICY_VERSION = "stockless-i2-e3-v1.0.0";
+export const EPIC3_POLICY_VERSION = "stockless-i3-e3-v2.0.0";
 
 export const EPIC3_POLICY = Object.freeze({
   horizonWeeks: 4 as const,
@@ -42,6 +43,38 @@ interface Assessment {
 
 export interface EstimateProductDemandOptions {
   readonly duplicateRowsNotDecided?: boolean;
+  readonly identityConflict?: boolean;
+}
+
+/** Evidence for all eight complete weeks; absent records never become recorded zeros. */
+export function buildDemandHistoryEvidence(productKey: string, analysisDate: string, timeline?: ProductTimeline, snapshot?: ReadinessSnapshot): DemandHistoryEvidence {
+  const completeWeekStarts = previousCompleteWeekStarts(analysisDate);
+  const indexed = new Map(timeline?.weeks.map(week => [week.weekStart, week]) ?? []);
+  const usableWeekStarts = completeWeekStarts.filter(start => isRecorded(indexed.get(start)));
+  const missingWeekStarts = completeWeekStarts.filter(start => !isRecorded(indexed.get(start)));
+  const excluded = snapshot?.rows.filter(row => row.productKey === productKey && row.useState === "excluded") ?? [];
+  const periods = new Map<string, { sourceRows: number[]; reasons: Set<string> }>();
+  const issueReasons = new Map(snapshot?.issues.map(issue => [issue.id, issue.reason]) ?? []);
+  const unplacedExcludedRows: number[] = [];
+  for (const row of excluded) {
+    if (!row.interpretedValues.transactionDate) { unplacedExcludedRows.push(row.sourceRow); continue; }
+    const start = isoWeekStart(row.interpretedValues.transactionDate);
+    if (!completeWeekStarts.includes(start)) continue;
+    const period = periods.get(start) ?? { sourceRows: [], reasons: new Set<string>() };
+    period.sourceRows.push(row.sourceRow);
+    for (const id of row.issueIds) { const reason = issueReasons.get(id); if (reason) period.reasons.add(reason); }
+    periods.set(start, period);
+  }
+  const additionalWeeksNeeded = Math.max(0, EPIC3_POLICY.minimumRecordedWeeks - usableWeekStarts.length);
+  const identityBlocked = snapshot?.productLimitations.some(item => item.productKey === productKey && item.code === "IDENTITY_CONFLICT");
+  const correctiveAction = identityBlocked ? "Correct the product names, codes and pack sizes, then rerun Step 3."
+    : additionalWeeksNeeded > 0 ? `Add or correct records for at least ${additionalWeeksNeeded} more complete week(s) in the last eight weeks, then rerun Step 3. Do not fill missing weeks with guessed zero sales.`
+    : missingWeekStarts.length ? "Add the missing weekly records or correct excluded records, then rerun Step 3 to improve the assessment."
+    : "Keep recording weekly sales and returns; rerun Step 3 after changing the source records.";
+  return Object.freeze({ completeWeekStarts, usableWeekStarts: Object.freeze(usableWeekStarts), missingWeekStarts: Object.freeze(missingWeekStarts),
+    excludedPeriods: Object.freeze([...periods].sort(([a], [b]) => a.localeCompare(b)).map(([weekStart, period]) => Object.freeze({ weekStart, sourceRows: Object.freeze(period.sourceRows), reasons: Object.freeze([...period.reasons]) }))),
+    unplacedExcludedRows: Object.freeze(unplacedExcludedRows), minimumRecordedWeeks: EPIC3_POLICY.minimumRecordedWeeks, additionalWeeksNeeded, correctiveAction,
+    demandBasis: "positive_sales_returns_separate" });
 }
 
 /** Returns the eight Monday starts belonging to complete weeks before the origin. */
@@ -259,7 +292,9 @@ export function estimateProductDemand(
     labelReason: assessment.reason,
     recordedWeeksInLast8: assessment.records.length,
     policyVersion: EPIC3_POLICY_VERSION,
+    historyEvidence: buildDemandHistoryEvidence(timeline.productKey, analysisDate, timeline),
   } as const;
+  if (options.identityConflict) return Object.freeze({ ...base, label: "Cannot assess", labelReason: Object.freeze({ code: "IDENTITY_CONFLICT", message: "Product identity is unresolved. Correct product names, codes and pack sizes." }) });
   if (assessment.label === "Cannot assess" || assessment.pattern === undefined) {
     return Object.freeze(base);
   }
@@ -278,28 +313,32 @@ export function estimateProductDemand(
 }
 
 /** Orchestrates one deterministic Epic 3 result per product timeline. */
-export function buildDemandForecastReview(snapshot: ReadinessSnapshot): DemandForecastReview {
+export function buildDemandForecastReview(snapshot: ReadinessSnapshot, timelines = buildProductTimelines(snapshot)): DemandForecastReview {
   const duplicateBlocked = new Set(snapshot.productLimitations
     .filter((limitation) => limitation.code === "DUPLICATE_UNRESOLVED")
     .map((limitation) => limitation.productKey));
   const timelineByProduct = new Map(
-    buildProductTimelines(snapshot).map((timeline) => [timeline.productKey, timeline]),
+    timelines.map((timeline) => [timeline.productKey, timeline]),
   );
   const productKeys = [...new Set(snapshot.rows
     .map((row) => row.productKey)
     .filter((productKey): productKey is string => productKey !== undefined))].sort();
   const products = productKeys.map((productKey): ProductDemandEstimate => {
     const timeline = timelineByProduct.get(productKey);
+    const identityConflict = snapshot.productLimitations.some(item => item.productKey === productKey && item.code === "IDENTITY_CONFLICT")
+      || snapshot.issues.some(issue => issue.productKey === productKey && issue.issueCode === "PRODUCT_IDENTITY_CONFLICT" && issue.resolutionState === "unresolved");
+    const historyEvidence = buildDemandHistoryEvidence(productKey, snapshot.analysisDate, timeline, snapshot);
     if (timeline) {
-      return estimateProductDemand(timeline, snapshot.analysisDate, {
+      return Object.freeze({ ...estimateProductDemand(timeline, snapshot.analysisDate, {
         duplicateRowsNotDecided: duplicateBlocked.has(productKey),
-      });
+        identityConflict,
+      }), historyEvidence });
     }
     const duplicateRowsNotDecided = duplicateBlocked.has(productKey);
     return Object.freeze({
       productKey,
       label: "Cannot assess",
-      labelReason: Object.freeze(duplicateRowsNotDecided
+      labelReason: Object.freeze(identityConflict ? { code: "IDENTITY_CONFLICT" as const, message: "Product identity is unresolved. Correct product names, codes and pack sizes." } : duplicateRowsNotDecided
         ? {
           code: "DUPLICATE_ROWS_NOT_DECIDED" as const,
           message: "Duplicate rows not yet decided",
@@ -311,6 +350,7 @@ export function buildDemandForecastReview(snapshot: ReadinessSnapshot): DemandFo
         }),
       recordedWeeksInLast8: 0,
       policyVersion: EPIC3_POLICY_VERSION,
+      historyEvidence,
     });
   });
   return Object.freeze({

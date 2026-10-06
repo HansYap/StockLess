@@ -77,3 +77,10 @@
   .upload-screen .upload-zone { padding: 28px 14px; }
   .upload-screen .upload-zone h2 { font-size: 24px; }
 }
+
+.upload-sheet { padding: 20px; border-top: 1px solid #d9e3e3; }
+.upload-sheet label { display: block; font-weight: 700; margin-bottom: 8px; }
+.upload-sheet select { width: 100%; padding: 10px; font: inherit; }
+.upload-sheet__table { max-width: 100%; overflow: auto; max-height: 260px; }
+.upload-sheet table { border-collapse: collapse; width: 100%; }
+.upload-sheet th, .upload-sheet td { padding: 8px; text-align: left; border: 1px solid #d9e3e3; white-space: nowrap; font-size: 15px; }

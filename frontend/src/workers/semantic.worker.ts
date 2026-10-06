@@ -1,6 +1,8 @@
 /// <reference lib="webworker" />
 
 import { env, pipeline } from "@huggingface/transformers";
+import wasmUrl from "stockless-onnx-wasm?url";
+import wasmModuleUrl from "stockless-onnx-module?url";
 import type { SemanticScoreRequest } from "../engine.ts";
 
 const MODEL_ID = "Xenova/all-MiniLM-L6-v2";
@@ -10,6 +12,15 @@ env.allowLocalModels = true;
 env.allowRemoteModels = false;
 env.localModelPath = "/models/";
 env.useBrowserCache = true;
+
+// Transformers defaults to a CDN runtime. Bundle both ONNX runtime assets so
+// column matching requests only this application's files and local model files.
+const wasm = env.backends.onnx.wasm;
+if (!wasm) throw new Error("The local ONNX runtime is unavailable.");
+wasm.wasmPaths = {
+  wasm: new URL(wasmUrl, self.location.href).href,
+  mjs: new URL(wasmModuleUrl, self.location.href).href,
+};
 
 interface ScoreRequest {
   readonly type: "score";

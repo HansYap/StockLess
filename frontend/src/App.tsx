@@ -2,6 +2,7 @@ import { t, useLanguage } from "./i18n/index.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { SavedDataControls, SaveDatasetControls } from "./components/SavedDataControls.tsx";
+import { StorageExplanation } from "./components/StorageExplanation.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
 import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessScreen.tsx";
@@ -11,6 +12,7 @@ import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } fr
 import {
   MappingConflictError,
   READINESS_POLICY_VERSION,
+  readinessEvidenceKey,
   EPIC3_POLICY_VERSION,
   getReadinessBlockers,
   clearActiveSession,
@@ -24,6 +26,7 @@ import {
   type CanonicalField,
   type ConfirmedDateFormat,
   type CsvProgress,
+  type ImportSourceMetadata,
   type DateFormatConfirmation,
   type DemandForecastReview,
   type MappingProposalResult,
@@ -77,7 +80,9 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [proposals, setProposals] = useState<MappingProposalResult | null>(null);
   const [step, setStep] = useState<StepId>(1);
   const [showImpact, setShowImpact] = useState(false);
+  const [showSavedManagement, setShowSavedManagement] = useState(false);
   const [reached, setReached] = useState<StepId>(1);
+  const [mappingUndo, setMappingUndo] = useState<MappingState | null>(null);
   const [mappingError, setMappingError] = useState<string | null>(null);
   const [mappingNotice, setMappingNotice] = useState<string | null>(null);
   const [issueFilter, setIssueFilter] = useState<ReadinessIssueFilter | null>(null);
@@ -270,13 +275,16 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     forecastRun.current += 1;
     setReadinessLoading(false);
     setForecastLoading(false);
+    setMappingUndo(null);
     setEnvelope(saved.envelope);
     lastSavedEnvelope.current = saved.envelope;
     setAnalysisDate(saved.analysisDate);
     setDateConfirmations(saved.dateConfirmations);
     let restoredReadiness = saved.readiness?.policyVersion === READINESS_POLICY_VERSION
       && saved.readiness.sourceSha256 === saved.envelope.session.dataset?.sourceSha256
-      && saved.readiness.analysisDate === saved.analysisDate ? saved.readiness : null;
+      && saved.readiness.analysisDate === saved.analysisDate
+      && saved.envelope.session.dataset
+      && saved.readiness.evidenceKey === readinessEvidenceKey(saved.envelope.session.dataset, saved.envelope.session.mapping, { analysisDate: saved.analysisDate, dateConfirmations: saved.dateConfirmations }) ? saved.readiness : null;
     let restoredForecast = restoredReadiness && saved.forecast?.snapshotId === restoredReadiness.id
       && saved.forecast.policyVersion === EPIC3_POLICY_VERSION
       && saved.forecast.analysisDate === restoredReadiness.analysisDate ? saved.forecast : null;
@@ -378,12 +386,14 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     mimeType: string | undefined,
     onProgress: (progress: CsvProgress) => void,
     signal: AbortSignal,
+    sourceMetadata?: ImportSourceMetadata,
   ) => {
     const previousMode = envelope.session.sourceMode;
     const next = await replaceSessionSourceInWorker(envelope, bytes, {
       sourceMode,
       sourceName,
       mimeType,
+      sourceMetadata,
       onProgress,
       signal,
     });
@@ -400,6 +410,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     if (target) await replaceSavedDataset(target.id, importedEnvelope, malaysiaDate());
     resetReadinessEvidence();
     setProposals(proposed);
+    setMappingUndo(null);
     setEnvelope(importedEnvelope);
     lastSavedEnvelope.current = target ? importedEnvelope : null;
     setMappingError(null);
@@ -428,6 +439,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     resetReadinessEvidence();
     setEnvelope((current) => {
       try {
+        setMappingUndo(current.session.mapping);
         const mapping = sourceColumnId
           ? setMapping(current.session.mapping, field, sourceColumnId, false)
           : removeMapping(current.session.mapping, field);
@@ -443,6 +455,13 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       }
     });
   }, [resetReadinessEvidence]);
+
+  const handleUndoMapping = useCallback(() => {
+    if (!mappingUndo) return;
+    resetReadinessEvidence();
+    setEnvelope(current => updateSessionMapping(current, mappingUndo));
+    setMappingUndo(null); setMappingError(null); setMappingNotice(null);
+  }, [mappingUndo, resetReadinessEvidence]);
 
   const handleSelectIdentity = useCallback((mode: "stable" | "composite") => {
     setMappingError(null);
@@ -636,6 +655,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
   return (
     <AppShell
+      i3Typography={!showImpact}
       current={step}
       reached={reached}
       onNavigate={next => { if (next === 1 && workspaceActive) beginReupload(); else goTo(next); }}
@@ -654,7 +674,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       } : undefined}
     >
       {saveError && <p role="alert">{saveError} {retrySave.current && <button type="button" onClick={() => void retrySave.current?.()}>Retry</button>}</p>}
-      {step === 1 && !updateTargetId && savedDatasets.length > 0 && <details className="saved-management"><summary>Manage saved information</summary><SavedDataControls
+      {!showImpact && <StorageExplanation onManage={() => { setShowSavedManagement(true); goTo(1); }} />}
+      {step === 1 && (!updateTargetId || showSavedManagement) && (savedDatasets.length > 0 || showSavedManagement) && <details className="saved-management" open={showSavedManagement} onToggle={event => setShowSavedManagement(event.currentTarget.open)}><summary>{t("Manage saved information")}</summary><SavedDataControls
         items={savedDatasets} activeId={activeSavedId} selected={selectedSaved}
         onInspect={(id) => void inspectSavedDataset(id).catch(() => setSaveError("Saved details could not be read."))}
         onOpen={(id) => void openSavedDataset(id).catch(() => setSaveError("The dataset could not be opened."))}
@@ -716,6 +737,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
           sessionNotice={sessionNotice}
           onClear={handleClearSession}
           onSelectColumn={handleSelectColumn}
+          onUndo={mappingUndo ? handleUndoMapping : undefined}
           onSelectIdentity={handleSelectIdentity}
           onBack={() => workspaceActive ? beginReupload() : setStep(1)}
           checking={readinessLoading || mappingSubmitting}
@@ -784,7 +806,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
           <SaveDatasetControls defaultName={dataset.sourceName.replace(/\.[^.]+$/, "")}
             shops={[...new Set(savedDatasets.map(item => item.shopName))]} onSave={handleSaveDataset} />
         </div>}
-        {activeSavedId && <div className="workspace-plan-actions"><button type="button" className="btn btn--small btn--ghost" onClick={() => void handleSaveDecision()}>Save current plan as decision</button></div>}
+        {activeSavedId && <div className="workspace-plan-actions"><button type="button" className="btn btn--small btn--ghost" onClick={() => void handleSaveDecision()}>{t("Save current plan as decision")}</button></div>}
         <PurchasePlanScreen
           snapshot={readiness}
           forecast={forecast}

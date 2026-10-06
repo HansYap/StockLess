@@ -206,7 +206,6 @@
   .purchase-plan--new .is-compact .pp-hero-box { display: block; }
   .purchase-plan--new .is-compact .pp-hero-main { padding-bottom: 4px; }
   .purchase-plan--new .is-compact h1 { font-size: 18px; }
-  .purchase-plan--new .is-compact .pp-back, .purchase-plan--new .is-compact .pp-hero-actions > :not(.btn--primary) { display: none; }
   .purchase-plan--new .pp-kpis { gap: 10px; }
   .purchase-plan--new .pp-kpi { padding: 12px; }
   .purchase-plan--new .pp-kpi .pp-icon { display: none; }

@@ -3,9 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   FIELD_REGISTRY,
+  evaluateCapabilities,
+  partitionCapabilities,
   detectIdentityConflicts,
   getReadinessBlockers,
-  parseIsoDate,
   type CanonicalField,
   type MappingProposalResult,
   type MappingState,
@@ -21,6 +22,7 @@ interface MappingScreenProps {
   readonly mapping: MappingState;
   readonly proposals: MappingProposalResult | null;
   readonly onSelectColumn: (field: CanonicalField, sourceColumnId: string | null) => void;
+  readonly onUndo?: () => void;
   readonly onSelectIdentity: (mode: IdentityMode) => void;
   readonly onBack: () => void;
   readonly onClear?: () => void;
@@ -38,6 +40,8 @@ const OPTIONAL_FIELDS = [
   ["planned_order_quantity", "document", "Orders you plan to place"],
   ["incoming_stock_quantity", "truck", "Ordered but not yet arrived"],
   ["expiry_date", "expiry", "When each batch expires"],
+  ["unit_cost", "cost", "Purchase cost per unit in MYR; checked in Step 3"],
+  ["unit_weight_kg", "box", "Food weight in kilograms for one sales unit"],
 ] as const;
 
 /** Screen 02. Suggestions stay unconfirmed until the retailer confirms this page. */
@@ -65,6 +69,7 @@ export function MappingScreen(props: MappingScreenProps) {
   }, [mapping]);
   const conflicts = useMemo(() => detectIdentityConflicts(dataset, mapping), [dataset, mapping]);
   const bulkMapping = useMemo(() => confirmCurrentMapping(mapping), [mapping]);
+  const capabilities = partitionCapabilities(evaluateCapabilities(bulkMapping ?? mapping));
   const blockers = bulkMapping ? getReadinessBlockers(bulkMapping) : ["Resolve columns used more than once"];
   const staleColumns = Object.values(mapping.mappings).some(match => match && !dataset.columns.some(column => column.id === match.sourceColumnId));
   const blocked = blockers.length > 0 || staleColumns;
@@ -108,7 +113,7 @@ export function MappingScreen(props: MappingScreenProps) {
       {warning && <small className="mapping-warning" id={id + "-warning"}>{t(warning)}</small>}
     </div>;
   }
-  function fieldRow(field: CanonicalField, icon: "calendar" | "cart" | "box" | "document" | "truck" | "expiry" | "barcode", description: string, required = false) {
+  function fieldRow(field: CanonicalField, icon: "calendar" | "cart" | "box" | "document" | "truck" | "expiry" | "barcode" | "cost", description: string, required = false) {
     return <li className="mapping-row" key={field}>
       <span className="mapping-icon"><WorkflowIcon name={icon} /></span>
       <div className="mapping-label"><b>{t(FIELD_REGISTRY[field].label)}</b><small>{t(description)}</small></div>
@@ -140,6 +145,7 @@ export function MappingScreen(props: MappingScreenProps) {
               <small><span className="mapping-tag mapping-tag--teal">✓ {t("Read")}</span>
                 {dataset.rows.length.toLocaleString(getLocale())} {t("rows ·")} {dataset.columns.length} {t("columns")}</small>
               <small><span className="mapping-tag">{t(dataset.sourceMode === "sample" ? "Sample data" : "Retailer file")}</span> {(dataset.sourceByteLength / 1024).toFixed(1)} KB</small>
+              {dataset.worksheetName && <small>{t("Worksheet")}: {dataset.worksheetName}</small>}
             </div>
             <div className="mapping-file__actions">
               <button type="button" onClick={props.onBack} disabled={props.checking}>{t("Change")}</button>
@@ -149,6 +155,7 @@ export function MappingScreen(props: MappingScreenProps) {
         </div>
         <div className="mapping-actions">
           <button type="button" className="mapping-back" onClick={props.onBack} disabled={props.checking}>{t("← Choose another file")}</button>
+          {props.onUndo && <button type="button" className="btn btn--ghost" onClick={props.onUndo} disabled={props.checking}>{t("Undo last match change")}</button>}
           <span className="mapping-actions__spacer" />
           <span className="mapping-total" role="status">{totalCount} {t("of")} {totalFields} {t("matched")}</span>
           <span className="mapping-meter" aria-hidden="true"><i style={{ width: (100 * totalCount / totalFields) + "%" }} /></span>
@@ -211,17 +218,12 @@ export function MappingScreen(props: MappingScreenProps) {
             </div>
             <ul className="mapping-list">
               {OPTIONAL_FIELDS.map(([field, icon, description]) => fieldRow(field, icon, description))}
-              <li className="mapping-row mapping-row--unavailable"><span className="mapping-icon"><WorkflowIcon name="cost" /></span>
-                <div className="mapping-label"><b>{t("Unit cost")}</b><small>{t("What you pay your supplier for one unit")}</small></div>
-                <div className="mapping-select"><select disabled aria-label={t("Source column for Unit cost")}><option>{t("Not yet available")}</option></select></div>
-                <span className="mapping-preview">—</span>
-              </li>
             </ul>
           </section>
           <section className="mapping-unused" aria-labelledby="mapping-unused-title">
             <h3 id="mapping-unused-title">{t("Columns we won't use")}</h3>
             {unusedColumns.length ? <ul>{unusedColumns.map(column => <li key={column.id}>{column.header}</li>)}</ul> : <p>{t("All columns are matched.")}</p>}
-            <p>{t("These columns stay in your original file and are not used in this check.")}</p>
+            <p>{t("These columns are not mapped to an analysis field. They remain in the source records and help distinguish exact duplicates.")}</p>
           </section>
           {otherMatchedFields.length > 0 && <details className="mapping-additional"
             open={otherMatchedFields.some(field => warningFor(field)) || undefined}>
@@ -236,7 +238,7 @@ export function MappingScreen(props: MappingScreenProps) {
             <span className="alert__icon alert__icon--warn" aria-hidden="true">!</span><div>
               <p className="alert__title">{t(conflicts.length === 1 ? "One identity conflict" : `${conflicts.length} identity conflicts`)}</p>
               <ul className="alert__list">{conflicts.slice(0, 4).map(conflict => <li key={`${conflict.code}-${conflict.productHint}`}>
-                <b>{conflict.productHint}</b> {t(conflict.code === "CODE_TO_MULTIPLE_VARIANTS" ? "covers more than one pack size" : "maps to more than one product code")}: {conflict.values.join(", ")} {t("(rows")} {conflict.sourceRows.slice(0, 6).join(", ")}{conflict.sourceRows.length > 6 ? "…" : ""})
+                <b>{conflict.productHint}</b> {t(conflict.code === "CODE_TO_MULTIPLE_NAMES" ? "has more than one product name" : conflict.code === "CODE_TO_MULTIPLE_PACKS" ? "covers more than one pack size" : "maps to more than one product code")}: {conflict.values.join(", ")} {t("(rows")} {conflict.sourceRows.slice(0, 6).join(", ")}{conflict.sourceRows.length > 6 ? "…" : ""})
               </li>)}</ul></div>
           </div>}
           <div className="mapping-saved-controls">{props.children}</div>
@@ -251,6 +253,7 @@ export function MappingScreen(props: MappingScreenProps) {
             <p><b>{t("Stock on hand + Stock count date")}</b><small>{t("Weeks of cover, purchase check, stock freshness")}</small></p>
             <p><b>{t("Expiry date")}</b><small>{t("Expiry-aware note")}</small></p>
           </div>
+          <section aria-label={t("Available analyses")}><h3>{t("Available analyses")}</h3><p>{t("Selected columns support these analyses after Step 3 validation.")}</p><ul>{capabilities.availableNow.map(item => <li key={item.capability}>{t(item.label)}</li>)}</ul><h3>{t("Needs more information")}</h3><ul>{capabilities.needsMoreInformation.map(item => <li key={item.capability}><b>{t(item.label)}</b><small>{item.reasons.map(reason => t(reason.message)).join(" ")}</small></li>)}</ul></section>
           <p className="mapping-privacy"><span aria-hidden="true">🔒</span> {t("Processed in your browser, never uploaded.")}</p>
         </aside>
       </div>
@@ -260,11 +263,5 @@ export function MappingScreen(props: MappingScreenProps) {
 
 /** Formats previews without changing the original records or translating product values. */
 function formatPreview(values: readonly string[]): string {
-  const unique = [...new Set(values.map(value => value.trim()).filter(Boolean))].slice(0, 3);
-  return unique.map(value => {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-    if (!match || !parseIsoDate(value)) return value;
-    const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-    return new Intl.DateTimeFormat(getLocale(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(date);
-  }).join(" · ") || "—";
+  return values.filter(value => value.trim() !== "").slice(0, 5).join(" · ") || "—";
 }

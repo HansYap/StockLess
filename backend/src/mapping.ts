@@ -134,7 +134,16 @@ function typeScore(column: SourceColumn, kind: ValueKind): number {
 /** Collects the canonical label, description, and aliases used for matching. */
 function targetPrompts(field: CanonicalField): readonly string[] {
   const definition = FIELD_REGISTRY[field];
-  return [definition.field, definition.label, definition.description, ...definition.aliases];
+  return [...headerAliases(field), definition.description];
+}
+
+function headerAliases(field: CanonicalField): readonly string[] {
+  const definition = FIELD_REGISTRY[field];
+  // The legacy pack_size key means supplier case size. Matching that internal
+  // key as a header would compete with a product's actual pack/variant label.
+  return field === "pack_size"
+    ? [definition.label, ...definition.aliases]
+    : [definition.field, definition.label, ...definition.aliases];
 }
 
 /** Finds the best lexical match between a source header and a target field. */
@@ -146,7 +155,7 @@ function bestLexicalScore(sourceHeader: string, field: CanonicalField): number {
 function uniqueExactAlias(sourceHeader: string, targetField: CanonicalField): boolean {
   const normalized = normalizeHeader(sourceHeader);
   const matches = CANONICAL_FIELDS.filter((field) =>
-    [FIELD_REGISTRY[field].field, FIELD_REGISTRY[field].label, ...FIELD_REGISTRY[field].aliases]
+    headerAliases(field)
       .map(normalizeHeader)
       .includes(normalized),
   );

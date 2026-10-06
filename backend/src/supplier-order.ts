@@ -13,6 +13,29 @@ export type SupplierOrderSuggestion =
   | { readonly state: "unavailable"; readonly reason: string }
   | { readonly state: "available"; readonly quantity: number; readonly cases?: number; readonly arrivalDate?: string; readonly beyondPlanningWindow: boolean };
 
+export interface SupplierScenario {
+  readonly id: string;
+  readonly name: string;
+  readonly terms: SupplierOrderTerms;
+}
+
+/** Compares quantities and dates against one unchanged restock target, without invented prices. */
+export function compareSupplierOrders(estimate: RestockEstimate | undefined, scenarios: readonly SupplierScenario[], analysisDate: string) {
+  if (!parseIsoDate(analysisDate)) throw new Error("A valid analysis date is required.");
+  const counts = new Map<string, number>();
+  for (const scenario of scenarios) counts.set(scenario.id, (counts.get(scenario.id) ?? 0) + 1);
+  return scenarios.map(scenario => {
+    let result: SupplierOrderSuggestion;
+    if (!scenario.id.trim() || !scenario.name.trim() || counts.get(scenario.id) !== 1) {
+      result = { state: "unavailable", reason: "Give each supplier a name and a unique identifier." };
+    } else if (scenario.terms.caseSize === undefined || scenario.terms.minimumOrder === undefined || scenario.terms.leadTimeDays === undefined) {
+      result = { state: "unavailable", reason: "Enter case size, minimum order and lead time for this supplier." };
+    } else result = suggestSupplierOrder(estimate, scenario.terms, analysisDate);
+    return { id: scenario.id, name: scenario.name.trim(), terms: scenario.terms, result,
+      extraUnits: result.state === "available" && estimate?.state === "available" ? result.quantity - estimate.quantity.value : undefined };
+  });
+}
+
 /** Adjusts the existing restock target; delivery time never changes the demand forecast. */
 export function suggestSupplierOrder(estimate: RestockEstimate | undefined, terms: SupplierOrderTerms, analysisDate: string): SupplierOrderSuggestion {
   if (!parseIsoDate(analysisDate)) throw new Error("A valid analysis date is required.");

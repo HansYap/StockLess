@@ -7,6 +7,8 @@ export type CanonicalField =
   | "product_name"
   | "pack_variant"
   | "quantity_sold"
+  | "unit_cost"
+  | "unit_weight_kg"
   | "current_stock"
   | "stock_as_of_date"
   | "planned_order_quantity"
@@ -47,7 +49,10 @@ export type CapabilityId =
   | "weeks_of_cover"
   | "purchase_audit"
   | "expiry_aware_note"
-  | "supplier_scenario";
+  | "supplier_scenario"
+  | "demand_range"
+  | "purchase_cost"
+  | "food_weight";
 
 export type CapabilityState = "available" | "needs_information" | "limited" | "locked";
 
@@ -99,6 +104,8 @@ export interface ParsedDataset {
   readonly sourceName: string;
   readonly sourceByteLength: number;
   readonly sourceSha256: string;
+  readonly worksheetName?: string;
+  readonly headerRow?: number;
   readonly delimiter: "," | ";" | "\t";
   readonly columns: readonly SourceColumn[];
   readonly rows: readonly ParsedRow[];
@@ -119,7 +126,17 @@ export interface CsvParseOptions {
   readonly maxBytes?: number;
   readonly maxRows?: number;
   readonly signal?: AbortSignal;
+  readonly sourceMetadata?: ImportSourceMetadata;
   readonly onProgress?: (progress: CsvProgress) => void;
+}
+
+/** Original workbook provenance; row numbers refer to the chosen worksheet. */
+export interface ImportSourceMetadata {
+  readonly worksheetName: string;
+  readonly headerRow: number;
+  readonly sourceRowNumbers: readonly number[];
+  readonly originalSha256: string;
+  readonly originalByteLength: number;
 }
 
 export interface CsvProgress {
@@ -200,7 +217,7 @@ export interface IdentityEvidenceEvent {
 }
 
 export interface IdentityConflict {
-  readonly code: "CODE_TO_MULTIPLE_VARIANTS" | "COMPOSITE_TO_MULTIPLE_CODES";
+  readonly code: "CODE_TO_MULTIPLE_NAMES" | "CODE_TO_MULTIPLE_PACKS" | "COMPOSITE_TO_MULTIPLE_CODES";
   readonly productHint: string;
   readonly sourceRows: readonly number[];
   readonly values: readonly string[];
@@ -252,6 +269,11 @@ export type DataIssueCode =
   | "FUTURE_TRANSACTION_DATE"
   | "DATE_FORMAT_CONFIRMATION_REQUIRED"
   | "INVALID_QUANTITY"
+  | "MISSING_UNIT_COST"
+  | "INVALID_UNIT_COST"
+  | "CONFLICTING_UNIT_COST"
+  | "INVALID_UNIT_WEIGHT"
+  | "CONFLICTING_UNIT_WEIGHT"
   | "MISSING_IDENTITY"
   | "INVALID_CURRENT_STOCK"
   | "MISSING_CURRENT_STOCK"
@@ -295,6 +317,8 @@ export interface InterpretedRowValues {
   readonly plannedOrderQuantity?: number;
   readonly incomingStockQuantity?: number;
   readonly expiryDate?: string;
+  readonly unitCost?: number;
+  readonly unitWeightKg?: number;
 }
 
 export interface ValidatedRow {
@@ -314,6 +338,8 @@ export interface DuplicateGroup {
   readonly sourceRows: readonly number[];
   readonly productKeys: readonly string[];
   readonly decision: "treat_as_duplicate" | "unresolved";
+  readonly retainedSourceRow?: number;
+  readonly excludedCopyCount?: number;
 }
 
 export interface ReconciliationSummary {
@@ -344,8 +370,30 @@ export interface ProductStockEvidence {
 
 export interface ProductLimitation {
   readonly productKey: string;
-  readonly code: "DUPLICATE_UNRESOLVED";
+  readonly code: "DUPLICATE_UNRESOLVED" | "IDENTITY_CONFLICT";
   readonly message: string;
+}
+
+/** A value is usable only after every nonblank source value agrees and validates. */
+export type ProductNumericEvidence = {
+  readonly productKey: string;
+  readonly field: "unit_cost" | "unit_weight_kg";
+  readonly sourceRows: readonly number[];
+  readonly sourceColumn?: string;
+} & (
+  | { readonly state: "usable"; readonly value: number }
+  | { readonly state: "missing" | "invalid" | "conflicting"; readonly reason: string; readonly correctiveAction: string }
+);
+
+export interface ProductAssessment {
+  readonly productKey: string;
+  readonly status: "ready" | "review" | "missing";
+  readonly history: CapabilityResult;
+  readonly demand: CapabilityResult;
+  readonly stockCover: CapabilityResult;
+  readonly purchase: CapabilityResult;
+  readonly cost: CapabilityResult;
+  readonly reasons: readonly string[];
 }
 
 export interface ProductPurchaseFileEvidence {
@@ -378,6 +426,13 @@ export interface ReadinessSnapshot {
   readonly sourceMode: SourceMode;
   readonly sourceName: string;
   readonly sourceSha256: string;
+  readonly worksheetName?: string;
+  readonly headerRow?: number;
+  /** Includes source selection, mappings, date confirmations and reference date. */
+  readonly evidenceKey?: string;
+  readonly currency?: "MYR";
+  readonly productCosts?: readonly ProductNumericEvidence[];
+  readonly productWeights?: readonly ProductNumericEvidence[];
   readonly analysisDate: string;
   readonly rows: readonly ValidatedRow[];
   readonly issues: readonly DataIssue[];
@@ -502,6 +557,7 @@ export type DemandForecastMethod = "recent_mean_8" | "tsb_alpha_0_2_beta_0_2";
 
 export type DemandAssessmentReasonCode =
   | "INSUFFICIENT_RECORDED_WEEKS"
+  | "IDENTITY_CONFLICT"
   | "DUPLICATE_ROWS_NOT_DECIDED";
 
 export interface DemandAssessmentReason {
@@ -536,6 +592,19 @@ export interface ProductDemandEstimate {
   readonly pattern?: DemandPattern;
   readonly range?: DemandRangeEvidence;
   readonly policyVersion: string;
+  readonly historyEvidence?: DemandHistoryEvidence;
+}
+
+export interface DemandHistoryEvidence {
+  readonly completeWeekStarts: readonly string[];
+  readonly usableWeekStarts: readonly string[];
+  readonly missingWeekStarts: readonly string[];
+  readonly excludedPeriods: readonly { readonly weekStart: string; readonly sourceRows: readonly number[]; readonly reasons: readonly string[] }[];
+  readonly unplacedExcludedRows: readonly number[];
+  readonly minimumRecordedWeeks: number;
+  readonly additionalWeeksNeeded: number;
+  readonly correctiveAction: string;
+  readonly demandBasis: "positive_sales_returns_separate";
 }
 
 export interface DemandForecastReview {
@@ -620,6 +689,7 @@ export type RestockEstimate =
   | {
       readonly state: "unavailable";
       readonly reason: CannotJudgeReason;
+      readonly correctiveAction?: string;
     };
 
 export interface ExpiryCheckInput {

@@ -2,6 +2,7 @@ import {
   CsvImportError,
   type CsvErrorCode,
   type CsvProgress,
+  type ImportSourceMetadata,
   type SessionEnvelope,
   type SourceMode,
 } from "../engine.ts";
@@ -23,6 +24,7 @@ export function replaceSessionSourceInWorker(
     readonly sourceName: string;
     readonly sourceMode: SourceMode;
     readonly mimeType?: string;
+    readonly sourceMetadata?: ImportSourceMetadata;
     readonly onProgress: (progress: CsvProgress) => void;
     readonly signal: AbortSignal;
   },
@@ -85,6 +87,7 @@ export function replaceSessionSourceInWorker(
       sourceName: input.sourceName,
       sourceMode: input.sourceMode,
       mimeType: input.mimeType,
+      sourceMetadata: input.sourceMetadata,
     }, [workerBytes.buffer]);
   });
 }

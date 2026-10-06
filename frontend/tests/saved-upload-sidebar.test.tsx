@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ComponentProps } from "react";
 import App from "../src/App.tsx";
-import { createEmptySession, READINESS_POLICY_VERSION, createMappingState, setMapping, confirmIdentityMode } from "../src/engine.ts";
+import { createEmptySession, readinessEvidenceKey, READINESS_POLICY_VERSION, createMappingState, setMapping, confirmIdentityMode } from "../src/engine.ts";
 import { getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork, createSavedDataset, summarizeSavedDataset, type SavedDataset } from "../src/storage/saved-datasets.ts";
 import { runReadinessCheckInWorker } from "../src/workers/readiness-client.ts";
 import { runDemandForecastInWorker } from "../src/workers/forecast-client.ts";
@@ -51,7 +51,7 @@ function importedEnvelope() {
 }
 function evidence() {
   const result = makeEvidence();
-  return { ...result, snapshot: { ...result.snapshot, sourceSha256: "hash", policyVersion: READINESS_POLICY_VERSION } };
+  return { ...result, snapshot: { ...result.snapshot, sourceSha256: "hash", policyVersion: READINESS_POLICY_VERSION, evidenceKey: readinessEvidenceKey(importedEnvelope().session.dataset!, importedEnvelope().session.mapping, { analysisDate: result.snapshot.analysisDate }) } };
 }
 let saved: SavedDataset;
 beforeEach(() => {

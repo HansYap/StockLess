@@ -44,12 +44,14 @@ test("large-sale advisories preserve every usable sale and require enough histor
   const sparse = await check([row("2026-08-01"), row("2026-09-01", "2300")]);
   assert.ok(!sparse.issues.some(issue => issue.issueCode === "UNUSUAL_SALE"));
 });
-test("different names and packs produce identity warnings while preserving codes", async () => {
+test("different names and packs are held back while preserving original codes", async () => {
   const second = row("2026-09-01"); second[3] = "Kopi Kaw"; second[6] = "500 g";
   const result = await check([row("2026-08-01"), second]);
   assert.ok(result.issues.some(issue => issue.issueCode === "PRODUCT_IDENTITY_CONFLICT"));
   assert.deepEqual(result.rows.map(row => row.interpretedValues.productCode), ["0007", "0007"]);
-  assert.equal(result.reconciliation.rowsUsed, 2);
+  assert.equal(result.reconciliation.rowsUsed, 0);
+  assert.equal(result.reconciliation.rowsExcluded, 2);
+  assert.equal(result.productLimitations[0].code, "IDENTITY_CONFLICT");
 });
 test("full evidence download retains safe tidy-ups and their original values", async () => {
   const input = row("2026-09-01"); input[1] = " 0007 ";

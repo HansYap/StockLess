@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { t, useLanguage } from "../i18n/index.ts";
+import { ProductLabelList } from "../components/ProductLabelList.tsx";
+import { summarizePurchaseExcess } from "../engine.ts";
 import { evaluateProductPurchasePlan, type DemandForecastReview, type ReadinessSnapshot, type ProductPurchaseInputs, type ExpiryCheckInput, type ProductPurchasePlan, type SupplierOrderTerms } from "../engine.ts";
 import { evaluatePurchaseProduct, joinPurchaseEvidence, purchaseGroup, purchaseGroupLabels, type PurchaseDrafts, type PurchaseEvaluator, type PurchaseProduct, type PurchaseGroup } from "../purchase-plan/model.ts";
 import { ProductPurchasePanel } from "../purchase-plan/ProductPurchasePanel.tsx";
@@ -55,7 +57,7 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
       const inputs = drafts[product.key] ?? product.fileInputs, expiry = expiryByProduct?.[product.key] ?? product.fileExpiry;
       const cached = planCache.current.get(product.key);
       const result = cached && cached.product === product && cached.inputs === inputs && cached.expiry === expiry && cached.evaluator === evaluatePurchase && cached.analysisDate === snapshot.analysisDate
-        ? cached.result : evaluatePurchaseProduct(product, snapshot.analysisDate, inputs, evaluatePurchase, expiry, true);
+        ? cached.result : evaluatePurchaseProduct(product, snapshot.analysisDate, inputs, evaluatePurchase, expiry);
       nextPlans.set(product.key, result);
       nextCache.set(product.key, { product, inputs, expiry, evaluator: evaluatePurchase, analysisDate: snapshot.analysisDate, result });
     }
@@ -66,7 +68,7 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
   const sorted = useMemo(() => [...products].sort((a, b) => rank[purchaseGroup(plans.get(a.key))] - rank[purchaseGroup(plans.get(b.key))] || (a.sku ?? a.key).localeCompare(b.sku ?? b.key)), [products, plans]);
   const filtered = (search: string, selectedGroup: PurchaseGroup | "all") => {
     const term = search.trim().replace(/^sku\s*:?\s*/i, "").toLocaleLowerCase();
-    return sorted.filter(product => `${product.title} ${product.pack ?? ""} ${product.name} ${product.sku ?? ""}`.toLocaleLowerCase().includes(term) && (selectedGroup === "all" || purchaseGroup(plans.get(product.key)) === selectedGroup));
+    return sorted.filter(product => [product.title, product.pack, product.name, product.sku, ...(product.labels?.names ?? []), ...(product.labels?.codes ?? []), ...(product.labels?.packs ?? [])].join(" ").toLocaleLowerCase().includes(term) && (selectedGroup === "all" || purchaseGroup(plans.get(product.key)) === selectedGroup));
   };
   const visible = filtered(query, group), shown = expanded ? visible : visible.slice(0, 12);
   const selected = products.find(product => product.key === selectedKey), selectedIndex = visible.findIndex(product => product.key === selectedKey);
@@ -92,14 +94,8 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
     detailColumn.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   };
   const counts = Object.fromEntries(groups.map(item => [item.id, products.filter(product => purchaseGroup(plans.get(product.key)) === item.id).length]));
-  const checkedExcess = products.flatMap(product => {
-    const audit = plans.get(product.key)?.audit;
-    if (inputsFor(product).plannedOrder.state !== "value" || audit?.state !== "verdict") return [];
-    const units = Math.max(0, audit.figures.availableAfterOrder.value - audit.figures.demandHigh.value);
-    return units > 0 ? [units] : [];
-  });
-  const excess = checkedExcess.reduce((sum, units) => sum + units, 0);
-  const mismatchCount = products.filter(product => product.issue).length;
+  const excessSummary = summarizePurchaseExcess(products.map(product => ({ inputs: inputsFor(product), plan: plans.get(product.key) })));
+  const mismatchCount = products.filter(product => product.issueKind === "evidence").length;
   function download() {
     const rows = [
       ["Source file", snapshot.sourceName], ["Analysis date", snapshot.analysisDate],
@@ -117,7 +113,7 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
   }
   return <main className="purchase-plan purchase-plan--new">
     <section className={`pp-hero${compactHero ? " is-compact" : ""}`}><div className="pp-wrap pp-hero-box"><div className="pp-hero-main"><div><p className="pp-kicker"><span aria-hidden="true">🌳</span> {t("Purchase plan")}</p><h1>{t("Plan your next order")}</h1><p className="pp-hero-lede">{t(`For the next 4 weeks from ${purchaseDate(snapshot.analysisDate, true)}.`)} {t("Start from our estimate, type what you plan to buy, and we'll check it against expected demand.")}</p></div>
-      <button type="button" className="pp-excess" disabled={!onImpact} onClick={onImpact}><span className="pp-icon pp-icon--amber" aria-hidden="true">▣</span><span><small>{t("Possible excess stock")}</small><b className="num">{numberText(excess)} {t("units")}</b><small>{t(`in ${checkedExcess.length} ${checkedExcess.length === 1 ? "order" : "orders"}`)}</small></span><span className="pp-excess-go">{t("See impact →")}</span></button>
+      <button type="button" className="pp-excess" disabled={!onImpact} onClick={onImpact}><span className="pp-icon pp-icon--amber" aria-hidden="true">▣</span><span><small>{t("Possible excess stock")}</small><b className="num">{excessSummary.state === "assessed" ? `${numberText(excessSummary.quantity)} ${t("units")}` : t(excessSummary.state === "not_entered" ? "Not entered" : "Unavailable")}</b>{excessSummary.state === "assessed" ? <><small>{t("Assessed orders")}: {excessSummary.assessedCount} · {t("Orders with excess")}: {excessSummary.excessOrderCount}</small>{excessSummary.excludedCount > 0 && <small>{t("Unassessable orders excluded")}: {excessSummary.excludedCount}</small>}</> : <small>{t(excessSummary.reason)} {t(excessSummary.correctiveAction)}</small>}</span><span className="pp-excess-go">{t("See impact →")}</span></button>
     </div><div className="pp-hero-actions"><button type="button" className="pp-back" onClick={onBack}>{t("← Back to readiness")}</button><span className="pp-action-spacer" /><button type="button" className="btn btn--ghost" onClick={download}>{t("↓ Download plan")}</button><button type="button" className="btn btn--primary" disabled={!onImpact} onClick={onImpact}>{t("See your impact →")}</button></div></div></section>
     <div className="pp-wrap pp-main">
       {mismatchCount > 0 && <p className="notice notice--error" role="alert">{t(`Evidence mismatch affects ${mismatchCount} products. Return to readiness and refresh the forecast.`)}</p>}
@@ -129,7 +125,7 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
           const plan = plans.get(product.key), input = inputsFor(product), kind = purchaseGroup(plan);
           const range = !product.issue && product.demand?.label !== "Cannot assess" ? product.demand?.range : undefined;
           const expiry = plan?.expiry && "earliestDate" in plan.expiry ? plan.expiry.earliestDate : undefined;
-          return <tr key={product.key} className={selectedKey === product.key ? "is-selected" : ""} onClick={() => select(product.key)}><td><button type="button" className="pp-product-button" aria-label={t(`Open purchase plan for ${[product.title, product.pack].filter(Boolean).join(" · ")}, SKU ${product.sku || product.key}`)} aria-current={selectedKey === product.key ? "true" : undefined} onClick={event => { event.stopPropagation(); select(product.key); }}><b>{product.title}</b><small>{product.sku || t("Not available")}{product.pack ? ` · ${product.pack}` : ""}</small></button>{expiry && <small className="pp-row-expiry">◷ {t("Batch expires")} {purchaseDate(expiry)}</small>}</td><td className="num" data-label={t("Expected, 4 weeks")}>{range ? `${numberText(range.low)}–${numberText(range.high)}` : "—"}</td><td className="num" data-label={t("In stock")}>{product.stock?.currentStock === undefined ? "—" : numberText(product.stock.currentStock)}</td><td data-label={t("Your order")}><b className="num">{input.plannedOrder.state === "value" ? numberText(input.plannedOrder.value) : "—"}</b>{kind !== "balanced" && plan?.estimatedRestock.state === "available" && <small className="pp-row-suggestion">{t(`Suggested ${numberText(plan.estimatedRestock.quantity.value)}`)}</small>}</td><td><span className={`pp-pill pp-pill--${kind}`}>{t(purchaseGroupLabels[kind])}</span></td></tr>;
+          return <tr key={product.key} className={selectedKey === product.key ? "is-selected" : ""} onClick={() => select(product.key)}><td><button type="button" className="pp-product-button" aria-label={t(`Open purchase plan for ${[product.title, product.pack].filter(Boolean).join(" · ")}, SKU ${product.sku || product.key}`)} aria-current={selectedKey === product.key ? "true" : undefined} onClick={event => { event.stopPropagation(); select(product.key); }}><b>{product.title}</b><small>{product.sku || t("Not available")}{product.pack ? ` · ${product.pack}` : ""}</small></button><ProductLabelList labels={product.labels} shown={[product.title, product.sku, product.pack]} />{expiry && <small className="pp-row-expiry">◷ {t("Batch expires")} {purchaseDate(expiry)}</small>}</td><td className="num" data-label={t("Expected, 4 weeks")}>{range ? `${numberText(range.low)}–${numberText(range.high)}` : "—"}</td><td className="num" data-label={t("In stock")}>{product.stock?.currentStock === undefined ? "—" : numberText(product.stock.currentStock)}</td><td data-label={t("Your order")}><b className="num">{input.plannedOrder.state === "value" ? numberText(input.plannedOrder.value) : "—"}</b>{kind !== "balanced" && plan?.estimatedRestock.state === "available" && <small className="pp-row-suggestion">{t(`Suggested ${numberText(plan.estimatedRestock.quantity.value)}`)}</small>}</td><td><span className={`pp-pill pp-pill--${kind}`}>{t(purchaseGroupLabels[kind])}</span></td></tr>;
         })}</tbody></table></div>
         {visible.length === 0 && <p className="pp-list-none">{t("No products match.")}</p>}{visible.length > 12 && <button type="button" className="pp-list-more" onClick={() => setExpanded(!expanded)}>{t(expanded ? "Show fewer" : `Show all ${visible.length} products`)}</button>}
         <p className="pp-list-count" role="status">{t(`Showing ${shown.length} of ${visible.length} matching products.`)} {t("Counts above do not change when filtering.")}</p>
