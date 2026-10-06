@@ -1,20 +1,20 @@
 /* Shared navigation for workflow screens converted to the supplied design. */
 .frame.frame--workflow { --shell: 1180px; }
-.frame.frame--workflow .topbar {
+.frame.frame--workflow .topbar, .returning-page .topbar {
   width: 100%; min-height: 66px; padding: 0 max(32px, calc((100% - 1180px) / 2 + 40px));
   gap: 12px; border-bottom: 1px solid var(--line-soft); background: #fff;
 }
-.frame--workflow .topbar .brand { flex: none; margin-right: auto; }
-.frame--workflow .topbar .brand__logo { height: 36px; width: auto; }
-.frame--workflow .workspace-home-link {
+.frame--workflow .topbar .brand, .returning-page .topbar .brand { flex: none; margin-right: auto; }
+.frame--workflow .topbar .brand__logo, .returning-page .topbar .brand__logo { height: 36px; width: auto; }
+.frame--workflow .workspace-home-link, .returning-page .workspace-home-link {
   margin-left: 0; min-height: 38px; padding: 0 15px; border: 1px solid var(--line);
   border-radius: 999px; font: 700 15px var(--body); color: var(--teal-deep); white-space: nowrap;
 }
-.frame--workflow .workflow-language {
+.frame--workflow .workflow-language, .returning-page .workflow-language {
   display: inline-flex; align-items: center; min-height: 38px; padding: 0 10px;
   border: 1px solid #cfe4de; border-radius: 10px; background: var(--teal-tint);
 }
-.frame--workflow .workflow-language select { border: 0; background: none; font: 700 14px var(--body); color: var(--ink); cursor: pointer; max-width: 145px; }
+.frame--workflow .workflow-language select, .returning-page .workflow-language select { border: 0; background: none; font: 700 14px var(--body); color: var(--ink); cursor: pointer; max-width: 145px; }
 .frame--workflow .stepper { height: auto; min-height: 0; width: 100%; padding: 0; border-bottom: 1px solid var(--line-soft); }
 .frame--workflow .stepper__inner { width: min(760px, 100%); padding: 14px 20px; }
 .frame--workflow .step { display: flex; justify-content: center; }
@@ -32,12 +32,12 @@
 
 .frame--workflow .step--done .step__line { background: var(--teal); }
 @media (max-width: 900px) {
-  .frame.frame--workflow .topbar { padding: 8px 16px; min-height: 60px; gap: 10px; }
-  .frame--workflow .topbar .brand { flex: none; }
-  .frame--workflow .workspace-home-link { min-width: 38px; padding: 0 10px; }
-  .frame--workflow .workspace-home-link span { display: none; }
+  .frame.frame--workflow .topbar, .returning-page .topbar { padding: 8px 16px; min-height: 60px; gap: 10px; }
+  .frame--workflow .topbar .brand, .returning-page .topbar .brand { flex: none; }
+  .frame--workflow .workspace-home-link, .returning-page .workspace-home-link { min-width: 38px; padding: 0 10px; }
+  .frame--workflow .workspace-home-link span, .returning-page .workspace-home-link span { display: none; }
   .frame--workflow .step__button { min-width: 0; }
   .frame--workflow .step__label { font-size: 12px; }
   .frame--workflow .page > :not(.upload-screen):not(.mapping-screen):not(.readiness-screen):not(.purchase-plan--new) { width: calc(100% - 32px); }
 }
-@media (max-width: 420px) { .frame--workflow .workflow-language { padding: 0 6px; } .frame--workflow .workflow-language select { max-width: 120px; } }
+@media (max-width: 420px) { .frame--workflow .workflow-language, .returning-page .workflow-language { padding: 0 6px; } .frame--workflow .workflow-language select, .returning-page .workflow-language select { max-width: 120px; } }
