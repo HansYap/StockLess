@@ -3683,3 +3683,33 @@ Object.assign(messages, savedWorkspaceMessages);
 
 Object.assign(messages, epic123Messages);
 Object.assign(messages, onboardingMessages);
+Object.assign(messages, {
+  "Readiness view": ["检查结果视图", "Paparan kesediaan"],
+  "Products": ["商品", "Produk"],
+  "Rows in your file": ["文件里的行", "Baris dalam fail anda"],
+  "of {0} rows will be used": ["行会被使用，共 {0} 行", "daripada {0} baris akan digunakan"],
+  "{0} rows used, {1} left out": ["使用 {0} 行，未使用 {1} 行", "{0} baris digunakan, {1} diketepikan"],
+  "Used in the plan": ["用于计划", "Digunakan dalam pelan"],
+  "Tidied for you (still used)": ["已帮您整理（仍会使用）", "Dikemas untuk anda (masih digunakan)"],
+  "Why {0} rows were left out": ["为什么有 {0} 行没用上", "Kenapa {0} baris diketepikan"],
+  "Why 1 row was left out": ["为什么有 1 行没用上", "Kenapa 1 baris diketepikan"],
+  "Repeated rows (latest kept)": ["重复的行（保留最新一行）", "Baris berulang (yang terbaru disimpan)"],
+  "Other reasons": ["其他原因", "Sebab lain"],
+  "Nothing to fix. Every row can be used.": ["没有需要修改的，每一行都能用。", "Tiada apa perlu dibaiki. Semua baris boleh digunakan."],
+  "Nothing to fix": ["不用修改", "Tiada apa perlu dibaiki"],
+  "Fix {0} rows in your file": ["在文件里修改这 {0} 行", "Baiki {0} baris dalam fail anda"],
+  "Fix 1 row in your file": ["在文件里修改这 1 行", "Baiki 1 baris dalam fail anda"],
+  "Download the list to see these rows": ["下载清单查看这些行", "Muat turun senarai untuk lihat baris ini"],
+  "Quantity isn't a number": ["数量不是数字", "Kuantiti bukan nombor"],
+  "No product code": ["没有商品代码", "Tiada kod produk"],
+  "Or continue now — these rows are simply left out of the plan.": ["也可以现在继续，这些行只是不会算进计划里。", "Atau teruskan sekarang — baris ini cuma tak dikira dalam pelan."],
+  "Show these rows in “What we found” ↓": ["在「检查结果」里查看这些行 ↓", "Lihat baris ini dalam “Apa yang kami jumpa” ↓"],
+  "See every finding as a table": ["用表格查看全部检查结果", "Lihat semua dapatan dalam jadual"],
+  "Issue": ["问题", "Masalah"],
+  "Reason and action": ["原因和处理方法", "Sebab dan tindakan"],
+  "Use": ["结果", "Hasil"],
+  "View affected rows": ["查看受影响的行", "Lihat baris terjejas"],
+  "1 affected row": ["1 行受影响", "1 baris terjejas"],
+  "{0} affected rows": ["{0} 行受影响", "{0} baris terjejas"],
+  "Affected rows for": ["以下项目的受影响行", "Baris terjejas untuk"],
+});

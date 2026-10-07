@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { t, useLanguage } from "../i18n/index.ts";
 import { ProductLabelList } from "../components/ProductLabelList.tsx";
+import { ReadinessIcon } from "./ReadinessIcon.tsx";
 import { previousCompleteWeekStarts, buildDemandHistoryEvidence, type ProductTimeline, type ReadinessSnapshot } from "../engine.ts";
 import { FOOD_CATEGORIES, type FoodCategory } from "../readiness/categories.ts";
 import { buildReadinessProducts, type ProductSummary, type ProductStatus } from "../readiness/model.ts";
@@ -36,11 +37,11 @@ export function ReadinessOverview({ snapshot, timelines, products: supplied }: {
   const openProduct = (product: ProductSummary) => { setSelected(product); dialog.current?.showModal(); };
   return <>
     <section className="rd-stats" aria-label={t("Product readiness summary")}>{(["ready", "review", "missing"] as const).map(item => <button className={"rd-stat rd-stat--" + item} type="button" key={item} aria-pressed={status === item} onClick={() => { setStatus(status === item ? null : item); setExpanded(false); }}>
-      <span className="rd-stat__icon" aria-hidden="true">{item === "ready" ? "✓" : item === "review" ? "!" : "×"}</span><span><b className="num rd-stat__number">{counts[item]}</b> <b>{t(item === "ready" ? "products ready" : item === "review" ? "need review" : "missing data")}</b><small>{t(NOTES[item])}</small></span>
+      <span className="rd-stat__icon"><ReadinessIcon name={item === "ready" ? "check" : item === "review" ? "warning" : "missing"} /></span><span><b className="num rd-stat__number">{counts[item]}</b> <b>{t(item === "ready" ? "products ready" : item === "review" ? "need review" : "missing data")}</b><small>{t(NOTES[item])}</small></span>
     </button>)}</section>
     <section className="rd-card rd-products" aria-labelledby="readiness-products-title">
       <div className="rd-products__head"><div><h2 id="readiness-products-title">{t("Products by category")}</h2><p>{t("Categories are suggested from product names. Products to check are listed first.")}</p><span className="sr-only">{derived.length} {t("products checked")}</span></div>
-        <label className="rd-search"><span aria-hidden="true">⌕</span><input type="search" value={search} onChange={event => { setSearch(event.currentTarget.value); setExpanded(false); }} placeholder={t("Search name or code")} aria-label={t("Search name or code")} /></label>
+        <label className="rd-search"><ReadinessIcon name="search" /><input type="search" value={search} onChange={event => { setSearch(event.currentTarget.value); setExpanded(false); }} placeholder={t("Search name or code")} aria-label={t("Search name or code")} /></label>
       </div>
       <div className="rd-tabs" role="tablist" aria-label={t("Food categories")}>{categories.map((item, index) => <button key={item ?? "all"} type="button" role="tab" id={"readiness-category-" + index} aria-selected={category === item} tabIndex={category === item ? 0 : -1} aria-controls="readiness-product-panel" onClick={() => { setCategory(item); setExpanded(false); }} onKeyDown={event => {
         const next = event.key === "ArrowRight" ? (index + 1) % categories.length : event.key === "ArrowLeft" ? (index + categories.length - 1) % categories.length : event.key === "Home" ? 0 : event.key === "End" ? categories.length - 1 : -1;
@@ -52,7 +53,7 @@ export function ReadinessOverview({ snapshot, timelines, products: supplied }: {
         <ProductLabelList labels={product.labels} shown={[product.name, product.code, product.pack]} />
         <div className="rd-product__facts"><div><small>{t("Last stock count")}</small><b className="num">{product.stock?.stockAsOfDate ?? "—"}</b></div><div><small>{t("Stock age")}</small><b>{product.stock?.freshness.ageDays === undefined ? "—" : t(String(product.stock.freshness.ageDays) + " days")}</b></div></div>
         <WeeklySales product={product} date={snapshot.analysisDate} />
-        <p className={"rd-product__note rd-product__note--" + product.status}>{t(product.reasons[0] ?? "Complete data, no major issues")}</p>
+        <p className={"rd-product__note rd-product__note--" + product.status}><ReadinessIcon name={product.status === "ready" ? "check" : "warning"} /><span>{t(product.reasons[0] ?? "Complete data, no major issues")}</span></p>
         <button type="button" className="btn btn--ghost btn--small" aria-label={t("View details") + ": " + product.name + " · " + product.code} onClick={() => openProduct(product)}>{t("View details →")}</button>
       </article>)}</div>
       {matches.length === 0 && <p className="rd-empty" role="status">{t("No matching products.")}</p>}
