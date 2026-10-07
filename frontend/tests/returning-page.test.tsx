@@ -12,27 +12,27 @@ const items: SavedDatasetSummary[] = [
 ];
 beforeEach(() => { vi.resetAllMocks(); setLanguage("en"); storage.listSavedDatasets.mockResolvedValue(items); });
 afterEach(() => setLanguage("en"));
-async function page() { render(<ReturningPage />); await screen.findByRole("link", { name: "Continue" }); }
+async function page() { render(<ReturningPage />); await screen.findByRole("link", { name: "Back to purchase plan" }); }
 function rows() { return Array.from(document.querySelectorAll(".returning-row")).map(row => within(row as HTMLElement).getByRole("heading").textContent); }
 
-it("continues the latest real dataset and preserves open, update and upload destinations", async () => {
+it("shows upload history and reuploads only the current file", async () => {
   await page();
-  expect(screen.getByRole("link", { name: "Continue" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
-  expect(screen.getByRole("link", { name: "Open September sales" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
-  expect(screen.getAllByRole("link", { name: "Update" })[0].getAttribute("href")).toBe("#update/recent%20%2F%20file");
-  expect(screen.getByRole("link", { name: "Upload a new file" }).getAttribute("href")).toBe("#workspace");
+  expect(screen.getByRole("link", { name: "Back to purchase plan" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
+  expect(screen.getByRole("link", { name: "View plan September sales" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
+  expect(screen.queryByRole("link", { name: "Update" })).toBeNull();
+  expect(screen.getByRole("link", { name: "Upload a new file" }).getAttribute("href")).toBe("#update/recent%20%2F%20file");
 });
 it("filters by file, dataset and shop while keeping the most recent card independent", async () => {
   await page();
-  const input = screen.getByRole("searchbox", { name: "Search datasets" });
+  const input = screen.getByRole("searchbox", { name: "Search uploads" });
   fireEvent.change(input, { target: { value: "  AUG.CSV " } });
   expect(rows()).toEqual(["August sales"]);
-  expect(screen.getByText("Showing 1 of 2 datasets")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Continue" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
+  expect(screen.getByText("Showing 1 of 2 uploads")).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Back to purchase plan" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
   fireEvent.change(input, { target: { value: "Corner Shop" } });
   expect(rows()).toEqual(["September sales"]);
   fireEvent.change(input, { target: { value: "missing" } });
-  expect(screen.getByRole("heading", { name: "No matching datasets" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "No matching uploads" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
   expect(rows()).toHaveLength(2);
   expect(document.activeElement).toBe(input);
@@ -53,27 +53,27 @@ it("requires confirmation before removing one dataset and refreshes the resume c
   expect(storage.removeSavedDataset).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Delete September sales" }));
   storage.listSavedDatasets.mockResolvedValue([items[1]]);
-  fireEvent.click(screen.getByRole("button", { name: "Remove dataset" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove upload" }));
   await waitFor(() => expect(storage.removeSavedDataset).toHaveBeenCalledWith(items[0].id));
-  await waitFor(() => expect(screen.getByRole("link", { name: "Continue" }).getAttribute("href")).toBe("#dataset/older"));
+  await waitFor(() => expect(screen.getByRole("link", { name: "Back to purchase plan" }).getAttribute("href")).toBe("#dataset/older"));
   expect(storage.clearEverything).not.toHaveBeenCalled();
 });
 it("keeps saved data visible after a failed delete and translates the new controls", async () => {
   await page();
   storage.removeSavedDataset.mockRejectedValue(new Error("storage unavailable"));
   fireEvent.click(screen.getByRole("button", { name: "Delete September sales" }));
-  fireEvent.click(screen.getByRole("button", { name: "Remove dataset" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove upload" }));
   expect(await screen.findByRole("alert")).toBeTruthy();
   expect(rows()).toHaveLength(2);
   act(() => setLanguage("ms"));
-  expect(screen.getByRole("searchbox", { name: "Cari set data" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Teruskan" })).toBeTruthy();
+  expect(screen.getByRole("searchbox", { name: "Cari muat naik" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Kembali ke pelan pembelian" })).toBeTruthy();
 });
 it("shows upload and empty states without creating example data", async () => {
   storage.listSavedDatasets.mockResolvedValue([]);
   render(<ReturningPage />);
-  await screen.findByRole("heading", { name: "A fresh start" });
-  expect(screen.queryByRole("link", { name: "Continue" })).toBeNull();
+  await screen.findByRole("heading", { name: "No uploads yet" });
+  expect(screen.queryByRole("link", { name: "Back to purchase plan" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Clear Everything" })).toBeNull();
   expect(screen.getAllByRole("link", { name: "Upload a new file" })).toHaveLength(2);
 });

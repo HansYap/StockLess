@@ -2,18 +2,18 @@ import { t, useLanguage } from "./i18n/index.ts";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { HomePage } from "./screens/HomePage.tsx";
 import { ReturningPage } from "./screens/ReturningPage.tsx";
-import { hasSavedDatasets } from "./storage/saved-datasets.ts";
+import { listSavedDatasets } from "./storage/saved-datasets.ts";
 import { datasetIdFromRoute, isWorkspaceRoute, startRouteFor } from "./visit-routing.ts";
 
 const Workspace = lazy(() => import("./App.tsx"));
 const currentRoute = () => window.location.hash || "#home";
 
-/** The landing page is the entry point; its start buttons choose the saved or new flow. */
+/** New visitors see the landing page; returning visitors resume their latest upload. */
 export default function Site() {
   const language = useLanguage();
-  const [route, setRoute] = useState(currentRoute);
+  const [route, setRoute] = useState(() => !window.location.hash || window.location.hash === "#home" ? "#entry" : currentRoute());
   const workspace = isWorkspaceRoute(route);
-  const returning = route === "#returning";
+  const returning = route === "#history" || route === "#returning";
 
   useEffect(() => {
     const navigate = () => setRoute(currentRoute());
@@ -22,14 +22,21 @@ export default function Site() {
   }, []);
 
   useEffect(() => {
-    if (route !== "#start") return;
+    if (route !== "#start" && route !== "#entry") return;
     let active = true;
-    void hasSavedDatasets().then((saved) => {
-      if (active) window.location.hash = startRouteFor(saved);
+    void listSavedDatasets().then((saved) => {
+      if (!active) return;
+      const destination = saved[0] ? startRouteFor(saved[0].id) : route === "#entry" ? "#home" : "#workspace";
+      window.history.replaceState(null, "", destination);
+      setRoute(destination);
     }).catch(() => {
       // Local storage may be unavailable (for example in an embedded browser).
       // Upload still works, so let the visitor continue as a new session.
-      if (active) window.location.hash = "#workspace";
+      if (active) {
+        const destination = route === "#entry" ? "#home" : "#workspace";
+        window.history.replaceState(null, "", destination);
+        setRoute(destination);
+      }
     });
     return () => { active = false; };
   }, [route]);
@@ -45,10 +52,10 @@ export default function Site() {
   }, [route, workspace, returning]);
 
   useEffect(() => {
-    document.title = t(workspace ? "StockLess | Your restocking workspace" : returning ? "StockLess | Welcome back" : "StockLess | Less food waste. Smarter restocking.");
+    document.title = t(workspace ? "StockLess | Your restocking workspace" : returning ? "StockLess | Upload history" : "StockLess | Less food waste. Smarter restocking.");
   }, [workspace, returning, language]);
 
-  if (route === "#start") return <main className="start-routing" role="status"><p>Opening StockLess…</p></main>;
+  if (route === "#start" || route === "#entry") return <main className="start-routing" role="status"><p>{t("Opening your workspace…")}</p></main>;
 
   if (returning) return <ReturningPage />;
 

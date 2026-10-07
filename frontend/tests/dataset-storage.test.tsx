@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { confirmIdentityMode, createEmptySession, setMapping, updateSessionMapping, type SessionEnvelope } from "../src/engine.ts";
 import { withStore } from "../src/storage/browser-db.ts";
-import { clearEverything, createSavedDataset, getSavedDataset, saveDatasetWork } from "../src/storage/saved-datasets.ts";
+import { clearEverything, createSavedDataset, getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork } from "../src/storage/saved-datasets.ts";
 
 // Exercise the real storage callers against an asynchronous browser database adapter.
 function browserDatabase(version: number, stores: Map<string, Map<IDBValidKey, unknown>>) {
@@ -29,6 +29,9 @@ function browserDatabase(version: number, stores: Map<string, Map<IDBValidKey, u
             return result;
           };
           return {
+            deleteIndex: vi.fn(), createIndex: vi.fn(),
+            delete: (id: IDBValidKey) => { records.delete(id); return request(undefined); },
+            count: () => request(records.size),
             get: (id: IDBValidKey) => request(records.get(id)),
             getAll: () => request([...records.values()]),
             add: (value: { id: string }) => { records.set(value.id, structuredClone(value)); return request(value.id); },
@@ -43,7 +46,7 @@ function browserDatabase(version: number, stores: Map<string, Map<IDBValidKey, u
   };
   const open = vi.fn((_name: string, nextVersion: number) => {
     const request = {
-      result: db, onupgradeneeded: null as ((event: { oldVersion: number }) => void) | null,
+      result: db, get transaction() { return { objectStore: (name: string) => db.transaction([name]).objectStore(name) }; }, onupgradeneeded: null as ((event: { oldVersion: number }) => void) | null,
       onsuccess: null as (() => void) | null,
     };
     queueMicrotask(() => {
@@ -83,7 +86,7 @@ describe("dataset-only browser storage", () => {
     ]);
     const database = browserDatabase(2, stores);
     expect(await getSavedDataset(saved.id)).toEqual(saved);
-    expect(database.open).toHaveBeenCalledWith("stockless", 3);
+    expect(database.open).toHaveBeenCalledWith("stockless", 4);
     expect(database.remove).toHaveBeenCalledExactlyOnceWith("mapping_templates");
     expect(database.create).not.toHaveBeenCalled();
     expect(stores.get("datasets")).toBe(datasets);
@@ -109,4 +112,34 @@ describe("dataset-only browser storage", () => {
     await clearEverything();
     expect(await withStore("datasets", "readonly", (store) => store.getAll())).toEqual([]);
   });
+});
+
+
+it("archives the previous file and keeps only the latest 12 uploads, regardless of plan edits", async () => {
+  const stores = new Map<string, Map<IDBValidKey, unknown>>();
+  browserDatabase(0, stores);
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    vi.setSystemTime(new Date("2026-09-01T00:00:00Z"));
+    const first = await createSavedDataset("Corner Shop", "First upload", importedDataset(), "2026-09-01");
+    await saveDatasetWork(first.id, { supplierTerms: { Vendor: "Case of 6" } });
+    for (let day = 2; day <= 13; day++) {
+      vi.setSystemTime(new Date(`2026-09-${String(day).padStart(2, "0")}T00:00:00Z`));
+      const imported = importedDataset();
+      const replacement = { ...imported, session: { ...imported.session, dataset: { ...imported.session.dataset!, sourceName: `sales-${day}.csv`, sourceSha256: `hash-${day}` } } };
+      await replaceSavedDataset(first.id, replacement);
+    }
+    const history = await listSavedDatasets();
+    expect(history).toHaveLength(12);
+    expect(stores.get("datasets")?.size).toBe(12);
+    expect(history[0].id).toBe(first.id);
+    expect(history[0].sourceName).toBe("sales-13.csv");
+    expect(history.at(-1)?.sourceName).toBe("sales-2.csv");
+    const archived = await getSavedDataset(history[1].id);
+    expect(archived?.envelope.session.dataset?.sourceName).toBe("sales-12.csv");
+    expect(archived?.supplierTerms).toEqual({ Vendor: "Case of 6" });
+    vi.setSystemTime(new Date("2026-10-07T00:00:00Z"));
+    await saveDatasetWork(history[1].id, { supplierTerms: { Vendor: "Edited older plan" } });
+    expect((await listSavedDatasets())[0].id).toBe(first.id);
+  } finally { vi.useRealTimers(); }
 });

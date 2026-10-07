@@ -5,6 +5,23 @@ import type {
 import type { PurchaseDrafts } from "../purchase-plan/model.ts";
 import { withStore, withTransaction } from "./browser-db.ts";
 
+export const UPLOAD_HISTORY_LIMIT = 12;
+
+/** Upload time, rather than plan edits, determines the current file and history order. */
+export function newestUploads<T extends Pick<SavedDataset, "createdAt">>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, UPLOAD_HISTORY_LIMIT);
+}
+
+function writeUpload(store: IDBObjectStore, saved: SavedDataset, previous?: SavedDataset): void {
+  if (previous) store.add({ ...previous, id: globalThis.crypto.randomUUID() });
+  store.put(saved);
+  const request = store.getAll() as IDBRequest<SavedDataset[]>;
+  request.onsuccess = () => {
+    const keep = new Set(newestUploads(request.result).map(item => item.id));
+    for (const item of request.result) if (!keep.has(item.id)) store.delete(item.id);
+  };
+}
+
 /** A saved workspace belongs to exactly one named shop and one named dataset. */
 export interface SavedDataset {
   readonly id: string;
@@ -92,7 +109,7 @@ export function summarizeSavedDataset(item: SavedDataset): SavedDatasetSummary {
 
 export async function listSavedDatasets(): Promise<readonly SavedDatasetSummary[]> {
   const items = await withStore<SavedDataset[]>("datasets", "readonly", (store) => store.getAll());
-  return items.map(summarizeSavedDataset).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return newestUploads(items).map(summarizeSavedDataset);
 }
 
 export async function hasSavedDatasets(): Promise<boolean> {
@@ -123,7 +140,10 @@ export async function createSavedDataset(
     readiness: null, forecast: null, purchaseDrafts: {}, supplierTerms: {}, decisions: [], outcomes: [],
   };
   try {
-    await withStore<IDBValidKey>("datasets", "readwrite", (store) => store.add(saved));
+    await withTransaction<void>(["datasets"], "readwrite", (transaction, result) => {
+      writeUpload(transaction.objectStore("datasets"), saved);
+      result(undefined);
+    });
   } catch (error) {
     if (error instanceof Error && error.name === "ConstraintError") throw new DatasetNameConflictError();
     throw error;
@@ -138,6 +158,7 @@ const pendingMutations = new Map<string, Promise<unknown>>();
 
 function mutateSavedDataset(
   id: string, change: (current: SavedDataset) => SavedDataset,
+  upload = false,
 ): Promise<SavedDataset> {
   const previous = pendingMutations.get(id) ?? Promise.resolve();
   const operation = previous.catch(() => undefined).then(() => withTransaction<SavedDataset>(["datasets"], "readwrite", (transaction, result) => {
@@ -147,7 +168,8 @@ function mutateSavedDataset(
       const current = request.result;
       if (!current) { transaction.abort(); return; }
       const next = change(current);
-      store.put(next);
+      if (upload) writeUpload(store, next, current);
+      else store.put(next);
       result(next);
     };
   }));
@@ -166,17 +188,19 @@ export function saveDatasetWork(id: string, work: Partial<SavedWork>): Promise<S
 }
 
 /** Replaces the parsed file only after import succeeds. History and planning edits remain. */
-export function replaceDatasetContents(current: SavedDataset, replacement: SessionEnvelope, now = new Date().toISOString(), analysisDate = current.analysisDate): SavedDataset {
+export function replaceDatasetContents(current: SavedDataset, replacement: SessionEnvelope, now = new Date().toISOString(), analysisDate = current.analysisDate, datasetInput?: string): SavedDataset {
   requireImport(replacement);
+  const datasetName = name(datasetInput ?? replacement.session.dataset!.sourceName.replace(/\.[^.]+$/, ""));
   return {
     ...current, envelope: replacement, readiness: null, forecast: null,
-    analysisDate, dateConfirmations: [], updatedAt: now,
+    datasetName, nameKey: key(datasetName),
+    analysisDate, dateConfirmations: [], createdAt: now, updatedAt: now,
   };
 }
 
-export function replaceSavedDataset(id: string, replacement: SessionEnvelope, analysisDate?: string): Promise<SavedDataset> {
+export function replaceSavedDataset(id: string, replacement: SessionEnvelope, analysisDate?: string, datasetName?: string): Promise<SavedDataset> {
   requireImport(replacement);
-  return mutateSavedDataset(id, (current) => replaceDatasetContents(current, replacement, new Date().toISOString(), analysisDate));
+  return mutateSavedDataset(id, (current) => replaceDatasetContents(current, replacement, new Date().toISOString(), analysisDate, datasetName), true);
 }
 
 export function recordDecision(id: string, decision: SavedDecision): Promise<SavedDataset> {

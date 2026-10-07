@@ -1,5 +1,5 @@
-export function startRouteFor(hasDatasets: boolean): "#returning" | "#workspace" {
-  return hasDatasets ? "#returning" : "#workspace";
+export function startRouteFor(datasetId?: string): string {
+  return datasetId ? `#dataset/${encodeURIComponent(datasetId)}` : "#workspace";
 }
 
 export function isWorkspaceRoute(route: string): boolean {

@@ -81,13 +81,12 @@ it("sample offers two supplier comparisons and adopts only an explicitly chosen 
   expect(a.getByRole("alert")).toBeTruthy();
 });
 
-it("storage explanation states purposes and browser loss, then opens management", () => {
-  const onManage = vi.fn();
-  render(<StorageExplanation onManage={onManage} />);
+it("storage explanation states retention, purposes and browser loss", () => {
+  render(<StorageExplanation />);
   fireEvent.click(screen.getByText("How saved information is used"));
   expect(screen.getByText(/Settings: column matches/)).toBeTruthy();
   expect(screen.getByText(/Decisions: a copy/)).toBeTruthy();
   expect(screen.getByText(/may be lost when browser data is cleared/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button",{name:"Inspect and remove saved information"}));
-  expect(onManage).toHaveBeenCalledOnce();
+  expect(screen.getByText(/Your latest 12 uploads/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Inspect and remove saved information" })).toBeNull();
 });

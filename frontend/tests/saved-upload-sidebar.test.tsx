@@ -82,7 +82,7 @@ it("adds saved-dataset navigation and graphics to reupload, without saved manage
   expect(within(sidebar).getByText("September sales")).toBeTruthy();
   expect(within(sidebar).getByText("Corner Shop")).toBeTruthy();
   expect(within(sidebar).getByRole("button", { name: "Reupload" }).getAttribute("aria-current")).toBe("page");
-  expect(within(sidebar).getByRole("link", { name: "Switch dataset" }).getAttribute("href")).toBe("#returning");
+  expect(within(sidebar).getByRole("link", { name: "Upload history" }).getAttribute("href")).toBe("#history");
   expect(screen.queryByText("Manage saved information")).toBeNull();
   expect(screen.queryByRole("button", { name: "Use sample file" })).toBeNull();
   expect(within(screen.getByRole("navigation", { name: "Progress" })).getAllByRole("listitem")).toHaveLength(3);
@@ -90,7 +90,7 @@ it("adds saved-dataset navigation and graphics to reupload, without saved manage
 });
 it("keeps new uploads without a sidebar even when this device has saved datasets", async () => {
   render(<App />);
-  await screen.findByText("Manage saved information");
+  await screen.findByRole("heading", { name: "Upload your sales file" });
   expect(screen.getByRole("heading", { name: "Upload your sales file" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Use sample file" })).toBeTruthy();
   expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
@@ -130,14 +130,15 @@ function sidebar() { return screen.getByRole("complementary", { name: "Workspace
 function noSidebar() { expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull(); }
 
 it("keeps a newly saved dataset without a sidebar until all three preparation steps are complete", async () => {
+  vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<App />);
   fireEvent.click(screen.getByText("Import test replacement"));
   await screen.findByRole("heading", { name: "Test mapping" });
   noSidebar();
   fireEvent.change(screen.getByRole("combobox", { name: "Shop name" }), { target: { value: "New shop" } });
-  fireEvent.change(screen.getByRole("textbox", { name: "Dataset name" }), { target: { value: "New sales" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save dataset", exact: true }));
-  await waitFor(() => expect(screen.queryByRole("button", { name: "Save dataset", exact: true })).toBeNull());
+  fireEvent.change(screen.getByRole("textbox", { name: "Upload name" }), { target: { value: "New sales" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save upload", exact: true }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Save upload", exact: true })).toBeNull());
   noSidebar();
   fireEvent.click(screen.getByText("Check test readiness"));
   await screen.findByRole("heading", { name: "Test readiness" });
@@ -194,13 +195,22 @@ it("keeps reupload and results destinations when the page is refreshed", async (
   expect(window.location.hash).toBe("#dataset/existing");
 });
 
-it("starts the sidebar flow when update is selected from saved information management", async () => {
+it("offers upload history through the sidebar without the old dataset picker", async () => {
+  render(<App initialDatasetId="existing" />);
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  expect(within(sidebar()).getByRole("link", { name: "Upload history" }).getAttribute("href")).toBe("#history");
+  expect(screen.queryByText("Manage saved information")).toBeNull();
+});
+
+it("uses a saved upload as the current file rather than adding a second store dataset", async () => {
+  vi.spyOn(window, "confirm").mockReturnValue(true);
   render(<App />);
-  await screen.findByText("Manage saved information");
-  fireEvent.click(screen.getByText("Manage saved information"));
-  fireEvent.click(screen.getByRole("button", { name: "Update with a file" }));
-  await screen.findByRole("heading", { name: "Reupload your sales file" });
-  expect(sidebar()).toBeTruthy();
+  fireEvent.click(screen.getByText("Import test replacement"));
+  await screen.findByRole("heading", { name: "Test mapping" });
+  fireEvent.click(screen.getByRole("button", { name: "Save upload", exact: true }));
+  await waitFor(() => expect(replaceSavedDataset).toHaveBeenCalledOnce());
+  expect(vi.mocked(replaceSavedDataset).mock.calls[0][0]).toBe("existing");
+  expect(createSavedDataset).not.toHaveBeenCalled();
 });
 
 it.each(["missing", "old policy", "different file"])("refreshes %s evidence before displaying a returning purchase plan", async kind => {
@@ -224,16 +234,17 @@ it("refreshes a mismatched forecast without repeating the valid readiness check"
 });
 
 it("offers saving on an unsaved purchase plan and stores the already calculated results", async () => {
+  vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<App />);
   fireEvent.click(screen.getByText("Import test replacement"));
   fireEvent.click(await screen.findByText("Check test readiness"));
   fireEvent.click(await screen.findByText("Calculate test plan"));
   await screen.findByRole("heading", { name: "Saved purchase plan" });
   expect(within(sidebar()).getByText(/This session only/)).toBeTruthy();
-  expect(screen.getByText("Save this dataset to reopen this purchase plan and its results on your next visit.")).toBeTruthy();
+  expect(screen.getByText("Save this upload to reopen your purchase plan on your next visit.")).toBeTruthy();
   fireEvent.change(screen.getByRole("combobox", { name: "Shop name" }), { target: { value: "New shop" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save dataset", exact: true }));
-  await waitFor(() => expect(screen.queryByRole("button", { name: "Save dataset", exact: true })).toBeNull());
+  fireEvent.click(screen.getByRole("button", { name: "Save upload", exact: true }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Save upload", exact: true })).toBeNull());
   expect(saveDatasetWork).toHaveBeenCalledWith("new", expect.objectContaining({ readiness: evidence().snapshot, forecast: evidence().forecast }));
 });
 

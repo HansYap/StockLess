@@ -1,7 +1,7 @@
 import { t, useLanguage } from "./i18n/index.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
-import { SavedDataControls, SaveDatasetControls } from "./components/SavedDataControls.tsx";
+import { SaveDatasetControls } from "./components/SavedDataControls.tsx";
 import { StorageExplanation } from "./components/StorageExplanation.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
@@ -43,9 +43,8 @@ import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
 import { confirmCurrentMapping } from "./mapping-confirmation.ts";
 import {
-  clearEverything, createSavedDataset, findSavedDataset, getSavedDataset,
-  listSavedDatasets, recordDecision, recordOutcome, removeSavedDataset,
-  removeSavedDecision, removeSavedOutcome, removeSavedPlan,
+  createSavedDataset, getSavedDataset,
+  listSavedDatasets, recordDecision,
   replaceSavedDataset, saveDatasetWork, summarizeSavedDataset,
   type SavedDataset, type SavedDatasetSummary, type SavedWork,
 } from "./storage/saved-datasets.ts";
@@ -80,7 +79,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [proposals, setProposals] = useState<MappingProposalResult | null>(null);
   const [step, setStep] = useState<StepId>(1);
   const [showImpact, setShowImpact] = useState(false);
-  const [showSavedManagement, setShowSavedManagement] = useState(false);
   const [reached, setReached] = useState<StepId>(1);
   const [mappingUndo, setMappingUndo] = useState<MappingState | null>(null);
   const [mappingError, setMappingError] = useState<string | null>(null);
@@ -121,10 +119,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
   const refreshSavedDatasets = useCallback(async () => {
     setSavedDatasets(await listSavedDatasets());
-  }, []);
-
-  const inspectSavedDataset = useCallback(async (id: string) => {
-    setSelectedSaved((await getSavedDataset(id)) ?? null);
   }, []);
 
   useEffect(() => {
@@ -265,7 +259,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
   const openSavedDataset = useCallback(async (id: string, destination: "purchase" | "impact" = "purchase") => {
     const saved = await getSavedDataset(id);
-    if (!saved) { window.location.hash = "returning"; return; }
+    if (!saved) { window.location.hash = "history"; return; }
     window.history.replaceState(null, "", `#dataset/${encodeURIComponent(id)}`);
     readinessAbort.current?.abort();
     forecastAbort.current?.abort();
@@ -365,7 +359,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     let cancelled = false;
     void getSavedDataset(updateTargetId).then(saved => {
       if (cancelled) return;
-      if (!saved) { window.location.hash = "returning"; return; }
+      if (!saved) { window.location.hash = "history"; return; }
       setUploadTarget(summarizeSavedDataset(saved));
       setWorkspaceActive(true);
       setSessionNotice("Upload the replacement file for the selected dataset.");
@@ -402,12 +396,12 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
     const target = updateTargetId ? await getSavedDataset(updateTargetId) : undefined;
     if (updateTargetId && !target) throw new Error("The dataset selected for update is no longer saved.");
-    if (target && !window.confirm(`Replace ${target.shopName} / ${target.datasetName} with ${sourceName}? Earlier decisions and outcomes will remain.`)) {
+    if (target && !window.confirm(`Use ${sourceName} as your current sales file? The previous upload will stay in Upload History (up to 12 uploads).`)) {
       return;
     }
     const proposed = await proposeMappings(parsed, createLocalSemanticScorer(signal));
     const importedEnvelope = updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed));
-    if (target) await replaceSavedDataset(target.id, importedEnvelope, malaysiaDate());
+    const uploaded = target ? await replaceSavedDataset(target.id, importedEnvelope, malaysiaDate()) : undefined;
     resetReadinessEvidence();
     setProposals(proposed);
     setMappingUndo(null);
@@ -418,10 +412,10 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setProductKey(null);
     setAnalysisDate(malaysiaDate());
     setActiveSavedId(target?.id ?? null);
-    setWorkspaceInfo({ datasetName: target?.datasetName ?? parsed.sourceName, shopName: target?.shopName ?? "", rowCount: parsed.rows.length });
+    setWorkspaceInfo({ datasetName: uploaded?.datasetName ?? parsed.sourceName, shopName: target?.shopName ?? "", rowCount: parsed.rows.length });
     setUpdateTargetId(null);
     if (target) {
-      setUploadTarget(summarizeSavedDataset({ ...target, envelope: importedEnvelope }));
+      setUploadTarget(summarizeSavedDataset(uploaded!));
       window.history.replaceState(null, "", `#dataset/${encodeURIComponent(target.id)}`);
       setPurchaseDrafts(target.purchaseDrafts);
       setSupplierOrderDrafts(target.supplierOrderDrafts ?? {});
@@ -503,10 +497,11 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
   const handleSaveDataset = useCallback(async (shop: string, datasetName: string) => {
     try {
-      const existing = await findSavedDataset(shop, datasetName);
+      const latest = (await listSavedDatasets())[0];
+      const existing = latest ? await getSavedDataset(latest.id) : undefined;
       const saved = existing
-        ? window.confirm(`Update ${existing.shopName} / ${existing.datasetName} with ${dataset?.sourceName}? Its earlier decisions and outcomes will remain.`)
-          ? await replaceSavedDataset(existing.id, envelope, analysisDate) : null
+        ? window.confirm(`Use ${dataset?.sourceName} as your current sales file? The previous upload will stay in Upload History (up to 12 uploads).`)
+          ? await replaceSavedDataset(existing.id, envelope, analysisDate, datasetName) : null
         : await createSavedDataset(shop, datasetName, envelope, analysisDate);
       if (!saved) return;
       await saveDatasetWork(saved.id, { envelope, analysisDate, dateConfirmations, readiness, forecast, purchaseDrafts, supplierOrderDrafts });
@@ -521,47 +516,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       setSaveError(error instanceof Error ? error.message : "Dataset could not be saved.");
     }
   }, [analysisDate, dataset?.sourceName, envelope, refreshSavedDatasets, dateConfirmations, readiness, forecast, purchaseDrafts, supplierOrderDrafts, step]);
-
-  const handleDeleteDataset = useCallback(async (id: string) => {
-    const item = savedDatasets.find((entry) => entry.id === id);
-    if (!item || !window.confirm(`Delete ${item.shopName} / ${item.datasetName}? Its ${item.rowCount} records, settings, ${item.planCount} plans, ${item.decisionCount} decisions and ${item.outcomeCount} outcomes will be removed. Other datasets remain available.`)) return;
-    try {
-      await removeSavedDataset(id);
-      if (activeSavedId === id) handleClearSession();
-      if (selectedSaved?.id === id) setSelectedSaved(null);
-      await refreshSavedDatasets();
-    } catch { setSaveError("The dataset could not be deleted. Retry the deletion."); }
-  }, [activeSavedId, handleClearSession, refreshSavedDatasets, savedDatasets, selectedSaved?.id]);
-
-  const handleClearEverything = useCallback(async () => {
-    if (!window.confirm("Clear Everything? All saved datasets, records, settings, plans, decisions and outcomes will be removed. This cannot be undone.")) return;
-    try {
-      await clearEverything();
-      try { localStorage.removeItem("stockless.language"); } catch { /* Browser preferences may be disabled. */ }
-      handleClearSession();
-      setSelectedSaved(null);
-      await refreshSavedDatasets();
-      setSessionNotice("Nothing saved. Start by uploading a dataset.");
-    } catch { setSaveError("Saved information could not be cleared. Retry Clear Everything."); }
-  }, [handleClearSession, refreshSavedDatasets]);
-
-  const updateSelected = useCallback(async (operation: () => Promise<SavedDataset>) => {
-    const retry = async () => {
-      const saved = await operation();
-      setSelectedSaved(saved);
-      setSaveError(null);
-      retrySave.current = null;
-      await refreshSavedDatasets();
-    };
-    try {
-      await retry();
-      return true;
-    } catch {
-      retrySave.current = retry;
-      setSaveError("The latest change could not be saved. Retry the action.");
-      return false;
-    }
-  }, [refreshSavedDatasets]);
 
   const handleSaveDecision = useCallback(async () => {
     if (!activeSavedId || !readiness || !forecast) return;
@@ -617,9 +571,9 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const reportMetadata = correctionReportMetadata(envelope.session, analysisDate);
 
   const beginReupload = () => {
-    const id = activeSavedId ?? uploadTarget?.id ?? null;
-    const info = workspaceDataset;
-    const target = uploadTarget ?? savedDatasets.find(item => item.id === id) ?? null;
+    const id = savedDatasets[0]?.id ?? activeSavedId ?? uploadTarget?.id ?? null;
+    const target = savedDatasets.find(item => item.id === id) ?? uploadTarget ?? null;
+    const info = target ?? workspaceDataset;
     readinessAbort.current?.abort();
     forecastAbort.current?.abort();
     readinessRun.current += 1;
@@ -663,7 +617,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       sourceName={dataset?.sourceName}
       notice={updateTargetId || step === 2 || step === 3 || (step === 4 && !showImpact) ? null : sessionNotice}
       workflowStyle={workspaceActive || step !== 4 || !showImpact}
-      onClear={dataset ? handleClearSession : undefined}
+      onClear={dataset ? workspaceActive ? beginReupload : handleClearSession : undefined}
       workspaceSidebar={workspaceActive ? {
         dataset: workspaceDataset,
         saved: Boolean(activeSavedId || updateTargetId || uploadTarget),
@@ -674,51 +628,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       } : undefined}
     >
       {saveError && <p role="alert">{saveError} {retrySave.current && <button type="button" onClick={() => void retrySave.current?.()}>Retry</button>}</p>}
-      {!showImpact && <StorageExplanation onManage={() => { setShowSavedManagement(true); goTo(1); }} />}
-      {step === 1 && (!updateTargetId || showSavedManagement) && (savedDatasets.length > 0 || showSavedManagement) && <details className="saved-management" open={showSavedManagement} onToggle={event => setShowSavedManagement(event.currentTarget.open)}><summary>{t("Manage saved information")}</summary><SavedDataControls
-        items={savedDatasets} activeId={activeSavedId} selected={selectedSaved}
-        onInspect={(id) => void inspectSavedDataset(id).catch(() => setSaveError("Saved details could not be read."))}
-        onOpen={(id) => void openSavedDataset(id).catch(() => setSaveError("The dataset could not be opened."))}
-        onUpdate={(id) => { setUpdateTargetId(id); setSessionNotice("Upload the replacement file for the selected dataset."); }}
-        onDelete={(id) => void handleDeleteDataset(id)}
-        onClear={() => void handleClearEverything()}
-        onDeletePlan={(key) => {
-          if (!selectedSaved || !window.confirm(`Delete the plan for ${key} from ${selectedSaved.shopName} / ${selectedSaved.datasetName}?`)) return;
-          void updateSelected(() => removeSavedPlan(selectedSaved.id, key));
-          if (activeSavedId === selectedSaved.id) setPurchaseDrafts((current) => {
-            const next = { ...current }; delete next[key]; return next;
-          });
-        }}
-        onDeleteDecision={(id) => {
-          const decision = selectedSaved?.decisions.find((item) => item.id === id);
-          if (!selectedSaved || !decision || !window.confirm(`Delete ${decision.note ?? `decision from ${decision.recordedAt}`} and its linked outcomes from ${selectedSaved.shopName} / ${selectedSaved.datasetName}?`)) return;
-          void updateSelected(() => removeSavedDecision(selectedSaved.id, id));
-        }}
-        onDeleteOutcome={(id) => {
-          const outcome = selectedSaved?.outcomes.find((item) => item.id === id);
-          if (!selectedSaved || !outcome || !window.confirm(`Delete outcome ${JSON.stringify(outcome.details)} from ${selectedSaved.shopName} / ${selectedSaved.datasetName}?`)) return;
-          void updateSelected(() => removeSavedOutcome(selectedSaved.id, id));
-        }}
-        onSaveOutcome={async (description, decisionId) => {
-          if (!selectedSaved) return false;
-          const outcome = { id: globalThis.crypto.randomUUID(), recordedAt: new Date().toISOString(), decisionId, details: { description } };
-          return updateSelected(() => recordOutcome(selectedSaved.id, {
-            ...outcome,
-          }));
-        }}
-        onSaveSupplierTerm={async (supplier, terms) => {
-          if (!selectedSaved) return false;
-          return updateSelected(() => saveDatasetWork(selectedSaved.id, {
-            supplierTerms: { ...selectedSaved.supplierTerms, [supplier.trim()]: terms.trim() },
-          }));
-        }}
-        onDeleteSupplierTerm={(supplier) => {
-          if (!selectedSaved || !window.confirm(`Delete supplier terms for ${supplier} from ${selectedSaved.shopName} / ${selectedSaved.datasetName}?`)) return;
-          const next = { ...selectedSaved.supplierTerms };
-          delete next[supplier];
-          void updateSelected(() => saveDatasetWork(selectedSaved.id, { supplierTerms: next }));
-        }}
-      /></details>}
+      {!showImpact && <StorageExplanation />}
       {t(step === 1 && (
         <UploadScreen
           onSource={handleSource}
@@ -795,14 +705,14 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
           forecast={forecast}
           drafts={purchaseDrafts}
           onBack={() => setShowImpact(false)}
-          onNew={handleClearSession}
+          onNew={beginReupload}
         />
       ))}
 
       {t(step === 4 && readiness && forecast && !showImpact && (
         <>
         {dataset?.sourceMode === "user" && !activeSavedId && <div className="workspace-save">
-          <p>{t("Save this dataset to reopen this purchase plan and its results on your next visit.")}</p>
+          <p>{t("Save this upload to reopen your purchase plan on your next visit.")}</p>
           <SaveDatasetControls defaultName={dataset.sourceName.replace(/\.[^.]+$/, "")}
             shops={[...new Set(savedDatasets.map(item => item.shopName))]} onSave={handleSaveDataset} />
         </div>}

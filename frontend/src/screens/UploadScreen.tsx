@@ -247,7 +247,7 @@ export function UploadScreen({
         <div className="upload-wrap upload-hero__inner">
           <p className="upload-hero__eyebrow"><span aria-hidden="true">🌱</span> {t("Step 1 of 3")}</p>
           <h1>{t(updating ? "Reupload your sales file" : "Upload your sales file")}</h1>
-          <p className="upload-hero__lede">{t("Use the CSV or Excel export from your POS, marketplace or spreadsheet. Column names don't need to match ours.")}</p>
+          <p className="upload-hero__lede">{t(updating ? "Upload one CSV or Excel sales file for your store. Your previous file stays in Upload History, up to 12 uploads." : "Use the CSV or Excel export from your POS, marketplace or spreadsheet. Column names don't need to match ours.")}</p>
         </div>
       </header>
       <main className="upload-wrap upload-main">

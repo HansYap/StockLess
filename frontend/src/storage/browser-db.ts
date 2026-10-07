@@ -7,12 +7,12 @@
  */
 
 const DB_NAME = "stockless";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export type StoreName = "datasets";
 
 /** Upgrades browser storage while preserving saved dataset work. */
-function upgrade(db: IDBDatabase, oldVersion: number): void {
+function upgrade(db: IDBDatabase, oldVersion: number, transaction: IDBTransaction): void {
   if (oldVersion < 2) {
     const datasets = db.createObjectStore("datasets", { keyPath: "id" });
     datasets.createIndex("shop_and_name", ["shopKey", "nameKey"], { unique: true });
@@ -20,6 +20,11 @@ function upgrade(db: IDBDatabase, oldVersion: number): void {
   // Retire standalone column templates while preserving every saved dataset.
   if (oldVersion < 3 && db.objectStoreNames.contains("mapping_templates")) {
     db.deleteObjectStore("mapping_templates");
+  }
+  if (oldVersion < 4) {
+    const datasets = transaction.objectStore("datasets");
+    datasets.deleteIndex("shop_and_name");
+    datasets.createIndex("shop_and_name", ["shopKey", "nameKey"]);
   }
 }
 
@@ -31,7 +36,7 @@ export function withTransaction<T>(
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const opening = indexedDB.open(DB_NAME, DB_VERSION);
-    opening.onupgradeneeded = (event) => upgrade(opening.result, event.oldVersion);
+    opening.onupgradeneeded = (event) => upgrade(opening.result, event.oldVersion, opening.transaction!);
     opening.onerror = () => reject(opening.error);
     opening.onsuccess = () => {
       const db = opening.result;
@@ -59,7 +64,7 @@ export function withStore<T>(
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const opening = indexedDB.open(DB_NAME, DB_VERSION);
-    opening.onupgradeneeded = (event) => upgrade(opening.result, event.oldVersion);
+    opening.onupgradeneeded = (event) => upgrade(opening.result, event.oldVersion, opening.transaction!);
     opening.onerror = () => reject(opening.error);
     opening.onsuccess = () => {
       const db = opening.result;

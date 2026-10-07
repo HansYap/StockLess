@@ -47,12 +47,12 @@ export function SavedWorkspaceSidebar({ dataset, saved = true, currentSection = 
       </nav>
     </div>
     <div className="saved-sidebar__bottom">
-      <section className="saved-sidebar__dataset" aria-label={t("Current dataset")}>
-        <p className="saved-sidebar__eyebrow">{t("Current dataset")}</p>
+      <section className="saved-sidebar__dataset" aria-label={t("Viewing upload")}>
+        <p className="saved-sidebar__eyebrow">{t("Viewing upload")}</p>
         <p className="saved-sidebar__name">{dataset.datasetName}</p>
         {dataset.shopName && <p className="saved-sidebar__meta">{dataset.shopName}</p>}
         <p className="saved-sidebar__meta">{dataset.rowCount.toLocaleString(getLocale())} {t("rows")} · {t(saved ? "Available on this device" : "This session only")}</p>
-        <a className="saved-sidebar__switch" href="#returning">{t("Switch dataset")}<Icon name="arrow" /></a>
+        <a className="saved-sidebar__switch" href="#history">{t("Upload history")}<Icon name="arrow" /></a>
       </section>
       <p className="saved-sidebar__privacy"><Icon name="lock" /><span>{t("Your data stays with you.")}<br />{t("No account needed.")}</span></p>
     </div>

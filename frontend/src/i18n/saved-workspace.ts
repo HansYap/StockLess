@@ -1,4 +1,13 @@
 export const savedWorkspaceMessages: Record<string, readonly [string, string]> = {
+  "Upload history": ["上传历史", "Sejarah muat naik"],
+  "StockLess | Upload history": ["StockLess | 上传历史", "StockLess | Sejarah muat naik"],
+  "Viewing upload": ["正在查看的上传", "Muat naik yang dilihat"],
+  "Save this upload": ["保存此次上传", "Simpan muat naik ini"],
+  "Save upload": ["保存上传", "Simpan muat naik"],
+  "Upload name": ["上传名称", "Nama muat naik"],
+  "Save this upload to reopen your purchase plan on your next visit.": ["保存此次上传，下次即可打开采购计划。", "Simpan muat naik ini untuk membuka pelan pembelian pada lawatan seterusnya."],
+  "Upload one CSV or Excel sales file for your store. Your previous file stays in Upload History, up to 12 uploads.": ["为您的商店上传一个CSV或Excel销售文件。之前的文件将保留在上传历史中，最多12次上传。", "Muat naik satu fail jualan CSV atau Excel untuk kedai anda. Fail terdahulu kekal dalam Sejarah Muat Naik, sehingga 12 muat naik."],
+  "Your latest 12 uploads are kept on this device. Each new upload replaces the current sales file; the oldest upload is removed when history is full.": ["最近12次上传保留在此设备上。新上传会替换当前销售文件；历史已满时将删除最早的上传。", "12 muat naik terkini disimpan pada peranti ini. Muat naik baharu menggantikan fail jualan semasa; muat naik paling lama dipadam apabila sejarah penuh."],
   "Your workspace": ["你的工作区", "Ruang kerja anda"],
   "Dataset sections": ["数据集功能", "Bahagian set data"],
   "Workspace navigation": ["工作区导航", "Navigasi ruang kerja"],

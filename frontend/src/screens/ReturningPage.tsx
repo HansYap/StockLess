@@ -22,7 +22,7 @@ function ReturningIcon({ name }: { readonly name: keyof typeof iconPaths }) {
   return <svg className="returning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={iconPaths[name]} /></svg>;
 }
 
-/** The supplied returning-user design, connected to real saved datasets. */
+/** Upload history for one store, opened from the workspace sidebar. */
 export function ReturningPage() {
   const language = useLanguage();
   const copy = (key: keyof typeof returningMessages.en) => returningMessages[language][key];
@@ -68,14 +68,14 @@ export function ReturningPage() {
     } catch { setError("deleteError"); closeDialog(); }
     finally { setBusy(false); }
   };
-  const recent = [...datasets].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+  const recent = [...datasets].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   const search = query.trim().toLocaleLowerCase(getLocale());
   const shown = datasets.filter(item => [item.datasetName, item.sourceName, item.shopName]
     .some(value => value.toLocaleLowerCase(getLocale()).includes(search)))
     .sort((a, b) => sort === "name" ? a.datasetName.localeCompare(b.datasetName, getLocale())
-      : sort === "rows" ? b.rowCount - a.rowCount : b.updatedAt.localeCompare(a.updatedAt));
+      : sort === "rows" ? b.rowCount - a.rowCount : b.createdAt.localeCompare(a.createdAt));
   const href = (item: SavedDatasetSummary) => `#dataset/${encodeURIComponent(item.id)}`;
-  const date = (item: SavedDatasetSummary) => new Date(item.updatedAt).toLocaleDateString(getLocale(), { day: "numeric", month: "short", year: "numeric" });
+  const date = (item: SavedDatasetSummary) => new Date(item.createdAt).toLocaleDateString(getLocale(), { day: "numeric", month: "short", year: "numeric" });
   const meta = (item: SavedDatasetSummary) => `${item.rowCount.toLocaleString(getLocale())} ${copy("rows")} · ${date(item)}`;
   return <div className="returning-page">
     <WorkspaceDecor />
@@ -99,9 +99,9 @@ export function ReturningPage() {
               <div className="returning-resume__bottom"><span className="returning-last-step">{recent.shopName} · {copy("lastSaved")} <strong>{date(recent)}</strong></span><a className="returning-btn returning-btn--primary" href={href(recent)}>{copy("continue")}<ReturningIcon name="arrow" /></a></div>
             </> : <div className="returning-resume__empty"><h2>{copy("ready")}</h2><p>{copy("savedAppear")}</p></div>}
           </section>
-          <section className="returning-new-file"><ReturningIcon name="upload" /><h3>{copy("newFile")}</h3><p>{copy("newFileLead")}</p><a className="returning-btn" href="#workspace"><ReturningIcon name="plus" />{copy("upload")}</a></section>
+          <section className="returning-new-file"><ReturningIcon name="upload" /><h3>{copy("newFile")}</h3><p>{copy("newFileLead")}</p><a className="returning-btn" href={recent ? `#update/${encodeURIComponent(recent.id)}` : "#workspace"}><ReturningIcon name="plus" />{copy("upload")}</a></section>
         </div>
-        <div className="returning-section-title"><h2 id="returning-datasets-title">{copy("datasets")}<span className="returning-count">{datasets.length.toLocaleString(getLocale())}</span></h2><span className="returning-privacy"><ReturningIcon name="lock" />{copy("privacy")}</span></div>
+        <div className="returning-section-title"><h2 id="returning-datasets-title">{copy("datasets")}<span className="returning-count">{datasets.length.toLocaleString(getLocale())} / 12</span></h2><span className="returning-privacy"><ReturningIcon name="lock" />{copy("privacy")}</span></div>
         <section className="returning-card returning-files" aria-labelledby="returning-datasets-title" aria-busy={loading}>
           <div className="returning-toolbar">
             <label className="returning-search"><ReturningIcon name="search" /><input ref={searchRef} type="search" aria-label={copy("search")} placeholder={copy("searchPlaceholder")} value={query} onChange={event => setQuery(event.target.value)} /></label>
@@ -110,8 +110,8 @@ export function ReturningPage() {
           {loading ? <p className="returning-empty" role="status">{copy("loading")}</p> : shown.length > 0 ? <div className="returning-list">{shown.map(item => <article className="returning-row" key={item.id}>
             <span className="returning-file-icon"><ReturningIcon name="file" /></span>
             <div className="returning-row__details"><h3><a href={href(item)}>{item.datasetName}</a></h3><p className="returning-file-meta">{meta(item)}</p><p className="returning-source">{item.shopName} · {item.sourceName}</p></div>
-            <div className="returning-row__status"><span className="returning-pill returning-pill--neutral">{copy(item.planCount > 0 ? "savedPlans" : "savedDataset")}</span></div>
-            <div className="returning-row__actions"><a className="returning-btn" aria-label={`${copy("open")} ${item.datasetName}`} href={href(item)}>{copy("open")}<ReturningIcon name="arrow" /></a><a className="returning-update" href={`#update/${encodeURIComponent(item.id)}`}>{copy("update")}</a><button className="returning-delete" type="button" disabled={busy} aria-label={`${copy("delete")} ${item.datasetName}`} onClick={() => setPending(item)}><ReturningIcon name="trash" /></button></div>
+            <div className="returning-row__status"><span className="returning-pill returning-pill--neutral">{copy(item.id === recent?.id ? "resume" : "savedDataset")}</span></div>
+            <div className="returning-row__actions"><a className="returning-btn" aria-label={`${copy("open")} ${item.datasetName}`} href={href(item)}>{copy("open")}<ReturningIcon name="arrow" /></a><button className="returning-delete" type="button" disabled={busy} aria-label={`${copy("delete")} ${item.datasetName}`} onClick={() => setPending(item)}><ReturningIcon name="trash" /></button></div>
           </article>)}</div> : <div className="returning-empty"><h3>{copy(search ? "noMatches" : "fresh")}</h3><p>{copy(search ? "tryName" : "emptyLead")}</p>{search ? <button type="button" className="returning-btn" onClick={() => { setQuery(""); searchRef.current?.focus(); }}>{copy("clearSearch")}</button> : <a className="returning-btn returning-btn--primary" href="#workspace">{copy("upload")}</a>}</div>}
         </section>
         <div className="returning-list-footer"><span role="status">{copy("showing").replace("{shown}", shown.length.toLocaleString(getLocale())).replace("{total}", datasets.length.toLocaleString(getLocale()))}</span>{datasets.length > 0 && <button type="button" className="returning-clear" disabled={busy || loading} onClick={() => setPending("all")}>{copy("clearAll")}</button>}</div>
