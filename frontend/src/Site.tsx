@@ -4,19 +4,23 @@ import { HomePage } from "./screens/HomePage.tsx";
 import { ReturningPage } from "./screens/ReturningPage.tsx";
 import { listSavedDatasets } from "./storage/saved-datasets.ts";
 import { datasetIdFromRoute, isWorkspaceRoute, startRouteFor } from "./visit-routing.ts";
+import { OnboardingProvider } from "./onboarding/Onboarding.tsx";
 
 const Workspace = lazy(() => import("./App.tsx"));
 const currentRoute = () => window.location.hash || "#home";
 
 /** New visitors see the landing page; returning visitors resume their latest upload. */
-export default function Site() {
+export default function Site() { return <OnboardingProvider><SiteContent /></OnboardingProvider>; }
+
+function SiteContent() {
   const language = useLanguage();
   const [route, setRoute] = useState(() => !window.location.hash || window.location.hash === "#home" ? "#entry" : currentRoute());
+  const [visit, setVisit] = useState(0);
   const workspace = isWorkspaceRoute(route);
   const returning = route === "#history" || route === "#returning";
 
   useEffect(() => {
-    const navigate = () => setRoute(currentRoute());
+    const navigate = () => { setRoute(currentRoute()); setVisit(value => value + 1); };
     window.addEventListener("hashchange", navigate);
     return () => window.removeEventListener("hashchange", navigate);
   }, []);
@@ -60,8 +64,10 @@ export default function Site() {
   if (returning) return <ReturningPage />;
 
   if (workspace) return <div className="workspace-view"><Suspense fallback={<p className="notice" role="status">{t("Opening your workspace…")}</p>}>
-    <Workspace key={route} initialDatasetId={route.startsWith("#dataset/") ? datasetIdFromRoute(route) : undefined}
-      updateDatasetId={route.startsWith("#update/") ? datasetIdFromRoute(route) : undefined} />
+    <Workspace key={`${route}:${visit}`} initialDatasetId={route.startsWith("#dataset/") ? datasetIdFromRoute(route) : undefined}
+      updateDatasetId={route.startsWith("#update/") ? datasetIdFromRoute(route) : undefined}
+      guidedImport={route === "#guide" || route.startsWith("#guide/")}
+      guideReturnId={route.startsWith("#guide/") ? datasetIdFromRoute(route) : undefined} />
   </Suspense></div>;
 
   return <HomePage startHref="#start" />;

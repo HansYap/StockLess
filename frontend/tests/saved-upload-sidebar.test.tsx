@@ -7,6 +7,7 @@ import { getSavedDataset, listSavedDatasets, saveGeneratedPurchasePlan, replaceS
 import { runReadinessCheckInWorker } from "../src/workers/readiness-client.ts";
 import { runDemandForecastInWorker } from "../src/workers/forecast-client.ts";
 import { makeEvidence } from "./fixtures.ts";
+import { replaceSessionSourceInWorker } from "../src/workers/import-session-client.ts";
 
 vi.mock("../src/storage/saved-datasets.ts", async original => ({
   ...await original<object>(), getSavedDataset: vi.fn(), listSavedDatasets: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock("../src/screens/UploadScreen.tsx", async original => {
     <UploadScreen {...props} />
     <button onClick={() => void props.onSource(new Uint8Array(), "replacement.csv", "user", "text/csv", () => {}, new AbortController().signal)}>Import test replacement</button>
     <button onClick={props.onCancel}>Cancel test import</button>
+    <button onClick={() => void props.onSource(new Uint8Array(), "sample.csv", "sample", "text/csv", () => {}, new AbortController().signal)}>Import test sample</button>
   </> };
 });
 vi.mock("../src/screens/MappingScreen.tsx", () => ({ MappingScreen: (props: ComponentProps<typeof import("../src/screens/MappingScreen.tsx").MappingScreen>) => <>
@@ -87,6 +89,62 @@ beforeEach(() => {
   });
 });
 afterEach(() => { vi.restoreAllMocks(); localStorage.removeItem("stockless.hasUploaded"); });
+it("Guide preparation keeps the sidebar hidden and leaves the saved plan untouched until a real replacement plan is generated", async () => {
+  const before = structuredClone(saved);
+  render(<App guidedImport guideReturnId="existing" />);
+  await screen.findByRole("heading", { name: "Upload your sales file" });
+  expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Back to my plan" })).toBeTruthy();
+  fireEvent.click(screen.getByText("Import test replacement"));
+  await screen.findByRole("heading", { name: "Test mapping" });
+  expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
+  expect(saved).toEqual(before);
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  expect(saveDatasetWork).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText("Check test readiness"));
+  await screen.findByRole("heading", { name: "Test readiness" });
+  expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
+  expect(saved).toEqual(before);
+  fireEvent.click(screen.getByText("Calculate test plan"));
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  expect(saveGeneratedPurchasePlan).toHaveBeenCalledWith(expect.anything(), expect.anything(), "existing", true);
+});
+
+it("sample practice never replaces or autosaves a returning user's plan and retains a route back", async () => {
+  const before = structuredClone(saved);
+  vi.mocked(replaceSessionSourceInWorker).mockImplementationOnce(async () => {
+    const envelope = importedEnvelope();
+    return { ...envelope, session: { ...envelope.session, sourceMode: "sample", dataset: { ...envelope.session.dataset!, sourceMode: "sample" } } };
+  });
+  render(<App guidedImport guideReturnId="existing" />);
+  await screen.findByRole("heading", { name: "Upload your sales file" });
+  fireEvent.click(screen.getByText("Import test sample"));
+  await screen.findByRole("heading", { name: "Test mapping" });
+  expect(screen.getByText("This sample is for practice. It won’t replace your plan or enter upload history.")).toBeTruthy();
+  fireEvent.click(screen.getByText("Check test readiness"));
+  await screen.findByRole("heading", { name: "Test readiness" });
+  fireEvent.click(screen.getByText("Calculate test plan"));
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  expect(saved).toEqual(before);
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  expect(saveDatasetWork).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Back to my plan" }));
+  expect(window.location.hash).toBe("#dataset/existing");
+});
+
+it("clearing a guided import keeps preparation without the sidebar and preserves saved history", async () => {
+  const before = structuredClone(saved);
+  render(<App guidedImport guideReturnId="existing" />);
+  await screen.findByRole("heading", { name: "Upload your sales file" });
+  fireEvent.click(screen.getByText("Import test replacement"));
+  await screen.findByRole("heading", { name: "Test mapping" });
+  fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
+  await screen.findByRole("heading", { name: "Upload your sales file" });
+  expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
+  expect(saved).toEqual(before);
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  expect(saveDatasetWork).not.toHaveBeenCalled();
+});
 async function updatePage() {
   render(<App updateDatasetId="existing" />);
   await screen.findByRole("heading", { name: "Reupload your sales file" });

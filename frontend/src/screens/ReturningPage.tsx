@@ -9,6 +9,7 @@ import "../components/workflow-shell.css";
 import "./returning.css";
 import { StorageExplanation } from "../components/StorageExplanation.tsx";
 import { t } from "../i18n/index.ts";
+import { GuideButton, useGuidePage } from "../onboarding/Onboarding.tsx";
 
 const iconPaths = {
   file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8m-8 4h5",
@@ -30,6 +31,7 @@ export function ReturningPage() {
   const copy = (key: keyof typeof returningMessages.en) => returningMessages[language][key];
   const [datasets, setDatasets] = useState<readonly SavedDatasetSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  useGuidePage(loading ? null : "history");
   const [error, setError] = useState<"readError" | "deleteError" | null>(null);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -91,6 +93,7 @@ export function ReturningPage() {
     <header className="topbar">
       <a className="brand" href="#home" aria-label="StockLess"><Logo height={36} /></a>
       <a className="workspace-home-link" href="#home" aria-label={copy("homepage")}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7" /></svg><span>{copy("homepage")}</span></a>
+      <GuideButton />
       <LanguageSwitcher compact />
     </header>
     <main>
@@ -101,7 +104,7 @@ export function ReturningPage() {
       <div className="returning-width returning-main">
         {error && <p className="returning-error" role="alert">{copy(error)} <button type="button" disabled={busy} onClick={() => void refresh()}>{copy("retry")}</button></p>}
         <div className="returning-welcome-actions">
-          <section className="returning-card returning-resume" aria-label={copy("resume")}>
+          <section className="returning-card returning-resume" data-guide="history-resume" aria-label={copy("resume")}>
             <div className="returning-resume__heading"><p className="returning-eyebrow">{copy("resume")}</p>{recent && <span className="returning-pill"><span className="returning-dot" />{copy("recent")}</span>}</div>
             {loading ? <p role="status">{copy("loading")}</p> : recent ? <>
               <div className="returning-resume__file"><span className="returning-file-icon"><ReturningIcon name="file" /></span><div><h3>{recent.datasetName}</h3><p className="returning-file-meta">{meta(recent)}</p></div></div>
@@ -111,7 +114,7 @@ export function ReturningPage() {
           <section className="returning-new-file"><ReturningIcon name="upload" /><h3>{copy("newFile")}</h3><p>{copy("newFileLead")}</p><a className="returning-btn" href={recent ? `#update/${encodeURIComponent(recent.id)}` : "#workspace"}><ReturningIcon name="plus" />{copy("upload")}</a></section>
         </div>
         <div className="returning-section-title"><h2 ref={uploadsHeadingRef} tabIndex={-1} id="returning-datasets-title">{copy("datasets")}<span className="returning-count">{datasets.length.toLocaleString(getLocale())} / 12</span></h2><span className="returning-privacy"><ReturningIcon name="lock" />{copy("privacy")}</span></div>
-        <section className="returning-card returning-files" aria-labelledby="returning-datasets-title" aria-busy={loading}>
+        <section className="returning-card returning-files" data-guide="history-list" aria-labelledby="returning-datasets-title" aria-busy={loading}>
           <div className="returning-toolbar">
             <label className="returning-search"><ReturningIcon name="search" /><input ref={searchRef} type="search" aria-label={copy("search")} placeholder={copy("searchPlaceholder")} value={query} onChange={event => setQuery(event.target.value)} /></label>
             <label className="returning-sort">{copy("sort")}<select value={sort} onChange={event => setSort(event.target.value)}><option value="recent">{copy("recent")}</option><option value="name">{copy("fileName")}</option><option value="rows">{copy("rowCount")}</option></select></label>
@@ -123,7 +126,7 @@ export function ReturningPage() {
             <div className="returning-row__actions"><a className="returning-btn" aria-label={`${copy("open")} ${item.datasetName}`} href={href(item)}>{copy("open")}<ReturningIcon name="arrow" /></a><button className="returning-delete" type="button" disabled={busy} aria-label={`${copy("delete")} ${item.datasetName}`} onClick={() => setPending(item)}><ReturningIcon name="trash" /></button></div>
           </article>)}</div> : <div className="returning-empty"><h3>{copy(search ? "noMatches" : "fresh")}</h3><p>{copy(search ? "tryName" : "emptyLead")}</p>{search ? <button type="button" className="returning-btn" onClick={() => { setQuery(""); searchRef.current?.focus(); }}>{copy("clearSearch")}</button> : <a className="returning-btn returning-btn--primary" href="#workspace">{copy("upload")}</a>}</div>}
         </section>
-        <div className="returning-list-footer"><span role="status">{copy("showing").replace("{shown}", shown.length.toLocaleString(getLocale())).replace("{total}", datasets.length.toLocaleString(getLocale()))}</span>{datasets.length > 0 && <button type="button" className="returning-clear" disabled={busy || loading} onClick={() => setPending("all")}>{copy("clearAll")}</button>}</div>
+        <div className="returning-list-footer" data-guide="history-manage"><span role="status">{copy("showing").replace("{shown}", shown.length.toLocaleString(getLocale())).replace("{total}", datasets.length.toLocaleString(getLocale()))}</span>{datasets.length > 0 && <button type="button" className="returning-clear" disabled={busy || loading} onClick={() => setPending("all")}>{copy("clearAll")}</button>}</div>
         <footer className="returning-bottom-note"><span><ReturningIcon name="leaf" />{copy("tagline")}</span><button ref={aboutButtonRef} type="button" className="returning-about-link" onClick={() => { aboutRef.current?.showModal(); aboutCloseRef.current?.focus(); }}>{t("About saved uploads")}</button></footer>
       </div>
     </main>

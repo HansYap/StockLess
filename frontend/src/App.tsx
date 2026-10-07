@@ -40,6 +40,7 @@ import { runReadinessCheckInWorker } from "./workers/readiness-client.ts";
 import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
 import { confirmCurrentMapping } from "./mapping-confirmation.ts";
+import { useGuidePage, useOnboarding } from "./onboarding/Onboarding.tsx";
 import {
   getSavedDataset, listSavedDatasets,
   saveGeneratedPurchasePlan, saveDatasetWork, summarizeSavedDataset,
@@ -69,10 +70,15 @@ function malaysiaDate(): string {
 interface AppProps {
   readonly initialDatasetId?: string;
   readonly updateDatasetId?: string;
+  readonly guidedImport?: boolean;
+  readonly guideReturnId?: string;
 }
 
-export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}) {
+export default function App({ initialDatasetId, updateDatasetId, guidedImport = false, guideReturnId }: AppProps = {}) {
   useLanguage();
+  const onboarding = useOnboarding();
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [returnPlanId, setReturnPlanId] = useState<string | undefined>(guideReturnId);
   const [envelope, setEnvelope] = useState<SessionEnvelope>(() => createEmptySession());
   const [proposals, setProposals] = useState<MappingProposalResult | null>(null);
   const [step, setStep] = useState<StepId>(1);
@@ -98,7 +104,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
   const [updateTargetId, setUpdateTargetId] = useState<string | null>(updateDatasetId ?? null);
   const [uploadTarget, setUploadTarget] = useState<SavedDatasetSummary | null>(null);
-  const [workspaceActive, setWorkspaceActive] = useState(Boolean(initialDatasetId || updateDatasetId) || hasUploadedBefore());
+  const [workspaceActive, setWorkspaceActive] = useState(!guidedImport && (Boolean(initialDatasetId || updateDatasetId) || hasUploadedBefore()));
   const [workspaceInfo, setWorkspaceInfo] = useState<{ datasetName: string; shopName: string; rowCount: number } | null>(null);
   const [openingDataset, setOpeningDataset] = useState(Boolean(initialDatasetId || updateDatasetId));
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -125,6 +131,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const forecastAbort = useRef<AbortController | null>(null);
 
   const dataset = envelope.session.dataset;
+  useGuidePage(workspaceActive ? "sidebar" : step === 1 ? "upload" : step === 2 ? "mapping" : null,
+    historyLoaded && !guidedImport && !workspaceActive && step === 1 && !hasUploadedBefore() && savedDatasets.length === 0);
   const workspaceDataset = (activeSavedId && savedDatasets.find(item => item.id === activeSavedId)) || workspaceInfo || uploadTarget || {
     datasetName: dataset?.sourceName ?? t("New file"), shopName: "", rowCount: dataset?.rows.length ?? 0,
   };
@@ -139,15 +147,17 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     let cancelled = false;
     void refreshSavedDatasets().then(items => {
       if (cancelled || !items[0]) return;
+      if (guidedImport) { setReturnPlanId(guideReturnId ?? items[0].id); return; }
       rememberUploadVisit();
       if (initialDatasetId || updateDatasetId) return;
       setWorkspaceActive(true);
       setUploadTarget(items[0]);
       setUpdateTargetId(items[0].id);
       window.history.replaceState(null, "", `#update/${encodeURIComponent(items[0].id)}`);
-    }).catch(() => { if (!cancelled) setSaveError("Saved information is unavailable here. You can still upload a file or use the sample."); });
+    }).catch(() => { if (!cancelled) setSaveError("Saved information is unavailable here. You can still upload a file or use the sample."); })
+      .finally(() => { if (!cancelled) setHistoryLoaded(true); });
     return () => { cancelled = true; };
-  }, [initialDatasetId, updateDatasetId, refreshSavedDatasets]);
+  }, [initialDatasetId, updateDatasetId, refreshSavedDatasets, guidedImport, guideReturnId]);
 
   const persistWork = useCallback(async (id: string, work: Partial<SavedWork>) => {
     pendingWork.current.set(id, { ...pendingWork.current.get(id), ...work });
@@ -503,8 +513,9 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     const parsed = next.session.dataset;
     if (!parsed) throw new Error("The parsed dataset is missing from the session.");
 
-    const target = updateTargetId ? await getSavedDataset(updateTargetId) : undefined;
-    if (updateTargetId && !target) throw new Error("The dataset selected for update is no longer saved.");
+    const targetId = sourceMode === "user" ? guidedImport ? returnPlanId : updateTargetId : undefined;
+    const target = targetId ? await getSavedDataset(targetId) : undefined;
+    if (targetId && !target) throw new Error("The dataset selected for update is no longer saved.");
     const proposed = await proposeMappings(parsed, createLocalSemanticScorer(signal));
     const importedEnvelope = updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed));
     if (sourceMode === "user") rememberUploadVisit();
@@ -528,7 +539,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setUpdateTargetId(null);
     if (target) {
       setUploadTarget(summarizeSavedDataset(target));
-      window.history.replaceState(null, "", `#dataset/${encodeURIComponent(target.id)}`);
+      if (!guidedImport) window.history.replaceState(null, "", `#dataset/${encodeURIComponent(target.id)}`);
       setPurchaseDrafts(target.purchaseDrafts);
       setSupplierOrderDrafts(target.supplierOrderDrafts ?? {});
     }
@@ -536,7 +547,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       ? `${previousMode === "sample" ? "Sample data" : "The retailer file"} was replaced. Dataset-specific mappings and results were cleared.`
       : sourceMode === "sample" ? "Sample data loaded." : "Retailer file loaded locally.");
     goTo(2);
-  }, [envelope, goTo, refreshSavedDatasets, resetReadinessEvidence, updateTargetId]);
+    onboarding.emit("import:complete");
+  }, [envelope, goTo, refreshSavedDatasets, resetReadinessEvidence, updateTargetId, guidedImport, returnPlanId, onboarding.emit]);
 
   const handleSelectColumn = useCallback((field: CanonicalField, sourceColumnId: string | null) => {
     setMappingError(null);
@@ -607,14 +619,14 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     generatedSaves.current.clear();
     if (retrySaves.current.size === 0) { setSaveError(null); setSaveState("idle"); }
     lastSavedEnvelope.current = null;
-    setUpdateTargetId(target?.id ?? null);
+    setUpdateTargetId(guidedImport ? null : target?.id ?? null);
     setSessionNotice(null);
     setUploadTarget(target ?? null);
-    setWorkspaceActive(keepSidebar);
+    setWorkspaceActive(guidedImport ? false : keepSidebar);
     setWorkspaceInfo(null);
     setMappingUndo(null);
-    window.history.replaceState(null, "", target ? `#update/${encodeURIComponent(target.id)}` : "#workspace");
-  }, [envelope, resetReadinessEvidence, savedDatasets, uploadTarget, workspaceActive]);
+    if (!guidedImport) window.history.replaceState(null, "", target ? `#update/${encodeURIComponent(target.id)}` : "#workspace");
+  }, [envelope, resetReadinessEvidence, savedDatasets, uploadTarget, workspaceActive, guidedImport]);
 
   const mappingSubmit = useRef(false);
   const [mappingSubmitting, setMappingSubmitting] = useState(false);
@@ -624,9 +636,10 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setMappingSubmitting(true);
     try {
       if (activeSavedId) await persistWork(activeSavedId, { envelope: activeEnvelope, analysisDate });
-      await executeReadiness(dateConfirmations, true, activeEnvelope);
+      const checked = await executeReadiness(dateConfirmations, true, activeEnvelope);
+      if (checked) onboarding.emit("mapping:complete");
     } finally { mappingSubmit.current = false; setMappingSubmitting(false); }
-  }, [activeSavedId, analysisDate, dateConfirmations, envelope, executeReadiness, persistWork]);
+  }, [activeSavedId, analysisDate, dateConfirmations, envelope, executeReadiness, persistWork, onboarding.emit]);
 
   const handleConfirmAllAndContinue = useCallback(async () => {
     if (mappingSubmit.current) return;
@@ -663,6 +676,12 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
   return (
     <AppShell
+      onGuide={async () => {
+        for (const [id, work] of pendingWork.current) await persistWork(id, work);
+        if (pendingWork.current.size > 0) return;
+        await onboarding.startReplay(activeSavedId ?? returnPlanId ?? uploadTarget?.id);
+      }}
+      onReturnToPlan={guidedImport && returnPlanId && !activeSavedId && step >= 3 ? () => { onboarding.stop(); window.location.hash = `#dataset/${encodeURIComponent(returnPlanId)}`; } : undefined}
       i3Typography={!showImpact}
       current={step}
       reached={reached}
@@ -681,6 +700,10 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
         onImpact: () => void navigateResults("impact").catch(() => setSaveError("The dataset could not be opened.")),
       } : undefined}
     >
+      {guidedImport && returnPlanId && !activeSavedId && step <= 2 && <section className="guided-import-notice" aria-label={t("Your saved plan")}>
+        <p>{t(dataset?.sourceMode === "sample" ? "This sample is for practice. It won’t replace your plan or enter upload history." : "Your current plan stays available until your new plan is ready.")}</p>
+        <button type="button" className="onboarding-button" onClick={() => { onboarding.stop(); window.location.hash = `#dataset/${encodeURIComponent(returnPlanId)}`; }}>{t("Back to my plan")}</button>
+      </section>}
       {saveError && <p role="alert">{t(saveError)}</p>}
       {workspaceActive && dataset?.sourceMode === "user" && <span className="workspace-autosave sr-only" role="status" aria-live="polite">{t(saveState === "saving" ? "Saving automatically…" : saveState === "saved" ? "Saved automatically on this device" : saveState === "error" ? "Waiting to save automatically" : "Your upload will be saved automatically when your purchase plan is ready.")}</span>}
       {t(step === 1 && (

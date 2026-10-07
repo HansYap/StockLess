@@ -38,8 +38,8 @@ export function SavedWorkspaceSidebar({ dataset, saved = true, currentSection = 
   ] as const;
   const content = <>
     <div><p className="saved-sidebar__label">{t("Your workspace")}</p>
-      <nav className="saved-sidebar__nav" aria-label={t("Dataset sections")}>
-        {sections.map(section => <button key={section.id} type="button"
+      <nav className="saved-sidebar__nav" data-guide="sidebar-navigation" aria-label={t("Dataset sections")}>
+        {sections.map(section => <button key={section.id} type="button" data-guide={section.id === "reupload" ? "sidebar-reupload" : undefined}
           className={`saved-sidebar__item${section.id === currentSection ? " saved-sidebar__item--active" : ""}`}
           aria-current={section.id === currentSection ? "page" : undefined} onClick={() => navigate(section.action)}>
           <Icon name={section.icon} /><span>{t(section.label)}</span>
@@ -52,14 +52,14 @@ export function SavedWorkspaceSidebar({ dataset, saved = true, currentSection = 
         <p className="saved-sidebar__name">{dataset.datasetName}</p>
         {dataset.shopName && <p className="saved-sidebar__meta">{dataset.shopName === "My store" ? t("Your store") : dataset.shopName}</p>}
         <p className="saved-sidebar__meta">{dataset.rowCount.toLocaleString(getLocale())} {t("rows")} · {t(saved ? "Available on this device" : "This session only")}</p>
-        <a className="saved-sidebar__switch" href="#history">{t("Upload history")}<Icon name="arrow" /></a>
+        <a className="saved-sidebar__switch" data-guide="sidebar-history" href="#history">{t("Upload history")}<Icon name="arrow" /></a>
       </section>
       <p className="saved-sidebar__privacy"><Icon name="lock" /><span>{t("Your data stays with you.")}<br />{t("No account needed.")}</span></p>
     </div>
   </>;
   return <>
     <aside className="saved-sidebar" aria-label={t("Workspace navigation")}>{content}</aside>
-    <div className="saved-sidebar-mobile"><button ref={menu} type="button" className="saved-sidebar__menu" aria-label={t("Open navigation")} aria-haspopup="dialog" onClick={() => drawer.current?.showModal()}><Icon name="menu" /></button><span>{t(sections.find(section => section.id === currentSection)!.label)}</span></div>
+    <div className="saved-sidebar-mobile"><button ref={menu} data-guide="sidebar-menu" type="button" className="saved-sidebar__menu" aria-label={t("Open navigation")} aria-haspopup="dialog" onClick={() => drawer.current?.showModal()}><Icon name="menu" /></button><span>{t(sections.find(section => section.id === currentSection)!.label)}</span></div>
     <dialog ref={drawer} className="saved-sidebar-drawer" aria-label={t("Workspace navigation")} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close(); } }}>
       <button type="button" className="saved-sidebar__close" aria-label={t("Close navigation")} onClick={close}><Icon name="close" /></button>
       {content}

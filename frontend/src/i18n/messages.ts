@@ -1,6 +1,7 @@
 import { epic123Messages } from "./epic123.ts";
 import { purchaseMessages } from "./purchase-refresh.ts";
 import { savedWorkspaceMessages } from "./saved-workspace.ts";
+import { onboardingMessages } from "./onboarding.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
 export const messages: Record<string, readonly [string, string]> = {
   "Language": [
@@ -3681,3 +3682,4 @@ Object.assign(messages, purchaseMessages);
 Object.assign(messages, savedWorkspaceMessages);
 
 Object.assign(messages, epic123Messages);
+Object.assign(messages, onboardingMessages);

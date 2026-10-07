@@ -157,7 +157,7 @@ export function MappingScreen(props: MappingScreenProps) {
           <span className="mapping-actions__spacer" />
           <span className="mapping-total" role="status">{totalCount} {t("of")} {totalFields} {t("matched")}</span>
           <span className="mapping-meter" aria-hidden="true"><i style={{ width: (100 * totalCount / totalFields) + "%" }} /></span>
-          <button type="button" className="btn btn--primary" disabled={blocked || props.checking} aria-busy={props.checking}
+          <button data-guide="mapping-confirm" type="button" className="btn btn--primary" disabled={blocked || props.checking} aria-busy={props.checking}
             onClick={props.onConfirmAllAndContinue}>{t(props.checking ? "Checking locally…" : "Confirm and check my data →")}</button>
         </div>
       </div>
@@ -168,7 +168,7 @@ export function MappingScreen(props: MappingScreenProps) {
           <div className="mapping-all">
             <div><b>{t("All matches look right?")}</b><p>{t("Confirm all selected columns and continue in one step.")}</p>
               <small>{t("Products will be kept separate using:")} {t(mode === "stable" ? "One code column" : "Product name + pack size")}.</small></div>
-            <button type="button" className="btn btn--primary" disabled={blocked || props.checking} aria-busy={props.checking}
+            <button data-guide="mapping-confirm-inline" type="button" className="btn btn--primary" disabled={blocked || props.checking} aria-busy={props.checking}
               onClick={props.onConfirmAllAndContinue}>{t(props.checking ? "Checking locally…" : "Confirm all and continue →")}</button>
           </div>
           {(sessionNotice || props.notice || props.error || props.proposals?.fallbackNotice || blocked) && <div className="mapping-feedback">
@@ -178,7 +178,7 @@ export function MappingScreen(props: MappingScreenProps) {
             {props.error && <p className="notice notice--error" role="alert">{t(props.error)}</p>}
             {blocked && <p className="mapping-blockers" role="status">{t("Still needed: ")}{staleColumns ? t("Choose a column to continue.") : blockers.map(t).join(" · ")}</p>}
           </div>}
-          <section className="mapping-card" aria-labelledby="mapping-required">
+          <section className="mapping-card" data-guide="mapping-required" aria-labelledby="mapping-required">
             <div className="mapping-card__head"><span className="mapping-icon mapping-icon--solid"><WorkflowIcon name="leaf" /></span>
               <div><h2 id="mapping-required">{t("Required")}</h2><p>{t("Needed to continue")}</p></div>
               <span className={"mapping-pill" + (requiredCount === 3 ? " mapping-pill--ok" : " mapping-pill--missing")}>{requiredCount} {t("of")} 3 {t("matched")}{requiredCount === 3 ? " ✓" : ""}</span>
@@ -209,7 +209,7 @@ export function MappingScreen(props: MappingScreenProps) {
               {fieldRow("quantity_sold", "cart", "Units sold, or returned as negative numbers", true)}
             </ul>
           </section>
-          <section className="mapping-card" aria-labelledby="mapping-optional">
+          <section className="mapping-card" data-guide="mapping-optional" aria-labelledby="mapping-optional">
             <div className="mapping-card__head"><span className="mapping-icon mapping-icon--amber" aria-hidden="true">🪴</span>
               <div><h2 id="mapping-optional">{t("Optional")}</h2><p>{t('Each one adds to your results. Choose "Not in this file" to skip.')}</p></div>
               <span className={"mapping-pill" + (optionalCount === OPTIONAL_FIELDS.length ? " mapping-pill--ok" : "")}>{optionalCount} {t("of")} {OPTIONAL_FIELDS.length} {t("matched")}</span>

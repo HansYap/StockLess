@@ -1,4 +1,5 @@
 import { t, useLanguage } from "../i18n/index.ts";
+import { useOnboarding } from "../onboarding/Onboarding.tsx";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { inspectExcelWorkbook, importExcelWorksheet, type ExcelWorksheet } from "./excel-import.ts";
@@ -94,6 +95,7 @@ export function UploadScreen({
   updating = false,
 }: UploadScreenProps) {
   useLanguage();
+  const { emit } = useOnboarding();
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
@@ -105,6 +107,9 @@ export function UploadScreen({
   const [workbook, setWorkbook] = useState<{ bytes: Uint8Array; sheets: readonly ExcelWorksheet[] } | null>(null);
   const [worksheetName, setWorksheetName] = useState("");
   const chosenSheet = workbook?.sheets.find(sheet => sheet.name === worksheetName);
+  useEffect(() => {
+    if (selectedFile && !busy && !failure && (!/\.(xlsx|xls)$/i.test(selectedFile.name) || (chosenSheet && !chosenSheet.problem))) emit("file:ready");
+  }, [selectedFile, busy, failure, chosenSheet, emit]);
 
   const [compactTitle, setCompactTitle] = useState(false);
   const continueRef = useRef<HTMLButtonElement>(null);
@@ -272,7 +277,7 @@ export function UploadScreen({
               </> : <>
                 <h2>{t("Drop your CSV or Excel file here")}</h2>
                 <p>{t("Use the export from your POS, marketplace or spreadsheet.")}</p>
-                <div className="upload-actions">
+                <div className="upload-actions" data-guide="upload-actions">
                   <button type="button" className="btn btn--primary" onClick={() => inputRef.current?.click()}>{t("Choose CSV or Excel file")}</button>
                   {!updating && <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>{t("Use sample file")}</button>}
                 </div>
@@ -293,7 +298,7 @@ export function UploadScreen({
               <span className="upload-picked__icon" aria-hidden="true">{selectedFile.name.split(".").pop()?.toUpperCase()}</span>
               <div className="upload-picked__details"><b>{selectedFile.name}</b><small>{(selectedFile.size / 1024).toFixed(selectedFile.size < 102400 ? 1 : 0)} KB</small></div>
               <span className="upload-tag" role="status">{t("Ready to match")}</span>
-              <button ref={continueRef} type="button" className="btn btn--primary" disabled={!!workbook && (!chosenSheet || !!chosenSheet.problem)} onClick={() => void handleFile(selectedFile)}>{t("Continue to matching →")}</button>
+              <button ref={continueRef} data-guide="upload-continue" type="button" className="btn btn--primary" disabled={!!workbook && (!chosenSheet || !!chosenSheet.problem)} onClick={() => void handleFile(selectedFile)}>{t("Continue to matching →")}</button>
             </div>}
             {workbook && !busy && <section className="upload-sheet" aria-label={t("Worksheet preview")}>
               <label htmlFor="upload-worksheet">{t("Worksheet")}</label><select id="upload-worksheet" value={worksheetName} onChange={event => setWorksheetName(event.target.value)}><option value="">{t("Choose a worksheet")}</option>{workbook.sheets.map(sheet => <option key={sheet.name} value={sheet.name}>{sheet.name} ({sheet.rowCount})</option>)}</select>
