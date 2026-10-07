@@ -5,7 +5,8 @@ import { SupplierComparison } from "./SupplierComparison.tsx";
 import { addCalendarDays, applyPurchaseQuantityEdit, createPurchaseQuantity, estimatePurchaseCost, EPIC5_POLICY, suggestSupplierOrder, type ProductPurchaseInputs, type ProductPurchasePlan, type SupplierOrderTerms } from "../engine.ts";
 import { purchaseGroup, purchaseGroupLabels, type PurchaseProduct } from "./model.ts";
 import { SourceTag, numberText, oneDecimalText } from "./SourceTag.tsx";
-import { PurchaseDemandChart, purchaseDate } from "./PurchaseDemandChart.tsx";
+import { PurchaseDemandChart, purchaseDate, demandRangeText } from "./PurchaseDemandChart.tsx";
+import { PurchaseStockChart } from "./PurchaseStockChart.tsx";
 
 interface Props {
   product: PurchaseProduct; plan?: ProductPurchasePlan; inputs: ProductPurchaseInputs;
@@ -53,8 +54,6 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
   };
   const metric = (label: string, amount: string, note: string) => <div><small>{t(label)}</small><b className="num">{amount}</b><small>{t(note)}</small></div>;
   const figures = audit?.state === "verdict" ? audit.figures : undefined;
-  const chartMaximum = figures ? Math.max(figures.demandHigh.value * 1.3, figures.availableAfterOrder.value * 1.08, 4) : 1;
-  const percent = (quantity: number) => `${quantity / chartMaximum * 100}%`;
   const reason = product.issue || (product.demand?.label === "Cannot assess" ? product.demand.labelReason?.message : restock?.state === "unavailable" ? restock.reason : product.demand?.labelReason?.message) || "Review the available evidence before planning.";
   return <section className="pp-detail" aria-labelledby="purchase-detail-title">
     <header className="pp-detail-head"><div><span className="pp-kicker">{position === undefined ? t("Selected product outside current filter") : t(`Product ${position + 1} of ${total}`)}</span><h2 id="purchase-detail-title">{product.title}</h2>
@@ -65,7 +64,7 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
     <section aria-label={t("Estimated purchase spending")}><h3>{t("Estimated purchase spending")}</h3>{spending?.state === "estimated" && !invalidQuantity ? <p>MYR {spending.amount.toFixed(2)} · {spending.quantity} × MYR {spending.unitCost} · {t("Estimated")}</p> : <><p>{t(spending?.state === "not_entered" ? "Not entered" : "Unavailable")}</p><p>{t(invalidQuantity ? "Correct the quantity." : spending?.state !== "estimated" ? spending?.reason : "No validated unit cost.")}</p>{spending?.state !== "estimated" && <p>{t(spending?.correctiveAction)}</p>}</>}</section>
     {!plannable ? <div className="pp-unavailable"><h3>{t("Unavailable")}</h3><p>{t(reason)}</p><p>{t(restock?.state === "unavailable" ? restock.correctiveAction : product.demand?.historyEvidence?.correctiveAction)}</p><button type="button" className="btn btn--ghost" onClick={onReviewData}>{t("Fix it in Step 3")}</button></div> : <>
       <section className="pp-demand"><div className="pp-demand-head"><h3>{t("Demand and stock")}</h3><button type="button" className="pp-link-button" aria-expanded={showEvidence} aria-controls="purchase-demand-evidence" onClick={() => setShowEvidence(!showEvidence)}>{t(showEvidence ? "Hide evidence" : "Show evidence")}</button></div>
-        {showEvidence && <div className="pp-demand-body" id="purchase-demand-evidence"><div className="pp-demand-main"><p className="pp-demand-range"><b>{numberText(range.low)}–{numberText(range.high)} {t("units")}</b><span>{purchaseDate(analysisDate)} – {purchaseDate(addCalendarDays(analysisDate, 27))}</span></p>
+        {showEvidence && <div className="pp-demand-body" id="purchase-demand-evidence"><div className="pp-demand-main"><p className="pp-small-note">{t("Expected sales in the next 4 weeks")}</p><p className="pp-demand-range"><b>{demandRangeText(range.low, range.high)} {t("units")}</b><span>{purchaseDate(analysisDate)} – {purchaseDate(addCalendarDays(analysisDate, 27))}</span></p>
           <PurchaseDemandChart weeks={product.evidence?.timeline.weeks ?? []} range={range} name={product.title} analysisDate={analysisDate} />
           <p className="pp-small-note">{t(`Range based on ${range.basedOnWeekCount} weeks, from ${range.firstWeekUsed} to ${range.lastWeekUsed}.`)}</p>
           {product.demand?.labelReason?.message && <p className="pp-small-note">{t(product.demand.labelReason.message)}</p>}
@@ -89,8 +88,7 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
         <p id="purchase-empty-order" className="pp-small-note">{t("Enter an order quantity to check stock after ordering, shortage and cost. Zero is a valid quantity.")}</p>
       </section></div>
       <section className="pp-purchase-check" aria-label={t("Purchase check")} aria-live="polite"><div className="pp-check-head"><h3>{t("Purchase check")}</h3>{figures && <span className="num">{numberText(figures.stockOnHand.value)} + {numberText(figures.incomingStock.value)} + {numberText(figures.plannedOrder.value)} = {numberText(figures.availableAfterOrder.value)} {t("units")}</span>}</div>
-        {figures && <div className="pp-stock-bar" role="img" aria-label={`${t("Stock after order")}: ${numberText(figures.availableAfterOrder.value)} ${t("units")}; ${t("Expected demand")}: ${numberText(range.low)}–${numberText(range.high)}`}><div className="pp-stock-track"><span className="pp-stock-segment pp-stock-segment--stock" style={{ width: percent(figures.stockOnHand.value) }} /><span className="pp-stock-segment pp-stock-segment--incoming" style={{ width: percent(figures.incomingStock.value) }} /><span className="pp-stock-segment pp-stock-segment--order" style={{ width: percent(figures.plannedOrder.value) }} /></div><span className="pp-stock-band" style={{ left: percent(range.low), width: percent(range.high - range.low) }} /><span className="pp-stock-tick" style={{ left: percent(range.low) }}>{numberText(range.low)}</span><span className="pp-stock-tick" style={{ left: percent(range.high) }}>{numberText(range.high)}</span></div>}
-        <ul className="pp-legend"><li><i className="pp-swatch pp-stock-segment--stock" />{t("In stock")}</li><li><i className="pp-swatch pp-stock-segment--incoming" />{t("Incoming")}</li><li><i className="pp-swatch pp-stock-segment--order" />{t("Your order")}</li><li><i className="pp-swatch pp-swatch--range" />{t("Expected demand")}</li></ul>
+        {figures && <PurchaseStockChart stock={figures.stockOnHand.value} incoming={figures.incomingStock.value} order={figures.plannedOrder.value} low={range.low} high={range.high} />}
         <div className={`pp-check-message pp-check-message--${group}`}><b>{t(inputs.plannedOrder.state === "empty" ? "Not entered" : group === "check_order" ? "This plan looks too high." : group === "order_needed" ? "This plan looks too low." : "This plan is within range.")}</b><p>{t(audit?.state === "verdict" ? audit.reasonSentence : "Enter a planned order when you are ready.")}</p>{inputs.plannedOrder.state === "empty" && <small>{t("No plan entered; stock after ordering and shortage are not assessed.")}</small>}{audit?.state === "verdict" && audit.gettingOld && <small>{t("The stock count is getting old. A fresher count would be better.")}</small>}</div>
         <details className="pp-check-explanation"><summary>{t("Why this purchase check?")}</summary><p>{t("Stock on hand + incoming stock + your planned order is compared with the expected four-week range. Above the range may leave excess stock; below it may leave a shortfall.")}</p></details>
       </section>

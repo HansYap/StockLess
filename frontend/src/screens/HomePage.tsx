@@ -3,6 +3,28 @@ import { Logo } from "../components/Logo.tsx";
 import { localizedWorkspaceHref, setLanguage, t, useLanguage, type Language } from "../i18n/index.ts";
 import { homepageRefreshMessages } from "../i18n/homepage-refresh.ts";
 import "../homepage.css";
+import "../purchase-plan/purchase-plan.css";
+import { PurchaseDemandChart } from "../purchase-plan/PurchaseDemandChart.tsx";
+import { PurchaseStockChart } from "../purchase-plan/PurchaseStockChart.tsx";
+import { addCalendarDays, previousCompleteWeekStarts, type WeeklyEvidence } from "../engine.ts";
+
+const exampleWeeks: readonly WeeklyEvidence[] = previousCompleteWeekStarts("2026-09-15").map((start, i) => {
+  const quantity = [4, 2, 6, 2, 4, 6, 6, 6][i];
+  return { productKey: "MM0002", weekStart: start, weekEnd: addCalendarDays(start, 6), positiveQuantity: quantity,
+    negativeQuantity: 0, netQuantity: quantity, recordCount: 1, state: "observed_demand", sourceRows: [i + 2] };
+});
+
+function ExampleForecastSummary() {
+  return <div className="hp-simple-forecast" role="img" aria-label={`${t("Earlier 4 weeks")}: 14; ${t("Latest 4 weeks")}: 22; ${t("Next 4 weeks")}: 15–21 ${t("units")}`}>
+    <p>{t("Sales in 4-week periods")} · {t("units")}</p>
+    <div className="hp-simple-forecast-bars" aria-hidden="true">
+      {[14, 22, 21].map((quantity, i) => <div key={i}><b>{i === 2 ? "15–21" : quantity}</b><span className={i === 2 ? "hp-simple-forecast-bar hp-simple-forecast-bar--estimate" : "hp-simple-forecast-bar"} style={{ height: quantity * 3 }}>
+        {i === 2 && <i style={{ height: 6 * 3 }} />}
+      </span><small>{t(i === 0 ? "Earlier 4 weeks" : i === 1 ? "Latest 4 weeks" : "Next 4 weeks")}</small></div>)}
+    </div>
+    <p className="hp-simple-forecast-key"><span>{t("Recorded sales")}</span><span>{t("Estimated sales")}</span></p>
+  </div>;
+}
 
 type HomePageProps = {
   startHref?: string;
@@ -282,90 +304,7 @@ function Hero() {
                 {copy("hp.pp.fc")}
               </span>
             </p>
-            <div className="fc fc--small">
-              <div className="fc__plot" style={{"height": "102px"}}>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"4"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "37px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"2"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "19px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"6"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "56px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"2"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "19px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"4"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "37px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"6"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "56px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"6"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "56px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"6"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "56px"}} />
-                </div>
-                <div className="fc__future">
-                  <span className="fc__flab">
-                    {copy("hp.pp.flab")}
-                  </span>
-                  <span className="fc__bl" style={{"bottom": "55px"}}>
-                    {"≈4.5"}
-                  </span>
-                  <div className="fc__fcol">
-                    <span className="fc__band" style={{"bottom": "35px", "height": "14px"}} />
-                    <span className="fc__mid" style={{"bottom": "42px"}} />
-                  </div>
-                  <div className="fc__fcol">
-                    <span className="fc__band" style={{"bottom": "35px", "height": "14px"}} />
-                    <span className="fc__mid" style={{"bottom": "42px"}} />
-                  </div>
-                  <div className="fc__fcol">
-                    <span className="fc__band" style={{"bottom": "35px", "height": "14px"}} />
-                    <span className="fc__mid" style={{"bottom": "42px"}} />
-                  </div>
-                  <div className="fc__fcol">
-                    <span className="fc__band" style={{"bottom": "35px", "height": "14px"}} />
-                    <span className="fc__mid" style={{"bottom": "42px"}} />
-                  </div>
-                </div>
-              </div>
-              <div className="fc__mlabels fc__mlabels--on">
-                <span>
-                  {copy("hp.pp.past")}
-                </span>
-                <b>
-                  {copy("hp.pp.flab")}
-                </b>
-              </div>
-            </div>
+            <ExampleForecastSummary />
             <div className="hp-anim__order">
               <span>
                 <span>
@@ -384,13 +323,7 @@ function Hero() {
                 {`8 + ${story.order} = ${8 + story.order}`}
               </span>
             </div>
-            <div className="hp-anim__bar" aria-hidden="true">
-              <div className="hp-anim__track">
-                <span className="hp-anim__s" />
-                <span className="hp-anim__o" id="ha-seg" style={{ width: `${story.order * 2}%` }} />
-              </div>
-              <span className="hp-anim__band" />
-            </div>
+            <div className="purchase-plan--new hp-shared-chart hp-shared-chart--compact"><PurchaseStockChart stock={8} incoming={0} order={story.order} low={15} high={21} /></div>
             <div className={`hp-card__check is-${story.verdict}`} id="ha-check">
               <div>
                 <span className="hp-k2">
@@ -992,8 +925,6 @@ function PurchaseExample() {
   const total = 8 + incoming + order;
   const suggested = Math.max(0, 18 - 8 - incoming);
   const verdict = total > 21 ? "hi" : total < 15 ? "lo" : "ok";
-  const maximum = Math.max(21 * 1.3, total * 1.08);
-  const percent = (value: number) => `${100 * value / maximum}%`;
   return (
     <section className="hp-ex" id="example">
       <div className="wrap">
@@ -1048,144 +979,7 @@ function PurchaseExample() {
                 {copy("hp.pp.fc")}
               </span>
             </p>
-            <div className="fc">
-              <div className="fc__plot" style={{"height": "150px"}}>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"4"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "63px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"2"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "31px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"6"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "94px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"2"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "31px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"4"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "63px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"6"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "94px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"6"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "94px"}} />
-                </div>
-                <div className="fc__col">
-                  <span className="fc__val">
-                    {"6"}
-                  </span>
-                  <span className="fc__bar" style={{"height": "94px"}} />
-                </div>
-                <div className="fc__future">
-                  <span className="fc__flab">
-                    {copy("hp.pp.flab")}
-                  </span>
-                  <span className="fc__bl" style={{"bottom": "89px"}}>
-                    {"≈4.5"}
-                  </span>
-                  <div className="fc__fcol">
-                    <span className="fc__band" style={{"bottom": "59px", "height": "24px"}} />
-                    <span className="fc__mid" style={{"bottom": "71px"}} />
-                  </div>
-                  <div className="fc__fcol">
-                    <span className="fc__band" style={{"bottom": "59px", "height": "24px"}} />
-                    <span className="fc__mid" style={{"bottom": "71px"}} />
-                  </div>
-                  <div className="fc__fcol">
-                    <span className="fc__band" style={{"bottom": "59px", "height": "24px"}} />
-                    <span className="fc__mid" style={{"bottom": "71px"}} />
-                  </div>
-                  <div className="fc__fcol">
-                    <span className="fc__band" style={{"bottom": "59px", "height": "24px"}} />
-                    <span className="fc__mid" style={{"bottom": "71px"}} />
-                  </div>
-                </div>
-              </div>
-              <div className="fc__labels">
-                <span>
-                  {"20 Jul"}
-                </span>
-                <span>
-                  {"27 Jul"}
-                </span>
-                <span>
-                  {"3 Aug"}
-                </span>
-                <span>
-                  {"10 Aug"}
-                </span>
-                <span>
-                  {"17 Aug"}
-                </span>
-                <span>
-                  {"24 Aug"}
-                </span>
-                <span>
-                  {"31 Aug"}
-                </span>
-                <span>
-                  {"7 Sep"}
-                </span>
-                <div className="fc__flabels">
-                  <span>
-                    {"15 Sep"}
-                  </span>
-                  <span>
-                    {"22 Sep"}
-                  </span>
-                  <span>
-                    {"29 Sep"}
-                  </span>
-                  <span>
-                    {"6 Oct"}
-                  </span>
-                </div>
-              </div>
-              <div className="fc__mlabels">
-                <span>
-                  {copy("hp.pp.past")}
-                </span>
-                <b>
-                  {copy("hp.pp.next")}
-                </b>
-              </div>
-              <ul className="lgd">
-                <li>
-                  <i className="sw sw--obs" />
-                  <span>
-                    {copy("hp.pp.sold")}
-                  </span>
-                </li>
-                <li>
-                  <i className="sw sw--e" />
-                  <span>
-                    {copy("hp.pp.frange")}
-                  </span>
-                </li>
-              </ul>
-            </div>
+            <div className="purchase-plan--new hp-shared-chart"><PurchaseDemandChart weeks={exampleWeeks} range={{ low: 15, high: 21 }} name="Milo 3in1 (illustrative example)" analysisDate="2026-09-15" /></div>
             <div className="pp2-facts">
               <div>
                 <small>
@@ -1291,20 +1085,7 @@ function PurchaseExample() {
                 {copy("hp.pp.eq", { s: 8, i: incoming, o: order, t: total })}
               </span>
             </div>
-            <div className="pbar" aria-hidden="true">
-              <div className="pbar__track">
-                <span className="pbar__seg pbar__seg--s" id="hp-seg-s" style={{ width: percent(8) }} />
-                <span className="pbar__seg pbar__seg--i" id="hp-seg-i" style={{ width: percent(incoming) }} />
-                <span className="pbar__seg pbar__seg--o" id="hp-seg-o" style={{ width: percent(order) }} />
-              </div>
-              <span className="pbar__band" id="hp-band" style={{ left: percent(15), width: percent(6) }} />
-              <span className="pbar__tick" id="hp-tlo" style={{ left: percent(15) }}>
-                {"15"}
-              </span>
-              <span className="pbar__tick" id="hp-thi" style={{ left: percent(21) }}>
-                {"21"}
-              </span>
-            </div>
+            <div className="purchase-plan--new hp-shared-chart"><PurchaseStockChart stock={8} incoming={incoming} order={order} low={15} high={21} /></div>
             <div className={`pp2-verdict is-${verdict}`} id="hp-v" aria-live="polite">
               <b id="hp-vh">
                 {copy(`hp.pp.v.${verdict}.h`)}

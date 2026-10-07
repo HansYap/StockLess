@@ -76,22 +76,49 @@
 .purchase-plan--new .pp-facts > div { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 14px; background: white; border: 1px solid #e3ece9; }
 .purchase-plan--new .pp-facts b { font-size: 22px; }
 .purchase-plan--new .pp-facts small { font-size: 12px; color: var(--muted); }
-.purchase-plan--new .pp-fc-plot { height: 150px; display: flex; align-items: flex-end; gap: 10px; padding: 0 2px; border-bottom: 1px solid #c9d5d2; }
-.purchase-plan--new .pp-fc-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
-.purchase-plan--new .pp-fc-value { font-size: 11px; color: var(--ink); }
-.purchase-plan--new .pp-fc-bar { display: block; width: 100%; max-width: 34px; border-radius: 6px 6px 2px 2px; background: var(--teal); }
-.purchase-plan--new .pp-fc-bar--missing { border-radius: 6px; background: #e3eae8; border: 1px dashed #a9b9b5; }
-.purchase-plan--new .pp-fc-bar--zero { background: #d99120; }
-.purchase-plan--new .pp-fc-future { flex: 4 1 0; min-width: 0; position: relative; height: 100%; display: flex; gap: 6px; padding: 22px 6px 0; background: #eaf4f0; border-left: 2px dashed #8fa9a3; border-radius: 0 8px 0 0; }
-.purchase-plan--new .pp-fc-future-label { position: absolute; top: 5px; left: 8px; font: 800 10px var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--teal-deep); white-space: nowrap; }
-.purchase-plan--new .pp-fc-fcol { flex: 1 1 0; height: 100%; position: relative; }
-.purchase-plan--new .pp-fc-band { position: absolute; left: 0; right: 0; border: 2px dashed var(--teal-deep); border-radius: 6px; background: #167d742e; }
-.purchase-plan--new .pp-fc-mid { position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px; background: var(--teal-deep); }
-.purchase-plan--new .pp-fc-dates { display: flex; gap: 10px; margin-top: 6px; font: 400 10px var(--data); color: var(--muted); }
-.purchase-plan--new .pp-fc-dates > span { flex: 1 1 0; min-width: 0; text-align: center; }
-.purchase-plan--new .pp-fc-dates > div { flex: 4 1 0; display: flex; gap: 6px; padding: 0 6px; color: var(--teal-deep); }
-.purchase-plan--new .pp-fc-dates > div span { flex: 1; text-align: center; }
-.purchase-plan--new .pp-fc-mobile-labels { display: none; }
+/* Equal periods, a shared zero baseline, and a distinct forecast range. */
+.purchase-plan--new .pp-forecast-chart { display: flex; flex-direction: column; gap: 10px; }
+.purchase-plan--new .pp-chart-title { font: 700 14px var(--display); color: var(--ink); }
+.purchase-plan--new .pp-period-chart { --axis-width: 42px; padding: 10px 12px 14px 0; border: 1px solid #dce7e3; border-radius: 12px; background: white; }
+.purchase-plan--new .pp-period-plot { position: relative; display: grid; grid-template-columns: var(--axis-width) repeat(3,minmax(0,1fr)); height: 202px; }
+.purchase-plan--new .pp-period-axis { position: relative; grid-column: 1; color: #52656b; font: 11px var(--data); }
+.purchase-plan--new .pp-period-axis span { position: absolute; right: 9px; transform: translateY(50%); }
+.purchase-plan--new .pp-period-axis small { position: absolute; top: 0; right: 9px; font: 11px var(--body); }
+.purchase-plan--new .pp-period-grid { position: absolute; inset: 0 0 0 var(--axis-width); pointer-events: none; }
+.purchase-plan--new .pp-period-grid i { position: absolute; left: 0; right: 0; border-top: 1px solid #e4ece8; }
+.purchase-plan--new .pp-period-grid i:first-child { border-color: #aebfb8; }
+.purchase-plan--new .pp-period-col { position: relative; display: flex; align-items: flex-end; justify-content: center; min-width: 0; }
+.purchase-plan--new .pp-period-col--forecast { background: var(--teal-tint); border-left: 1px dashed var(--mint); border-radius: 10px 10px 0 0; }
+.purchase-plan--new .pp-period-value { position: absolute; left: 0; right: 0; padding: 0 3px; text-align: center; font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; color: var(--ink); }
+.purchase-plan--new .pp-period-bar { display: block; width: 46%; max-width: 76px; background: #167d74; border-radius: 6px 6px 0 0; }
+.purchase-plan--new .pp-period-bar--zero { border-radius: 0; }
+.purchase-plan--new .pp-period-bar--forecast { position: relative; background: var(--mint); overflow: hidden; }
+.purchase-plan--new .pp-period-lower { position: absolute; bottom: 0; left: 0; right: 0; background: var(--mint); }
+.purchase-plan--new .pp-period-extension { position: absolute; top: 0; left: 0; right: 0; border: 1px solid var(--teal-deep); border-bottom: 2px solid #fff; background: repeating-linear-gradient(135deg,var(--teal-tint) 0px,var(--teal-tint) 5px,var(--teal) 5px,var(--teal) 7px); }
+.purchase-plan--new .pp-period-missing { display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 85%; height: 90px; padding: 8px; border: 1px dashed #bac9c3; border-radius: 8px; text-align: center; color: #52656b; background: #f4f7f5; }
+.purchase-plan--new .pp-period-missing b { font-size: 12px; }
+.purchase-plan--new .pp-period-missing small { font-size: 11px; }
+.purchase-plan--new .pp-period-labels { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin-left: var(--axis-width); }
+.purchase-plan--new .pp-period-labels > div { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 0; text-align: center; min-width: 0; }
+.purchase-plan--new .pp-period-labels b { font-size: 13px; }
+.purchase-plan--new .pp-period-labels small { font-size: 12px; color: #52656b; }
+.purchase-plan--new .pp-period-labels span { font-size: 11px; color: #52656b; }
+.purchase-plan--new .pp-period-label--forecast b, .purchase-plan--new .pp-period-label--forecast span { color: var(--teal-deep); }
+.purchase-plan--new .pp-forecast-key { display: flex; flex-wrap: wrap; gap: 8px 16px; color: #52656b; font-size: 12px; }
+.purchase-plan--new .pp-forecast-key > span { display: flex; align-items: center; gap: 6px; }
+.purchase-plan--new .pp-swatch--forecast { background: var(--mint); }
+.purchase-plan--new .pp-swatch--estimate-range { border: 1px solid var(--teal-deep); background: repeating-linear-gradient(135deg,var(--teal-tint) 0px,var(--teal-tint) 3px,var(--teal) 3px,var(--teal) 4px); }
+.purchase-plan--new .pp-weekly-history { padding-top: 10px; border-top: 1px solid #dce7e3; }
+.purchase-plan--new .pp-weekly-history summary { font-weight: 700; font-size: 13px; color: var(--teal-deep); cursor: pointer; }
+.purchase-plan--new .pp-weekly-history > p { margin-top: 12px; }
+.purchase-plan--new .pp-weekly-scroll { overflow-x: auto; }
+.purchase-plan--new .pp-weekly-plot { display: grid; grid-template-columns: repeat(8,minmax(48px,1fr)); min-width: 420px; gap: 6px; padding: 14px 0 8px; }
+.purchase-plan--new .pp-weekly-col { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.purchase-plan--new .pp-weekly-col small { font-size: 10px; color: #52656b; }
+.purchase-plan--new .pp-weekly-bar-area { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 5px; height: 112px; width: 100%; border-bottom: 1px solid #aebfb8; font-size: 12px; }
+.purchase-plan--new .pp-weekly-bar { display: block; width: 55%; max-width: 32px; background: #167d74; border-radius: 4px 4px 0 0; }
+.purchase-plan--new .pp-weekly-bar--missing { background: #f4f7f5; border: 1px dashed #bac9c3; border-radius: 4px; }
+.purchase-plan--new .pp-weekly-bar--zero { border-radius: 0; }
 .purchase-plan--new .pp-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 10px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 12px; }
 .purchase-plan--new .pp-legend li { display: inline-flex; align-items: center; gap: 5px; }
 .purchase-plan--new .pp-swatch { display: inline-block; width: 12px; height: 10px; border-radius: 2px; flex: none; }
@@ -123,14 +150,18 @@
 .purchase-plan--new .pp-purchase-check { display: flex; flex-direction: column; gap: 10px; }
 .purchase-plan--new .pp-check-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
 .purchase-plan--new .pp-check-head span { font-size: 14px; color: #4f6168; }
-.purchase-plan--new .pp-stock-bar { position: relative; height: 58px; padding-top: 7px; }
-.purchase-plan--new .pp-stock-track { display: flex; height: 16px; border-radius: 8px; background: var(--line-soft); overflow: hidden; }
-.purchase-plan--new .pp-stock-segment { display: block; height: 16px; }
+.purchase-plan--new .pp-stock-comparison { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid #dce7e3; border-radius: 12px; background: #fafcfb; }
+.purchase-plan--new .pp-stock-rows { display: flex; flex-direction: column; gap: 16px; }
+.purchase-plan--new .pp-stock-row-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin-bottom: 8px; font-size: 13px; }
+.purchase-plan--new .pp-stock-row-label strong { font-weight: 600; }
+.purchase-plan--new .pp-stock-track { display: flex; height: 24px; border-radius: 4px; background: #e8eeeb; overflow: hidden; }
+.purchase-plan--new .pp-stock-segment { display: block; height: 100%; }
 .purchase-plan--new .pp-stock-segment--stock { background: #16313b; }
 .purchase-plan--new .pp-stock-segment--incoming { background: #8fd2c8; }
 .purchase-plan--new .pp-stock-segment--order { background: #167d74; }
-.purchase-plan--new .pp-stock-band { position: absolute; top: 3px; height: 24px; border: 2px dashed #167d74; border-radius: 5px; }
-.purchase-plan--new .pp-stock-tick { position: absolute; top: 31px; transform: translateX(-50%); font: 400 12px var(--data); color: var(--muted); }
+.purchase-plan--new .pp-stock-estimate { background: var(--mint); }
+.purchase-plan--new .pp-stock-estimate-range { border: 1px solid var(--teal-deep); background: repeating-linear-gradient(135deg,var(--teal-tint) 0px,var(--teal-tint) 5px,var(--teal) 5px,var(--teal) 7px); }
+.purchase-plan--new .pp-stock-scale { display: flex; justify-content: space-between; font: 11px var(--data); color: #52656b; }
 .purchase-plan--new .pp-check-message { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 14px; font-size: 15px; line-height: 1.5; }
 .purchase-plan--new .pp-check-message--check_order { background: var(--amber-tint); border: 1px solid #f1ddb4; }
 .purchase-plan--new .pp-check-message--order_needed { background: var(--red-tint); border: 1px solid #f0caca; }
@@ -225,10 +256,9 @@
   .purchase-plan--new .pp-demand { padding: 14px; }
   .purchase-plan--new .pp-detail-nav { width: 100%; justify-content: flex-end; }
   .purchase-plan--new .pp-detail-nav .pp-pill { margin-right: auto; }
-  .purchase-plan--new .pp-fc-plot { gap: 4px; }
-  .purchase-plan--new .pp-fc-future { padding-left: 4px; padding-right: 4px; gap: 4px; }
-  .purchase-plan--new .pp-fc-future-label { font-size: 9px; left: 4px; letter-spacing: 0; }
-  .purchase-plan--new .pp-fc-dates { display: none; }
-  .purchase-plan--new .pp-fc-mobile-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .purchase-plan--new .pp-period-chart { --axis-width: 34px; padding-right: 6px; }
+  .purchase-plan--new .pp-period-value { font-size: 13px; }
+  .purchase-plan--new .pp-period-labels b { font-size: 11px; }
+  .purchase-plan--new .pp-period-labels small { font-size: 11px; }
   .purchase-plan--new .pp-detail-footer .btn { width: 100%; }
 }

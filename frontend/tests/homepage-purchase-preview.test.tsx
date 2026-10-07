@@ -10,6 +10,16 @@ function renderExample() {
 }
 
 describe("redesigned homepage", () => {
+  it("uses the same four-week forecast comparison and keeps it unchanged when an order is edited", () => {
+    const example = renderExample();
+    const forecast = example.getByRole("img", { name: /Recorded sales and four-week demand range/ });
+    expect(forecast.getAttribute("aria-label")).toContain("20 Jul – 16 Aug: 14 units");
+    expect(forecast.getAttribute("aria-label")).toContain("17 Aug – 13 Sept: 22 units");
+    expect(forecast.getAttribute("aria-label")).toContain("Next 4 weeks: 15–21 units");
+    fireEvent.change(example.getByRole("slider", { name: "Your order" }), { target: { value: "10" } });
+    expect(example.getByRole("img", { name: /^Stock after order:/ }).getAttribute("aria-label")).toContain("Stock after order: 18 units");
+    expect(forecast.getAttribute("aria-label")).toContain("Next 4 weeks: 15–21 units");
+  });
   it("keeps every start and workflow link on the existing visit-routing entry point", () => {
     render(<HomePage startHref="#start" />);
     const starts = screen.getAllByRole("link", { name: "Start with your sales data →" });

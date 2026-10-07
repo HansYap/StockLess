@@ -2,6 +2,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { PurchasePlanScreen } from "../src/screens/PurchasePlanScreen.tsx";
+import { PurchaseStockChart } from "../src/purchase-plan/PurchaseStockChart.tsx";
 import { PurchaseDemandChart } from "../src/purchase-plan/PurchaseDemandChart.tsx";
 import { buildDemandReview, evaluateProductPurchasePlan, suggestSupplierOrder } from "../src/engine.ts";
 import { joinPurchaseEvidence, type PurchaseDrafts } from "../src/purchase-plan/model.ts";
@@ -171,15 +172,57 @@ describe("purchase planning", () => {
 });
 
 describe("purchase evidence chart", () => {
-  it("uses eight complete calendar weeks, distinguishes zero from missing, and projects the existing range", () => {
+  it("compares equal four-week totals and preserves the supplied forecast bounds", () => {
+    const { snapshot, forecast } = makeEvidence();
+    const weeks = buildDemandReview(snapshot).products.find(product => product.productKey === "A")!.timeline.weeks;
+    const range = { ...forecast.products[0].range!, low: 20, high: 60 };
+    render(<PurchaseDemandChart weeks={weeks} range={range} name="Test" analysisDate={snapshot.analysisDate} />);
+    const bars = screen.getAllByTestId("recorded-period-bar");
+    expect(bars).toHaveLength(2);
+    const expected = [weeks.slice(-8, -4), weeks.slice(-4)].map(period => period.reduce((sum, week) => sum + week.positiveQuantity, 0));
+    const chart = screen.getByRole("img", { name: /Recorded sales/ });
+    expected.forEach(quantity => expect(chart.getAttribute("aria-label")).toContain(`${quantity} units`));
+    expect(chart.getAttribute("aria-label")).toContain("Next 4 weeks: 20–60 units");
+    expect(screen.getByTestId("forecast-range-extension")).toBeTruthy();
+    expect(screen.getByText("Earlier 4 weeks")).toBeTruthy();
+    expect(screen.getByText("Latest 4 weeks")).toBeTruthy();
+  });
+  it("shows a single estimate without a range extension when both bounds agree", () => {
+    const { snapshot, forecast } = makeEvidence();
+    const weeks = buildDemandReview(snapshot).products.find(product => product.productKey === "A")!.timeline.weeks;
+    render(<PurchaseDemandChart weeks={weeks} range={{ ...forecast.products[0].range!, low: 40, high: 40 }} name="Test" analysisDate={snapshot.analysisDate} />);
+    expect(screen.getByRole("img", { name: /Recorded sales/ }).getAttribute("aria-label")).toContain("Next 4 weeks: 40 units");
+    expect(screen.queryByTestId("forecast-range-extension")).toBeNull();
+    expect(screen.queryByText("40–40")).toBeNull();
+  });
+  it("shows no complete-period sales bar when recent records are missing", () => {
+    const { snapshot, forecast } = makeEvidence();
+    render(<PurchaseDemandChart weeks={[]} range={forecast.products[0].range!} name="Test" analysisDate={snapshot.analysisDate} />);
+    expect(screen.queryByTestId("recorded-period-bar")).toBeNull();
+    expect(screen.getAllByText("Missing records")).toHaveLength(2);
+    expect(screen.getAllByText("0 of 4 weeks recorded")).toHaveLength(2);
+  });
+  it("separates stock and estimated sales while keeping a shared scale", () => {
+    render(<PurchaseStockChart stock={10} incoming={5} order={20} low={30} high={40} />);
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("Stock after order: 35 units");
+    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("Expected demand: 30–40 units");
+    expect(screen.getByText("Stock after your order")).toBeTruthy();
+    expect(screen.getByText("Expected sales")).toBeTruthy();
+    expect(screen.getByText("In stock: 10")).toBeTruthy();
+    expect(screen.getByText("Incoming: 5")).toBeTruthy();
+    expect(screen.getByText("Your order: 20")).toBeTruthy();
+  });
+  it("distinguishes missing weeks from zero and shows one four-week forecast", () => {
     const { snapshot, forecast } = makeEvidence();
     const weeks = buildDemandReview(snapshot).products.find(product => product.productKey === "B")!.timeline.weeks;
     render(<PurchaseDemandChart weeks={weeks} range={forecast.products[1].range!} name="Test" analysisDate={snapshot.analysisDate} />);
     expect(screen.getAllByTestId("missing-week")).toHaveLength(2);
     expect(screen.getAllByTestId("zero-sales-bar")).toHaveLength(1);
     expect(screen.getAllByTestId("recorded-sales-bar")).toHaveLength(5);
-    expect(screen.getAllByTestId("forecast-week-band")).toHaveLength(4);
-    expect(screen.getByText("Weekly equivalent of expected demand")).toBeTruthy();
+    expect(screen.getAllByTestId("forecast-period-bar")).toHaveLength(1);
+    expect(screen.queryByTestId("forecast-week-band")).toBeNull();
+    expect(screen.getByText("The forecast is an estimate for all 4 weeks together. Actual sales may be lower or higher.")).toBeTruthy();
+    expect(screen.getByText("A past bar is unavailable when any of its weeks are missing. Missing records do not mean zero sales.")).toBeTruthy();
   });
   it("does not substitute old history for recent missing weeks and explains returns", () => {
     const { snapshot, forecast } = makeEvidence();

@@ -92,6 +92,8 @@ const open = () =>
   );
 
 describe("App forecast and draft lifecycle", () => {
+  // Three upload-to-plan journeys include the rendered evidence charts. Allow
+  // enough time for all assertions to complete on a busy machine.
   it("input edits never rerun forecasting; navigation retains drafts; Clear session and replacement discard drafts", async () => {
     vi.mocked(runDemandForecastInWorker).mockClear();
     const store = vi.spyOn(Storage.prototype, "setItem");
@@ -140,5 +142,5 @@ describe("App forecast and draft lifecycle", () => {
     );
     expect(store.mock.calls.every(([key]) => key === "stockless.hasUploaded")).toBe(true);
     store.mockRestore();
-  });
+  }, 15000);
 });

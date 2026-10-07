@@ -1,5 +1,24 @@
 /** Purchase workflow copy, including the supplier and empty-order controls. */
 export const purchaseMessages: Record<string, readonly [string, string]> = {
+  "Expected sales in the next 4 weeks": ["未来 4 周的预计销量", "Jangkaan jualan untuk 4 minggu akan datang"],
+  "Sales in 4-week periods": ["每 4 周的销量", "Jualan bagi tempoh 4 minggu"],
+  "Each bar covers 4 weeks, so you can compare past sales with the forecast.": ["每根柱子代表 4 周，方便比较过去销量和预测销量。", "Setiap bar mewakili 4 minggu supaya anda boleh membandingkan jualan lepas dengan ramalan."],
+  "Earlier 4 weeks": ["较早的 4 周", "4 minggu sebelumnya"],
+  "Latest 4 weeks": ["最近 4 周", "4 minggu terkini"],
+  "Estimated sales": ["预计销量", "Anggaran jualan"],
+  "Lower estimate": ["较低估计", "Anggaran bawah"],
+  "Up to the upper estimate": ["至较高估计", "Sehingga anggaran atas"],
+  "The forecast is an estimate for all 4 weeks together. Actual sales may be lower or higher.": ["预测是整个 4 周的合计估计。实际销量可能更低或更高。", "Ramalan ialah anggaran untuk keseluruhan 4 minggu. Jualan sebenar mungkin lebih rendah atau lebih tinggi."],
+  "A past bar is unavailable when any of its weeks are missing. Missing records do not mean zero sales.": ["若有一周缺少记录，则无法显示该时段的柱子。缺少记录不代表销量为零。", "Bar jualan lepas tidak tersedia jika rekod mana-mana minggu tiada. Rekod yang tiada bukan bermakna jualan sifar."],
+  "Missing records": ["缺少记录", "Rekod tiada"],
+  "{0} of 4 weeks recorded": ["4 周中有 {0} 周有记录", "{0} daripada 4 minggu direkodkan"],
+  "See weekly sales records": ["查看每周销量记录", "Lihat rekod jualan mingguan"],
+  "Each bar below shows recorded sales for one week.": ["下方每根柱子表示一周的已记录销量。", "Setiap bar di bawah menunjukkan jualan yang direkodkan untuk satu minggu."],
+  "Recorded": ["已记录", "Direkodkan"],
+  "Both bars use the same scale for the next 4 weeks.": ["两根横条使用相同刻度，比较未来 4 周的数据。", "Kedua-dua bar menggunakan skala yang sama untuk 4 minggu akan datang."],
+  "Stock after your order": ["订货后的库存", "Stok selepas pesanan anda"],
+  "Expected sales": ["预计销量", "Jangkaan jualan"],
+  "Estimated sales range": ["预计销量范围", "Julat anggaran jualan"],
   "Step 4 of 4": [
     "第 4 步 / 共 4 步",
     "Langkah 4 / 4"

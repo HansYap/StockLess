@@ -443,3 +443,22 @@ html[lang^="zh"] .sl-home h1,html[lang^="zh"] .sl-home h2,html[lang^="zh"] .sl-h
 .sl-home .hp-card-wrap,.sl-home .hp-hero__text{min-width:0}
 .sl-home .hp-hero h1:focus{outline:none}
 @media(max-width:700px){.sl-home .hp-hero h1{overflow-wrap:break-word}}
+
+/* The examples use the same period comparison and stock bars as the workspace. */
+.sl-home .hp-shared-chart { background: transparent; }
+.sl-home .hp-simple-forecast { padding: 12px 0 4px; }
+.sl-home .hp-simple-forecast > p { font-size: 11px; color: var(--muted); margin: 0 0 10px; }
+.sl-home .hp-simple-forecast-bars { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.sl-home .hp-simple-forecast-bars > div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
+.sl-home .hp-simple-forecast-bars b { font: 700 13px var(--data); }
+.sl-home .hp-simple-forecast-bars small { font-size: 10px; white-space: nowrap; }
+.sl-home .hp-simple-forecast-bar { display: block; position: relative; width: 50%; max-width: 45px; background: #167d74; border-radius: 4px 4px 0 0; overflow: hidden; }
+.sl-home .hp-simple-forecast-bar--estimate { background: var(--mint); }
+.sl-home .hp-simple-forecast-bar i { position: absolute; top: 0; left: 0; right: 0; border: 1px solid var(--teal-deep); border-bottom: 1px solid white; background: repeating-linear-gradient(135deg,var(--teal-tint) 0px,var(--teal-tint) 5px,var(--teal) 5px,var(--teal) 7px); }
+.sl-home .hp-simple-forecast .hp-simple-forecast-key { display: flex; justify-content: space-between; margin: 8px 0; font-size: 10px; }
+.sl-home .hp-simple-forecast-key span:last-child { color: var(--teal-deep); }
+.sl-home .hp-shared-chart--compact .pp-stock-comparison { padding: 8px 0; border: 0; background: none; }
+.sl-home .hp-shared-chart--compact .pp-stock-comparison > p, .sl-home .hp-shared-chart--compact .pp-legend, .sl-home .hp-shared-chart--compact .pp-stock-scale { display: none; }
+.sl-home .hp-shared-chart--compact .pp-stock-row-label { font-size: 11px; margin-bottom: 4px; }
+.sl-home .hp-shared-chart--compact .pp-stock-rows { gap: 10px; }
+.sl-home .hp-shared-chart--compact .pp-stock-track { height: 12px; }
