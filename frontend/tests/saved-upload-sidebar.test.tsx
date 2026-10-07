@@ -27,10 +27,12 @@ vi.mock("../src/screens/UploadScreen.tsx", async original => {
 });
 vi.mock("../src/screens/MappingScreen.tsx", () => ({ MappingScreen: (props: ComponentProps<typeof import("../src/screens/MappingScreen.tsx").MappingScreen>) => <>
   <h1>Test mapping</h1><button onClick={props.onBack}>Back to test upload</button>
+  <button onClick={props.onClear}>Clear session</button>
   <button onClick={props.onConfirmAllAndContinue}>Check test readiness</button>{props.children}
 </> }));
 vi.mock("../src/screens/ReadinessScreen.tsx", () => ({ ReadinessScreen: (props: ComponentProps<typeof import("../src/screens/ReadinessScreen.tsx").ReadinessScreen>) => <>
   <h1>Test readiness</h1><button onClick={props.onContinue}>Calculate test plan</button><button onClick={props.onBack}>Back to test mapping</button>
+  <button onClick={props.onClear}>Clear session</button>
 </> }));
 vi.mock("../src/screens/PurchasePlanScreen.tsx", () => ({ PurchasePlanScreen: (props: ComponentProps<typeof import("../src/screens/PurchasePlanScreen.tsx").PurchasePlanScreen>) => <>
   <h1>Saved purchase plan</h1><button onClick={props.onBack}>Back to test readiness</button>
@@ -57,6 +59,7 @@ function evidence() {
 }
 let saved: SavedDataset;
 beforeEach(() => {
+  localStorage.removeItem("stockless.hasUploaded");
   vi.clearAllMocks();
   const result = evidence();
   saved = { id: "existing", shopName: "Corner Shop", datasetName: "September sales", shopKey: "corner shop", nameKey: "september sales",
@@ -83,7 +86,7 @@ beforeEach(() => {
     return saved;
   });
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); localStorage.removeItem("stockless.hasUploaded"); });
 async function updatePage() {
   render(<App updateDatasetId="existing" />);
   await screen.findByRole("heading", { name: "Reupload your sales file" });
@@ -100,7 +103,8 @@ it("adds saved-dataset navigation and graphics to reupload, without saved manage
   expect(within(screen.getByRole("navigation", { name: "Progress" })).getAllByRole("listitem")).toHaveLength(3);
   expect(document.querySelectorAll(".saved-workspace__content .ws-decor img")).toHaveLength(2);
 });
-it("keeps new uploads without a sidebar even when this device has saved datasets", async () => {
+it("keeps the fresh upload screen without a sidebar when there is no saved history", async () => {
+  vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<App />);
   await screen.findByRole("heading", { name: "Upload your sales file" });
   expect(screen.getByRole("heading", { name: "Upload your sales file" })).toBeTruthy();
@@ -207,6 +211,52 @@ it("keeps reupload and results destinations when the page is refreshed", async (
   fireEvent.click(within(sidebar()).getByRole("button", { name: "Purchase plan" }));
   await screen.findByRole("heading", { name: "Saved purchase plan" });
   expect(window.location.hash).toBe("#dataset/existing");
+});
+
+it.each(["mapping", "readiness"])("Clear session from %s returns to upload with its sidebar and keeps saved work", async stage => {
+  await updatePage();
+  fireEvent.click(screen.getByText("Import test replacement"));
+  await screen.findByRole("heading", { name: "Test mapping" });
+  if (stage === "readiness") {
+    fireEvent.click(screen.getByText("Check test readiness"));
+    await screen.findByRole("heading", { name: "Test readiness" });
+  }
+  fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
+  await screen.findByRole("heading", { name: "Reupload your sales file" });
+  expect(sidebar()).toBeTruthy();
+  expect(window.location.hash).toBe("#update/existing");
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  fireEvent.click(within(sidebar()).getByRole("button", { name: "Purchase plan" }));
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  expect(runDemandForecastInWorker).not.toHaveBeenCalled();
+});
+
+it("retains a sidebar when the first uploaded file is cleared before a plan is generated", async () => {
+  vi.mocked(listSavedDatasets).mockResolvedValue([]);
+  render(<App />);
+  fireEvent.click(screen.getByText("Import test replacement"));
+  await screen.findByRole("heading", { name: "Test mapping" });
+  fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
+  await screen.findByRole("heading", { name: "Reupload your sales file" });
+  expect(sidebar()).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Test mapping" })).toBeNull();
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  expect(window.location.hash).toBe("#workspace");
+});
+
+it("opens Upload with a sidebar when saved history already exists", async () => {
+  render(<App />);
+  await screen.findByRole("heading", { name: "Reupload your sales file" });
+  expect(sidebar()).toBeTruthy();
+  expect(window.location.hash).toBe("#update/existing");
+});
+
+it("keeps returning Upload with a sidebar after the last history item is removed", async () => {
+  localStorage.setItem("stockless.hasUploaded", "true");
+  vi.mocked(listSavedDatasets).mockResolvedValue([]);
+  render(<App />);
+  await screen.findByRole("heading", { name: "Reupload your sales file" });
+  expect(sidebar()).toBeTruthy();
 });
 
 it("offers upload history through the sidebar without the old dataset picker", async () => {

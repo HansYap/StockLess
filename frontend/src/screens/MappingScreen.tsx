@@ -148,13 +148,11 @@ export function MappingScreen(props: MappingScreenProps) {
               {dataset.worksheetName && <small>{t("Worksheet")}: {dataset.worksheetName}</small>}
             </div>
             <div className="mapping-file__actions">
-              <button type="button" onClick={props.onBack} disabled={props.checking}>{t("Change")}</button>
               {props.onClear && <button type="button" onClick={props.onClear} disabled={props.checking}>{t("Clear session")}</button>}
             </div>
           </div>
         </div>
         <div className="mapping-actions">
-          <button type="button" className="mapping-back" onClick={props.onBack} disabled={props.checking}>{t("← Choose another file")}</button>
           {props.onUndo && <button type="button" className="btn btn--ghost" onClick={props.onUndo} disabled={props.checking}>{t("Undo last match change")}</button>}
           <span className="mapping-actions__spacer" />
           <span className="mapping-total" role="status">{totalCount} {t("of")} {totalFields} {t("matched")}</span>

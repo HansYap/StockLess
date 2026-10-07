@@ -1,5 +1,14 @@
 /* Shared navigation for workflow screens converted to the supplied design. */
-.frame.frame--workflow { --shell: 1180px; }
+.frame.frame--workflow {
+  --shell: 1180px;
+  /* A collapsing sticky heading must not make the browser move the page back
+     up to preserve a content anchor and immediately expand the heading again. */
+  overflow-anchor: none;
+}
+/* Let the decorative gutters continue softly through each page heading. */
+.frame.frame--workflow :is(.upload-hero,.mapping-hero,.rd-hero,.pp-hero),
+.returning-page .returning-hero { background:rgb(238 246 242 / 94%); backdrop-filter:blur(12px); }
+.frame.frame--workflow .purchase-plan--new { background:transparent; }
 .frame.frame--workflow .topbar, .returning-page .topbar {
   width: 100%; min-height: 66px; padding: 0 max(32px, calc((100% - 1180px) / 2 + 40px));
   gap: 12px; border-bottom: 1px solid var(--line-soft); background: #fff;

@@ -69,6 +69,16 @@ it("keeps saved data visible after a failed delete and translates the new contro
   expect(screen.getByRole("searchbox", { name: "Cari muat naik" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Kembali ke pelan pembelian" })).toBeTruthy();
 });
+it("Clear Everything removes saved work and returns to the fresh upload route", async () => {
+  await page();
+  window.history.replaceState(null, "", "#history");
+  fireEvent.click(screen.getByRole("button", { name: "Clear Everything" }));
+  expect(storage.clearEverything).not.toHaveBeenCalled();
+  storage.listSavedDatasets.mockResolvedValue([]);
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Clear everything?" })).getByRole("button", { name: "Clear Everything" }));
+  await waitFor(() => expect(storage.clearEverything).toHaveBeenCalledOnce());
+  await waitFor(() => expect(window.location.hash).toBe("#workspace"));
+});
 it("shows upload and empty states without creating example data", async () => {
   storage.listSavedDatasets.mockResolvedValue([]);
   render(<ReturningPage />);

@@ -15,7 +15,7 @@
 .frame.frame--saved-workspace .workspace-save > p { margin:0 0 14px; }
 .frame.frame--saved-workspace .workspace-save .card { width:100%; margin:0; }
 .workspace-plan-actions { display:flex; justify-content:flex-end; }
-.workspace-autosave { margin:0 0 12px; color:var(--muted); font-size:13px; }
+.frame .page > .workspace-autosave { position:absolute; width:1px; height:1px; margin:-1px; }
 .saved-sidebar { position:sticky; top:var(--saved-header-height); height:calc(100dvh - var(--saved-header-height)); }
 .saved-sidebar,.saved-sidebar-drawer { display:flex; flex-direction:column; gap:30px; padding:30px 18px 20px; overflow-y:auto; background:linear-gradient(160deg,#f0f6f2,#f8faf8); border-right:1px solid var(--line); color:var(--ink); }
 .saved-sidebar__label { margin:2px 14px 12px; font:800 12px var(--display); letter-spacing:1.6px; color:#71867a; text-transform:uppercase; }

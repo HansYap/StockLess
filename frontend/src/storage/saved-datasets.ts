@@ -7,6 +7,15 @@ import { withStore, withTransaction } from "./browser-db.ts";
 
 export const UPLOAD_HISTORY_LIMIT = 12;
 
+/** Remember returning use even if an unfinished file is cleared or the last history item is removed. */
+export const UPLOAD_VISIT_KEY = "stockless.hasUploaded";
+export function hasUploadedBefore(): boolean {
+  try { return localStorage.getItem(UPLOAD_VISIT_KEY) === "true"; } catch { return false; }
+}
+export function rememberUploadVisit(): void {
+  try { localStorage.setItem(UPLOAD_VISIT_KEY, "true"); } catch { /* Available saved uploads still identify returning use. */ }
+}
+
 /** Upload time, rather than plan edits, determines the current file and history order. */
 export function newestUploads<T extends Pick<SavedDataset, "createdAt">>(items: readonly T[]): T[] {
   return [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, UPLOAD_HISTORY_LIMIT);
@@ -295,4 +304,5 @@ export async function clearEverything(): Promise<void> {
     transaction.objectStore("datasets").clear();
     result(undefined);
   });
+  try { localStorage.removeItem(UPLOAD_VISIT_KEY); } catch { /* Browser storage may be unavailable. */ }
 }

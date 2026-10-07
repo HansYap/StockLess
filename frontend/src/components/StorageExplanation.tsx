@@ -1,9 +1,8 @@
 import { t, useLanguage } from "../i18n/index.ts";
 
-export function StorageExplanation() {
+export function StorageExplanation({ onManage }: { readonly onManage: () => void }) {
   useLanguage();
-  return <details className="storage-explanation">
-    <summary>{t("How saved information is used")}</summary>
+  return <section className="storage-explanation">
     <div>
       <h2>{t("Saved in this browser")}</h2>
       <ul>
@@ -15,6 +14,7 @@ export function StorageExplanation() {
       </ul>
       <p>{t("Saved work belongs to this browser on this device. It may be lost when browser data is cleared; it is not synchronised to another browser.")}</p>
       <p>{t("Sample data is kept separate from your saved business decisions and outcomes.")}</p>
+      <button type="button" className="returning-btn returning-btn--primary" onClick={onManage}>{t("Manage saved uploads")}</button>
     </div>
-  </details>;
+  </section>;
 }

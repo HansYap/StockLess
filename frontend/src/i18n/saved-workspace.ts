@@ -1,4 +1,6 @@
 export const savedWorkspaceMessages: Record<string, readonly [string, string]> = {
+  "About saved uploads": ["关于已保存的上传", "Tentang muat naik tersimpan"],
+  "Manage saved uploads": ["管理已保存的上传", "Urus muat naik tersimpan"],
   "Your store": ["您的商店", "Kedai anda"],
   "My store": ["我的商店", "Kedai saya"],
   "Saving automatically…": ["正在自动保存…", "Menyimpan secara automatik…"],

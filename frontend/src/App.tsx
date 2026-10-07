@@ -1,7 +1,6 @@
 import { t, useLanguage } from "./i18n/index.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
-import { StorageExplanation } from "./components/StorageExplanation.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
 import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessScreen.tsx";
@@ -44,6 +43,7 @@ import { confirmCurrentMapping } from "./mapping-confirmation.ts";
 import {
   getSavedDataset, listSavedDatasets,
   saveGeneratedPurchasePlan, saveDatasetWork, summarizeSavedDataset,
+  hasUploadedBefore, rememberUploadVisit,
   type SavedDataset, type SavedDatasetSummary, type SavedDecision, type SavedWork,
 } from "./storage/saved-datasets.ts";
 
@@ -98,7 +98,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
   const [updateTargetId, setUpdateTargetId] = useState<string | null>(updateDatasetId ?? null);
   const [uploadTarget, setUploadTarget] = useState<SavedDatasetSummary | null>(null);
-  const [workspaceActive, setWorkspaceActive] = useState(Boolean(initialDatasetId || updateDatasetId));
+  const [workspaceActive, setWorkspaceActive] = useState(Boolean(initialDatasetId || updateDatasetId) || hasUploadedBefore());
   const [workspaceInfo, setWorkspaceInfo] = useState<{ datasetName: string; shopName: string; rowCount: number } | null>(null);
   const [openingDataset, setOpeningDataset] = useState(Boolean(initialDatasetId || updateDatasetId));
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -130,12 +130,24 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   };
 
   const refreshSavedDatasets = useCallback(async () => {
-    setSavedDatasets(await listSavedDatasets());
+    const items = await listSavedDatasets();
+    setSavedDatasets(items);
+    return items;
   }, []);
 
   useEffect(() => {
-    void refreshSavedDatasets().catch(() => setSaveError("Saved information is unavailable here. You can still upload a file or use the sample."));
-  }, [refreshSavedDatasets]);
+    let cancelled = false;
+    void refreshSavedDatasets().then(items => {
+      if (cancelled || !items[0]) return;
+      rememberUploadVisit();
+      if (initialDatasetId || updateDatasetId) return;
+      setWorkspaceActive(true);
+      setUploadTarget(items[0]);
+      setUpdateTargetId(items[0].id);
+      window.history.replaceState(null, "", `#update/${encodeURIComponent(items[0].id)}`);
+    }).catch(() => { if (!cancelled) setSaveError("Saved information is unavailable here. You can still upload a file or use the sample."); });
+    return () => { cancelled = true; };
+  }, [initialDatasetId, updateDatasetId, refreshSavedDatasets]);
 
   const persistWork = useCallback(async (id: string, work: Partial<SavedWork>) => {
     pendingWork.current.set(id, { ...pendingWork.current.get(id), ...work });
@@ -495,6 +507,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     if (updateTargetId && !target) throw new Error("The dataset selected for update is no longer saved.");
     const proposed = await proposeMappings(parsed, createLocalSemanticScorer(signal));
     const importedEnvelope = updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed));
+    if (sourceMode === "user") rememberUploadVisit();
     pendingUploadTarget.current = target?.id;
     uploadToken.current = globalThis.crypto.randomUUID();
     for (const key of retrySaves.current.keys()) if (key.startsWith("plan:")) retrySaves.current.delete(key);
@@ -574,6 +587,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   }, [dateConfirmations, executeReadiness]);
 
   const handleClearSession = useCallback(() => {
+    const target = savedDatasets[0] ?? uploadTarget;
+    const keepSidebar = workspaceActive || envelope.session.dataset?.sourceMode === "user" || Boolean(target);
     terminateStocklessWorkers();
     const cleared = clearActiveSession(envelope);
     resetReadinessEvidence();
@@ -584,20 +599,22 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setProductKey(null);
     setReached(1);
     setStep(1);
+    setShowImpact(false);
     setActiveSavedId(null);
     pendingUploadTarget.current = undefined;
-    retrySaves.current.clear();
+    uploadToken.current = globalThis.crypto.randomUUID();
+    for (const key of retrySaves.current.keys()) if (key.startsWith("plan:")) retrySaves.current.delete(key);
     generatedSaves.current.clear();
-    pendingWork.current.clear();
-    setSaveError(null);
-    setSaveState("idle");
+    if (retrySaves.current.size === 0) { setSaveError(null); setSaveState("idle"); }
     lastSavedEnvelope.current = null;
-    setUpdateTargetId(null);
-    setSessionNotice(cleared.message);
-    setUploadTarget(null);
-    setWorkspaceActive(false);
+    setUpdateTargetId(target?.id ?? null);
+    setSessionNotice(null);
+    setUploadTarget(target ?? null);
+    setWorkspaceActive(keepSidebar);
     setWorkspaceInfo(null);
-  }, [envelope, resetReadinessEvidence]);
+    setMappingUndo(null);
+    window.history.replaceState(null, "", target ? `#update/${encodeURIComponent(target.id)}` : "#workspace");
+  }, [envelope, resetReadinessEvidence, savedDatasets, uploadTarget, workspaceActive]);
 
   const mappingSubmit = useRef(false);
   const [mappingSubmitting, setMappingSubmitting] = useState(false);
@@ -625,25 +642,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
   const reportMetadata = correctionReportMetadata(envelope.session, analysisDate);
 
-  const beginReupload = () => {
-    const id = savedDatasets[0]?.id ?? activeSavedId ?? uploadTarget?.id ?? null;
-    const target = savedDatasets.find(item => item.id === id) ?? uploadTarget ?? null;
-    const info = target ?? workspaceDataset;
-    readinessAbort.current?.abort();
-    forecastAbort.current?.abort();
-    readinessRun.current += 1;
-    forecastRun.current += 1;
-    setReadinessLoading(false);
-    setForecastLoading(false);
-    setSessionNotice(null);
-    setReached(1);
-    goTo(1);
-    setWorkspaceActive(true);
-    setWorkspaceInfo(info);
-    setUploadTarget(target);
-    setUpdateTargetId(id);
-    if (id) window.history.replaceState(null, "", `#update/${encodeURIComponent(id)}`);
-  };
+  const beginReupload = handleClearSession;
 
   const navigateResults = async (destination: "purchase" | "impact") => {
     if (!dataset || updateTargetId) {
@@ -683,8 +682,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       } : undefined}
     >
       {saveError && <p role="alert">{t(saveError)}</p>}
-      {workspaceActive && dataset?.sourceMode === "user" && <p className="workspace-autosave" role="status" aria-live="polite">{t(saveState === "saving" ? "Saving automatically…" : saveState === "saved" ? "Saved automatically on this device" : saveState === "error" ? "Waiting to save automatically" : "Your upload will be saved automatically when your purchase plan is ready.")}</p>}
-      {!showImpact && <StorageExplanation />}
+      {workspaceActive && dataset?.sourceMode === "user" && <span className="workspace-autosave sr-only" role="status" aria-live="polite">{t(saveState === "saving" ? "Saving automatically…" : saveState === "saved" ? "Saved automatically on this device" : saveState === "error" ? "Waiting to save automatically" : "Your upload will be saved automatically when your purchase plan is ready.")}</span>}
       {t(step === 1 && (
         <UploadScreen
           onSource={handleSource}

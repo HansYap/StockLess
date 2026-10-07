@@ -7,6 +7,8 @@ import { returningMessages } from "../i18n/returning.ts";
 import { clearEverything, listSavedDatasets, removeSavedDataset, type SavedDatasetSummary } from "../storage/saved-datasets.ts";
 import "../components/workflow-shell.css";
 import "./returning.css";
+import { StorageExplanation } from "../components/StorageExplanation.tsx";
+import { t } from "../i18n/index.ts";
 
 const iconPaths = {
   file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8m-8 4h5",
@@ -34,6 +36,11 @@ export function ReturningPage() {
   const [sort, setSort] = useState("recent");
   const [pending, setPending] = useState<SavedDatasetSummary | "all" | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const aboutRef = useRef<HTMLDialogElement>(null);
+  const aboutButtonRef = useRef<HTMLButtonElement>(null);
+  const aboutCloseRef = useRef<HTMLButtonElement>(null);
+  const uploadsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const managingUploads = useRef(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
@@ -58,6 +65,7 @@ export function ReturningPage() {
   };
   const remove = async () => {
     if (!pending || busy) return;
+    const clearAll = pending === "all";
     setBusy(true);
     try {
       if (pending === "all") {
@@ -65,6 +73,7 @@ export function ReturningPage() {
         try { localStorage.removeItem("stockless.language"); } catch { /* Storage may be disabled. */ }
       } else await removeSavedDataset(pending.id);
       await refresh(); closeDialog();
+      if (clearAll) window.location.hash = "workspace";
     } catch { setError("deleteError"); closeDialog(); }
     finally { setBusy(false); }
   };
@@ -101,7 +110,7 @@ export function ReturningPage() {
           </section>
           <section className="returning-new-file"><ReturningIcon name="upload" /><h3>{copy("newFile")}</h3><p>{copy("newFileLead")}</p><a className="returning-btn" href={recent ? `#update/${encodeURIComponent(recent.id)}` : "#workspace"}><ReturningIcon name="plus" />{copy("upload")}</a></section>
         </div>
-        <div className="returning-section-title"><h2 id="returning-datasets-title">{copy("datasets")}<span className="returning-count">{datasets.length.toLocaleString(getLocale())} / 12</span></h2><span className="returning-privacy"><ReturningIcon name="lock" />{copy("privacy")}</span></div>
+        <div className="returning-section-title"><h2 ref={uploadsHeadingRef} tabIndex={-1} id="returning-datasets-title">{copy("datasets")}<span className="returning-count">{datasets.length.toLocaleString(getLocale())} / 12</span></h2><span className="returning-privacy"><ReturningIcon name="lock" />{copy("privacy")}</span></div>
         <section className="returning-card returning-files" aria-labelledby="returning-datasets-title" aria-busy={loading}>
           <div className="returning-toolbar">
             <label className="returning-search"><ReturningIcon name="search" /><input ref={searchRef} type="search" aria-label={copy("search")} placeholder={copy("searchPlaceholder")} value={query} onChange={event => setQuery(event.target.value)} /></label>
@@ -115,9 +124,13 @@ export function ReturningPage() {
           </article>)}</div> : <div className="returning-empty"><h3>{copy(search ? "noMatches" : "fresh")}</h3><p>{copy(search ? "tryName" : "emptyLead")}</p>{search ? <button type="button" className="returning-btn" onClick={() => { setQuery(""); searchRef.current?.focus(); }}>{copy("clearSearch")}</button> : <a className="returning-btn returning-btn--primary" href="#workspace">{copy("upload")}</a>}</div>}
         </section>
         <div className="returning-list-footer"><span role="status">{copy("showing").replace("{shown}", shown.length.toLocaleString(getLocale())).replace("{total}", datasets.length.toLocaleString(getLocale()))}</span>{datasets.length > 0 && <button type="button" className="returning-clear" disabled={busy || loading} onClick={() => setPending("all")}>{copy("clearAll")}</button>}</div>
-        <footer className="returning-bottom-note"><ReturningIcon name="leaf" />{copy("tagline")}</footer>
+        <footer className="returning-bottom-note"><span><ReturningIcon name="leaf" />{copy("tagline")}</span><button ref={aboutButtonRef} type="button" className="returning-about-link" onClick={() => { aboutRef.current?.showModal(); aboutCloseRef.current?.focus(); }}>{t("About saved uploads")}</button></footer>
       </div>
     </main>
+    <dialog ref={aboutRef} className="returning-dialog returning-about-dialog" aria-labelledby="saved-uploads-title" onClose={() => { if (managingUploads.current) uploadsHeadingRef.current?.focus(); else aboutButtonRef.current?.focus(); managingUploads.current = false; }}>
+      <div className="returning-about-header"><h2 id="saved-uploads-title">{t("About saved uploads")}</h2><button ref={aboutCloseRef} type="button" className="returning-btn" onClick={() => aboutRef.current?.close()}>{t("Close")}</button></div>
+      <StorageExplanation onManage={() => { managingUploads.current = true; aboutRef.current?.close(); uploadsHeadingRef.current?.focus(); }} />
+    </dialog>
     <dialog ref={dialogRef} className="returning-dialog" aria-labelledby="returning-confirm-title" aria-describedby="returning-confirm-copy" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}>
       <h2 id="returning-confirm-title">{copy(pending === "all" ? "clearTitle" : "removeTitle")}</h2>
       <p id="returning-confirm-copy">{pending === "all" ? copy("clearCopy") : pending && copy("removeCopy").replace("{name}", `${pending.shopName} / ${pending.datasetName}`)}</p>

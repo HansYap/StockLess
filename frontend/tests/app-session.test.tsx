@@ -138,7 +138,7 @@ describe("App forecast and draft lifecycle", () => {
         screen.getByLabelText("Planned order").getAttribute("aria-valuetext"),
       ).toBe("Not entered"),
     );
-    expect(store).not.toHaveBeenCalled();
+    expect(store.mock.calls.every(([key]) => key === "stockless.hasUploaded")).toBe(true);
     store.mockRestore();
   });
 });

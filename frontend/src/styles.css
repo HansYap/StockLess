@@ -456,7 +456,9 @@ a.btn,a.btn:hover{text-decoration:none}
    Below 1330px there is no gutter left, so it is dropped rather than allowed
    behind the text. Decorative only — never intercepts a click. */
 .ws-decor{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.ws-decor__side{position:absolute;top:0;bottom:0;width:calc((100% - var(--shell)) / 2);overflow:hidden}
+.ws-decor__side{position:absolute;top:0;bottom:0;width:calc((100% - var(--shell)) / 2);overflow:hidden;
+  /* Fade within the visible gutter even when a sidebar leaves only a narrow strip. */
+  mask-image:linear-gradient(to right,#000 15%,transparent 100%)}
 @media (max-width:1180px){ .page{padding-left:24px;padding-right:24px} }
 .ws-decor__side--left{left:0}
 .ws-decor__side--right{right:0;transform:scaleX(-1)}
