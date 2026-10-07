@@ -85,8 +85,8 @@ it("storage explanation states retention, purposes and browser loss", () => {
   render(<StorageExplanation />);
   fireEvent.click(screen.getByText("How saved information is used"));
   expect(screen.getByText(/Settings: column matches/)).toBeTruthy();
-  expect(screen.getByText(/Decisions: a copy/)).toBeTruthy();
+  expect(screen.getByText(/Plan history: a copy/)).toBeTruthy();
   expect(screen.getByText(/may be lost when browser data is cleared/)).toBeTruthy();
-  expect(screen.getByText(/Your latest 12 uploads/)).toBeTruthy();
+  expect(screen.getByText(/Your latest 12 completed uploads/)).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Inspect and remove saved information" })).toBeNull();
 });

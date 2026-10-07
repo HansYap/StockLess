@@ -1,16 +1,16 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ComponentProps } from "react";
 import App from "../src/App.tsx";
 import { createEmptySession, readinessEvidenceKey, READINESS_POLICY_VERSION, createMappingState, setMapping, confirmIdentityMode } from "../src/engine.ts";
-import { getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork, createSavedDataset, summarizeSavedDataset, type SavedDataset } from "../src/storage/saved-datasets.ts";
+import { getSavedDataset, listSavedDatasets, saveGeneratedPurchasePlan, replaceSavedDataset, saveDatasetWork, createSavedDataset, summarizeSavedDataset, type SavedDataset } from "../src/storage/saved-datasets.ts";
 import { runReadinessCheckInWorker } from "../src/workers/readiness-client.ts";
 import { runDemandForecastInWorker } from "../src/workers/forecast-client.ts";
 import { makeEvidence } from "./fixtures.ts";
 
 vi.mock("../src/storage/saved-datasets.ts", async original => ({
   ...await original<object>(), getSavedDataset: vi.fn(), listSavedDatasets: vi.fn(),
-  replaceSavedDataset: vi.fn(), saveDatasetWork: vi.fn(), createSavedDataset: vi.fn(), findSavedDataset: vi.fn(async () => undefined),
+  saveGeneratedPurchasePlan: vi.fn(), replaceSavedDataset: vi.fn(), saveDatasetWork: vi.fn(), createSavedDataset: vi.fn(), findSavedDataset: vi.fn(async () => undefined),
 }));
 vi.mock("../src/engine.ts", async original => ({ ...await original<object>(), proposeMappings: vi.fn(async () => ({ proposals: [] })) }));
 vi.mock("../src/workers/semantic-client.ts", () => ({ createLocalSemanticScorer: () => undefined }));
@@ -34,6 +34,8 @@ vi.mock("../src/screens/ReadinessScreen.tsx", () => ({ ReadinessScreen: (props: 
 </> }));
 vi.mock("../src/screens/PurchasePlanScreen.tsx", () => ({ PurchasePlanScreen: (props: ComponentProps<typeof import("../src/screens/PurchasePlanScreen.tsx").PurchasePlanScreen>) => <>
   <h1>Saved purchase plan</h1><button onClick={props.onBack}>Back to test readiness</button>
+  <button onClick={() => props.onDraftChange("A", { plannedOrder: { state: "value", value: 20, source: "input by you" }, incomingStock: { state: "empty" } })}>Edit test order</button>
+  <button onClick={() => props.onSupplierChange?.("A", { caseSize: 6 })}>Edit test supplier</button>
   <span data-testid="restored-drafts">{JSON.stringify(props.drafts)}</span><span data-testid="restored-suppliers">{JSON.stringify(props.supplierDrafts)}</span>
 </> }));
 vi.mock("../src/screens/ImpactDashboard.tsx", () => ({ ImpactDashboard: () => <h1>Saved impact dashboard</h1> }));
@@ -65,6 +67,16 @@ beforeEach(() => {
   vi.mocked(getSavedDataset).mockImplementation(async id => id === saved.id ? saved : undefined);
   vi.mocked(listSavedDatasets).mockImplementation(async () => [summarizeSavedDataset(saved)]);
   vi.mocked(replaceSavedDataset).mockResolvedValue(saved);
+  vi.mocked(runReadinessCheckInWorker).mockImplementation(async (dataset, mapping, options) => ({
+    ...evidence().snapshot, analysisDate: options.analysisDate,
+    evidenceKey: readinessEvidenceKey(dataset, mapping, options),
+  }));
+  vi.mocked(runDemandForecastInWorker).mockImplementation(async snapshot => ({ ...evidence().forecast, snapshotId: snapshot.id, analysisDate: snapshot.analysisDate }));
+  vi.mocked(saveGeneratedPurchasePlan).mockImplementation(async (work, plan, id) => {
+    const latest = (await listSavedDatasets())[0];
+    saved = { ...saved, ...work, id: id ?? latest?.id ?? "new", datasetName: work.envelope.session.dataset!.sourceName.replace(/\.[^.]+$/, ""), decisions: [...saved.decisions, plan] };
+    return saved;
+  });
   vi.mocked(saveDatasetWork).mockImplementation(async (_id, work) => { saved = { ...saved, ...work }; return saved; });
   vi.mocked(createSavedDataset).mockImplementation(async (shopName, datasetName, envelope, analysisDate) => {
     saved = { ...saved, id: "new", shopName, datasetName, envelope, analysisDate, readiness: null, forecast: null };
@@ -101,22 +113,21 @@ it.each([ ["Purchase plan", "Saved purchase plan"], ["Impact dashboard", "Saved 
   await screen.findByRole("heading", { name: heading });
   expect(replaceSavedDataset).not.toHaveBeenCalled();
 });
-it("retains the update target when import or replacement is cancelled, and replaces that same dataset on retry", async () => {
-  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+it("keeps the saved file intact during preparation and commits a replacement without a save confirmation", async () => {
+  const confirm = vi.spyOn(window, "confirm");
   await updatePage();
   fireEvent.click(screen.getByText("Cancel test import"));
   expect(screen.getByRole("heading", { name: "Reupload your sales file" })).toBeTruthy();
   fireEvent.click(screen.getByText("Import test replacement"));
-  await waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
-  expect(replaceSavedDataset).not.toHaveBeenCalled();
-  confirm.mockReturnValue(true);
-  fireEvent.click(screen.getByText("Import test replacement"));
   await screen.findByRole("heading", { name: "Test mapping" });
-  expect(replaceSavedDataset).toHaveBeenCalledOnce();
-  expect(vi.mocked(replaceSavedDataset).mock.calls[0][0]).toBe("existing");
-  fireEvent.click(screen.getByText("Back to test upload"));
-  await screen.findByRole("heading", { name: "Reupload your sales file" });
-  expect(screen.queryByLabelText("Active session")).toBeNull();
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  expect(replaceSavedDataset).not.toHaveBeenCalled();
+  expect(saved.datasetName).toBe("September sales");
+  fireEvent.click(screen.getByText("Check test readiness"));
+  fireEvent.click(await screen.findByText("Calculate test plan"));
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  expect(saveGeneratedPurchasePlan).toHaveBeenCalledWith(expect.objectContaining({ readiness: expect.any(Object), forecast: expect.any(Object) }), expect.any(Object), "existing", true);
+  expect(confirm).not.toHaveBeenCalled();
 });
 it("opens preparation instead of an empty plan when saved evidence is incomplete", async () => {
   saved = { ...saved, envelope: { ...saved.envelope, session: { ...saved.envelope.session, mapping: createMappingState() } }, readiness: null, forecast: null };
@@ -129,30 +140,33 @@ it("opens preparation instead of an empty plan when saved evidence is incomplete
 function sidebar() { return screen.getByRole("complementary", { name: "Workspace navigation" }); }
 function noSidebar() { expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull(); }
 
-it("keeps a newly saved dataset without a sidebar until all three preparation steps are complete", async () => {
+it("automatically saves only after all three preparation steps, without asking for shop or upload names", async () => {
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<App />);
   fireEvent.click(screen.getByText("Import test replacement"));
   await screen.findByRole("heading", { name: "Test mapping" });
   noSidebar();
-  fireEvent.change(screen.getByRole("combobox", { name: "Shop name" }), { target: { value: "New shop" } });
-  fireEvent.change(screen.getByRole("textbox", { name: "Upload name" }), { target: { value: "New sales" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save upload", exact: true }));
-  await waitFor(() => expect(screen.queryByRole("button", { name: "Save upload", exact: true })).toBeNull());
-  noSidebar();
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: /Save/ })).toBeNull();
+  expect(screen.queryByLabelText("Shop name")).toBeNull();
   fireEvent.click(screen.getByText("Check test readiness"));
   await screen.findByRole("heading", { name: "Test readiness" });
   noSidebar();
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
   fireEvent.click(screen.getByText("Calculate test plan"));
   await screen.findByRole("heading", { name: "Saved purchase plan" });
-  expect(within(sidebar()).getByText("New sales")).toBeTruthy();
+  expect(within(sidebar()).getByText("sales")).toBeTruthy();
   expect(within(sidebar()).getByRole("button", { name: "Purchase plan" }).getAttribute("aria-current")).toBe("page");
-  expect(screen.queryByRole("navigation", { name: "Progress" })).toBeNull();
   expect(window.location.hash).toBe("#dataset/new");
-  expect(saveDatasetWork).toHaveBeenCalledWith("new", expect.objectContaining({ forecast: expect.objectContaining({ snapshotId: "snapshot-test" }) }));
+  expect(saveGeneratedPurchasePlan).toHaveBeenCalledOnce();
+  expect(saveGeneratedPurchasePlan).toHaveBeenCalledWith(expect.objectContaining({ readiness: expect.any(Object), forecast: expect.objectContaining({ snapshotId: "snapshot-test" }) }), expect.objectContaining({ note: expect.stringContaining("Generated purchase plan") }), undefined, true);
+  expect(screen.queryByRole("button", { name: /Save/ })).toBeNull();
+  expect(screen.getByText("Saved automatically on this device")).toBeTruthy();
   fireEvent.click(screen.getByText("Back to test readiness"));
-  await screen.findByRole("heading", { name: "Test readiness" });
-  expect(sidebar()).toBeTruthy();
+  fireEvent.click(await screen.findByText("Calculate test plan"));
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  expect(saveGeneratedPurchasePlan).toHaveBeenCalledOnce();
+  expect(runDemandForecastInWorker).toHaveBeenCalledOnce();
 });
 
 it("retains the sidebar through replacement mapping and readiness", async () => {
@@ -160,7 +174,7 @@ it("retains the sidebar through replacement mapping and readiness", async () => 
   await updatePage();
   fireEvent.click(screen.getByText("Import test replacement"));
   await screen.findByRole("heading", { name: "Test mapping" });
-  expect(within(sidebar()).getByText("September sales")).toBeTruthy();
+  expect(within(sidebar()).getByText("sales")).toBeTruthy();
   fireEvent.click(screen.getByText("Check test readiness"));
   await screen.findByRole("heading", { name: "Test readiness" });
   expect(within(sidebar()).getByRole("button", { name: "Reupload" }).getAttribute("aria-current")).toBe("page");
@@ -202,14 +216,14 @@ it("offers upload history through the sidebar without the old dataset picker", a
   expect(screen.queryByText("Manage saved information")).toBeNull();
 });
 
-it("uses a saved upload as the current file rather than adding a second store dataset", async () => {
-  vi.spyOn(window, "confirm").mockReturnValue(true);
+it("automatically replaces the current upload when a plan is generated, rather than adding another store", async () => {
   render(<App />);
   fireEvent.click(screen.getByText("Import test replacement"));
-  await screen.findByRole("heading", { name: "Test mapping" });
-  fireEvent.click(screen.getByRole("button", { name: "Save upload", exact: true }));
-  await waitFor(() => expect(replaceSavedDataset).toHaveBeenCalledOnce());
-  expect(vi.mocked(replaceSavedDataset).mock.calls[0][0]).toBe("existing");
+  fireEvent.click(await screen.findByText("Check test readiness"));
+  fireEvent.click(await screen.findByText("Calculate test plan"));
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  expect(saveGeneratedPurchasePlan).toHaveBeenCalledOnce();
+  expect(window.location.hash).toBe("#dataset/existing");
   expect(createSavedDataset).not.toHaveBeenCalled();
 });
 
@@ -233,22 +247,34 @@ it("refreshes a mismatched forecast without repeating the valid readiness check"
   expect(runDemandForecastInWorker).toHaveBeenCalledOnce();
 });
 
-it("offers saving on an unsaved purchase plan and stores the already calculated results", async () => {
+it("keeps a plan usable on a storage failure and retries saving automatically", async () => {
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
+  vi.mocked(saveGeneratedPurchasePlan).mockRejectedValueOnce(new Error("Storage temporarily unavailable"));
   render(<App />);
   fireEvent.click(screen.getByText("Import test replacement"));
   fireEvent.click(await screen.findByText("Check test readiness"));
   fireEvent.click(await screen.findByText("Calculate test plan"));
   await screen.findByRole("heading", { name: "Saved purchase plan" });
-  expect(within(sidebar()).getByText(/This session only/)).toBeTruthy();
-  expect(screen.getByText("Save this upload to reopen your purchase plan on your next visit.")).toBeTruthy();
-  fireEvent.change(screen.getByRole("combobox", { name: "Shop name" }), { target: { value: "New shop" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save upload", exact: true }));
-  await waitFor(() => expect(screen.queryByRole("button", { name: "Save upload", exact: true })).toBeNull());
-  expect(saveDatasetWork).toHaveBeenCalledWith("new", expect.objectContaining({ readiness: evidence().snapshot, forecast: evidence().forecast }));
+  expect(screen.getByRole("alert").textContent).toContain("we will try again automatically");
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Save/ })).toBeNull();
+  await screen.findByText("Saved automatically on this device", {}, { timeout: 5000 });
+  expect(saveGeneratedPurchasePlan).toHaveBeenCalledTimes(2);
+  expect(window.location.hash).toBe("#dataset/new");
+  expect(runDemandForecastInWorker).toHaveBeenCalledOnce();
+}, 10000);
+
+it("automatically saves order and supplier edits", async () => {
+  render(<App initialDatasetId="existing" />);
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  fireEvent.click(screen.getByText("Edit test order"));
+  await waitFor(() => expect(saveDatasetWork).toHaveBeenCalledWith("existing", expect.objectContaining({ purchaseDrafts: { A: expect.any(Object) } })));
+  fireEvent.click(screen.getByText("Edit test supplier"));
+  await waitFor(() => expect(saveDatasetWork).toHaveBeenCalledWith("existing", expect.objectContaining({ supplierOrderDrafts: { A: { caseSize: 6 } } })));
+  expect(screen.queryByRole("button", { name: /Save/ })).toBeNull();
 });
 
-it("keeps an unsaved plan available when a reupload is cancelled", async () => {
+it("keeps the automatically saved plan available when a reupload is cancelled", async () => {
   render(<App />);
   fireEvent.click(screen.getByText("Import test replacement"));
   fireEvent.click(await screen.findByText("Check test readiness"));
@@ -261,4 +287,37 @@ it("keeps an unsaved plan available when a reupload is cancelled", async () => {
   await screen.findByRole("heading", { name: "Saved purchase plan" });
   expect(runDemandForecastInWorker).toHaveBeenCalledOnce();
   expect(sidebar()).toBeTruthy();
+});
+
+
+it("merges the latest edits when an automatic save fails, so retry never restores older values", async () => {
+  render(<App initialDatasetId="existing" />);
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  vi.mocked(saveDatasetWork).mockRejectedValueOnce(new Error("Temporary storage failure"));
+  fireEvent.click(screen.getByText("Edit test order"));
+  await screen.findByRole("alert");
+  fireEvent.click(screen.getByText("Edit test supplier"));
+  await screen.findByText("Saved automatically on this device");
+  expect(saveDatasetWork).toHaveBeenLastCalledWith("existing", expect.objectContaining({
+    purchaseDrafts: { A: expect.objectContaining({ plannedOrder: expect.objectContaining({ value: 20 }) }) },
+    supplierOrderDrafts: { A: { caseSize: 6 } },
+  }));
+});
+
+
+it("shows Saving until the latest edit has finished writing", async () => {
+  render(<App initialDatasetId="existing" />);
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  let first!: (value: SavedDataset) => void;
+  let second!: (value: SavedDataset) => void;
+  vi.mocked(saveDatasetWork)
+    .mockImplementationOnce(() => new Promise(resolve => { first = resolve; }))
+    .mockImplementationOnce(() => new Promise(resolve => { second = resolve; }));
+  fireEvent.click(screen.getByText("Edit test order"));
+  fireEvent.click(screen.getByText("Edit test supplier"));
+  await act(async () => { first(saved); });
+  expect(screen.getByText("Saving automatically…")).toBeTruthy();
+  expect(screen.queryByText("Saved automatically on this device")).toBeNull();
+  await act(async () => { second(saved); });
+  expect(screen.getByText("Saved automatically on this device")).toBeTruthy();
 });

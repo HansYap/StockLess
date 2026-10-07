@@ -43,7 +43,7 @@ export interface SavedDataset {
   readonly outcomes: readonly SavedOutcome[];
 }
 
-/** Frozen evidence from the time a retailer made a decision. Updates never rewrite it. */
+/** Frozen evidence from plan generation or an explicitly recorded decision. Updates never rewrite it. */
 export interface SavedDecision {
   readonly id: string;
   readonly recordedAt: string;
@@ -153,6 +153,44 @@ export async function createSavedDataset(
 
 export type SavedWork = Pick<SavedDataset,
   "envelope" | "analysisDate" | "dateConfirmations" | "readiness" | "forecast" | "purchaseDrafts" | "supplierTerms" | "supplierOrderDrafts">;
+
+/** Commit a complete plan and its upload together; incomplete imports never replace saved work. */
+export async function saveGeneratedPurchasePlan(
+  work: SavedWork, plan: SavedDecision, datasetId?: string, newUpload = false,
+): Promise<SavedDataset> {
+  requireImport(work.envelope);
+  if (!work.readiness || !work.forecast || work.forecast.snapshotId !== work.readiness.id) {
+    throw new Error("Generate a purchase plan before saving this upload.");
+  }
+  await Promise.all([...pendingMutations.values()].map(operation => operation.catch(() => undefined)));
+  return withTransaction<SavedDataset>(["datasets"], "readwrite", (transaction, result) => {
+    const store = transaction.objectStore("datasets");
+    const request = store.getAll() as IDBRequest<SavedDataset[]>;
+    request.onsuccess = () => {
+      const current = datasetId ? request.result.find(item => item.id === datasetId) : newestUploads(request.result)[0];
+      if (datasetId && !current) { transaction.abort(); return; }
+      const upload = newUpload || !datasetId;
+      const now = new Date().toISOString();
+      const datasetName = work.envelope.session.dataset!.sourceName.replace(/\.[^.]+$/, "") || "Sales upload";
+      const shopName = current?.shopName ?? "My store";
+      const saved: SavedDataset = {
+        ...(current ?? {}), ...work,
+        supplierTerms: { ...current?.supplierTerms, ...work.supplierTerms },
+        id: current?.id ?? globalThis.crypto.randomUUID(),
+        shopName, shopKey: current?.shopKey ?? key(shopName),
+        datasetName: upload ? datasetName : current!.datasetName,
+        nameKey: upload ? key(datasetName) : current!.nameKey,
+        createdAt: upload ? now : current!.createdAt, updatedAt: now,
+        decisions: current?.decisions.some(item => item.id === plan.id)
+          ? current.decisions : [...(current?.decisions ?? []), plan],
+        outcomes: current?.outcomes ?? [],
+      };
+      if (upload) writeUpload(store, saved, current);
+      else store.put(saved);
+      result(saved);
+    };
+  });
+}
 
 const pendingMutations = new Map<string, Promise<unknown>>();
 

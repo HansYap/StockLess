@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { confirmIdentityMode, createEmptySession, setMapping, updateSessionMapping, type SessionEnvelope } from "../src/engine.ts";
+import { makeEvidence } from "./fixtures.ts";
 import { withStore } from "../src/storage/browser-db.ts";
-import { clearEverything, createSavedDataset, getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork } from "../src/storage/saved-datasets.ts";
+import { clearEverything, createSavedDataset, getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork, saveGeneratedPurchasePlan, type SavedWork } from "../src/storage/saved-datasets.ts";
 
 // Exercise the real storage callers against an asynchronous browser database adapter.
 function browserDatabase(version: number, stores: Map<string, Map<IDBValidKey, unknown>>) {
@@ -142,4 +143,50 @@ it("archives the previous file and keeps only the latest 12 uploads, regardless 
     await saveDatasetWork(history[1].id, { supplierTerms: { Vendor: "Edited older plan" } });
     expect((await listSavedDatasets())[0].id).toBe(first.id);
   } finally { vi.useRealTimers(); }
+});
+
+
+function completedWork(envelope = importedDataset()): SavedWork {
+  const evidence = makeEvidence();
+  return { envelope, analysisDate: evidence.snapshot.analysisDate, dateConfirmations: [],
+    readiness: evidence.snapshot, forecast: evidence.forecast, purchaseDrafts: {}, supplierOrderDrafts: {}, supplierTerms: {} };
+}
+function planRecord(id: string) {
+  return { id, recordedAt: "2026-10-07T00:00:00Z", recommendation: { analysisDate: "2026-10-07", sourceSha256: id, products: [] }, note: "Generated purchase plan" };
+}
+
+it("automatically names a completed upload and stores its plan and original version together", async () => {
+  const stores = new Map<string, Map<IDBValidKey, unknown>>();
+  browserDatabase(0, stores);
+  const work = completedWork();
+  const first = await saveGeneratedPurchasePlan(work, planRecord("first"));
+  expect(first.datasetName).toBe("sales");
+  expect(first.shopName).toBe("My store");
+  expect((await getSavedDataset(first.id))?.forecast).toEqual(work.forecast);
+  await saveDatasetWork(first.id, { supplierTerms: { Vendor: "Case of 6" } });
+  const imported = importedDataset();
+  const replacement = { ...imported, session: { ...imported.session, dataset: { ...imported.session.dataset!, sourceName: "latest.csv", sourceSha256: "new-hash" } } };
+  const next = await saveGeneratedPurchasePlan(completedWork(replacement), planRecord("second"), first.id, true);
+  expect(next.id).toBe(first.id);
+  expect(next.datasetName).toBe("latest");
+  expect(next.supplierTerms).toEqual({ Vendor: "Case of 6" });
+  const history = await listSavedDatasets();
+  expect(history).toHaveLength(2);
+  const archived = await getSavedDataset(history.find(item => item.id !== first.id)!.id);
+  expect(archived?.envelope.session.dataset?.sourceName).toBe("sales.csv");
+  expect(archived?.forecast).toEqual(work.forecast);
+  expect(archived?.decisions.map(item => item.id)).toEqual(["first"]);
+  await saveGeneratedPurchasePlan(completedWork(replacement), planRecord("second"), first.id);
+  expect(await listSavedDatasets()).toHaveLength(2);
+  expect((await getSavedDataset(first.id))?.decisions.map(item => item.id)).toEqual(["first", "second"]);
+});
+
+it("does not create or replace saved work before the purchase plan is ready", async () => {
+  const stores = new Map<string, Map<IDBValidKey, unknown>>();
+  browserDatabase(0, stores);
+  const first = await saveGeneratedPurchasePlan(completedWork(), planRecord("first"));
+  const before = await getSavedDataset(first.id);
+  await expect(saveGeneratedPurchasePlan({ ...completedWork(), forecast: null }, planRecord("second"), first.id, true)).rejects.toThrow("Generate a purchase plan");
+  expect(await getSavedDataset(first.id)).toEqual(before);
+  expect(await listSavedDatasets()).toHaveLength(1);
 });

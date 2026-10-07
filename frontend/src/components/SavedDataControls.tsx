@@ -76,26 +76,3 @@ export function SavedDataControls({ items, activeId, selected, onInspect, onOpen
     </>}
   </section>;
 }
-
-interface SaveProps {
-  readonly defaultName: string;
-  readonly shops: readonly string[];
-  readonly onSave: (shop: string, dataset: string) => Promise<void>;
-}
-
-export function SaveDatasetControls({ defaultName, shops, onSave }: SaveProps) {
-  useLanguage();
-  const [shop, setShop] = useState(shops[0] ?? "");
-  const [dataset, setDataset] = useState(defaultName);
-  const [saving, setSaving] = useState(false);
-  return <section aria-label={t("Save upload")} className="card">
-    <h2>{t("Save this upload")}</h2>
-    <label>{t("Shop name")} <input list="saved-shop-names" value={shop} onChange={(event) => setShop(event.currentTarget.value)} /></label>{" "}
-    <datalist id="saved-shop-names">{shops.map((value) => <option key={value} value={value} />)}</datalist>
-    <label>{t("Upload name")} <input value={dataset} onChange={(event) => setDataset(event.currentTarget.value)} /></label>{" "}
-    <button type="button" disabled={saving || !shop.trim() || !dataset.trim()} onClick={async () => {
-      setSaving(true);
-      try { await onSave(shop, dataset); } finally { setSaving(false); }
-    }}>{t("Save upload")}</button>
-  </section>;
-}

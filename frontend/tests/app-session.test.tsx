@@ -111,6 +111,7 @@ describe("App forecast and draft lifecycle", () => {
       screen.getByRole("button", { name: "← Back to readiness" }),
     );
     fireEvent.click(screen.getByText("Run test forecast"));
+    await screen.findByRole("heading", { name: "Plan your next order" });
     open();
     expect(
       (screen.getByLabelText("Planned order") as HTMLInputElement).value,

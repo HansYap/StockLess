@@ -1,7 +1,6 @@
 import { t, useLanguage } from "./i18n/index.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
-import { SaveDatasetControls } from "./components/SavedDataControls.tsx";
 import { StorageExplanation } from "./components/StorageExplanation.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
@@ -43,10 +42,9 @@ import { createLocalSemanticScorer } from "./workers/semantic-client.ts";
 import { terminateStocklessWorkers } from "./workers/worker-registry.ts";
 import { confirmCurrentMapping } from "./mapping-confirmation.ts";
 import {
-  createSavedDataset, getSavedDataset,
-  listSavedDatasets, recordDecision,
-  replaceSavedDataset, saveDatasetWork, summarizeSavedDataset,
-  type SavedDataset, type SavedDatasetSummary, type SavedWork,
+  getSavedDataset, listSavedDatasets,
+  saveGeneratedPurchasePlan, saveDatasetWork, summarizeSavedDataset,
+  type SavedDataset, type SavedDatasetSummary, type SavedDecision, type SavedWork,
 } from "./storage/saved-datasets.ts";
 
 /** Seeds an unconfirmed mapping state from the engine's proposals. */
@@ -97,7 +95,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [dateConfirmations, setDateConfirmations] = useState<readonly DateFormatConfirmation[]>([]);
   const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
   const [savedDatasets, setSavedDatasets] = useState<readonly SavedDatasetSummary[]>([]);
-  const [selectedSaved, setSelectedSaved] = useState<SavedDataset | null>(null);
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
   const [updateTargetId, setUpdateTargetId] = useState<string | null>(updateDatasetId ?? null);
   const [uploadTarget, setUploadTarget] = useState<SavedDatasetSummary | null>(null);
@@ -105,7 +102,22 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const [workspaceInfo, setWorkspaceInfo] = useState<{ datasetName: string; shopName: string; rowCount: number } | null>(null);
   const [openingDataset, setOpeningDataset] = useState(Boolean(initialDatasetId || updateDatasetId));
   const [saveError, setSaveError] = useState<string | null>(null);
-  const retrySave = useRef<(() => Promise<void>) | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const retrySaves = useRef(new Map<string, () => Promise<unknown>>());
+  const pendingWork = useRef(new Map<string, Partial<SavedWork>>());
+  const generatedSaves = useRef(new Map<string, Promise<SavedDataset | undefined>>());
+  const pendingUploadTarget = useRef<string | undefined>(undefined);
+  const uploadToken = useRef(globalThis.crypto.randomUUID());
+  const mounted = useRef(true);
+  const latestDrafts = useRef(purchaseDrafts);
+  const latestSupplierDrafts = useRef(supplierOrderDrafts);
+  latestDrafts.current = purchaseDrafts;
+  latestSupplierDrafts.current = supplierOrderDrafts;
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; retrySaves.current.clear(); };
+  }, []);
   const lastSavedEnvelope = useRef<SessionEnvelope | null>(null);
   const readinessRun = useRef(0);
   const readinessAbort = useRef<AbortController | null>(null);
@@ -113,7 +125,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   const forecastAbort = useRef<AbortController | null>(null);
 
   const dataset = envelope.session.dataset;
-  const workspaceDataset = (activeSavedId && savedDatasets.find(item => item.id === activeSavedId)) || uploadTarget || workspaceInfo || {
+  const workspaceDataset = (activeSavedId && savedDatasets.find(item => item.id === activeSavedId)) || workspaceInfo || uploadTarget || {
     datasetName: dataset?.sourceName ?? t("New file"), shopName: "", rowCount: dataset?.rows.length ?? 0,
   };
 
@@ -126,19 +138,101 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
   }, [refreshSavedDatasets]);
 
   const persistWork = useCallback(async (id: string, work: Partial<SavedWork>) => {
-    const retry = async () => {
-      const saved = await saveDatasetWork(id, work);
-      setSelectedSaved((current) => current?.id === id ? saved : current);
-      setSaveError(null);
-      retrySave.current = null;
-      await refreshSavedDatasets();
+    pendingWork.current.set(id, { ...pendingWork.current.get(id), ...work });
+    const flush = async () => {
+      const pending = pendingWork.current.get(id);
+      if (!pending) return;
+      setSaveState("saving");
+      try {
+        await saveDatasetWork(id, pending);
+        if (pendingWork.current.get(id) === pending) {
+          pendingWork.current.delete(id);
+          retrySaves.current.delete(`work:${id}`);
+        }
+        if (mounted.current && retrySaves.current.size === 0 && pendingWork.current.size === 0) { setSaveError(null); setSaveState("saved"); }
+      } catch {
+        if (!mounted.current || !pendingWork.current.has(id)) return;
+        retrySaves.current.set(`work:${id}`, flush);
+        setSaveState("error");
+        setSaveError("Your changes are still here. Saving on this device failed; we will try again automatically. Keep this page open.");
+      }
     };
-    try { await retry(); }
-    catch {
-      retrySave.current = retry;
-      setSaveError("Your latest changes could not be saved. Your inputs are still here.");
-    }
-  }, [refreshSavedDatasets]);
+    await flush();
+  }, []);
+
+  useEffect(() => {
+    if (!saveError || retrySaves.current.size === 0) return;
+    let cancelled = false;
+    let running = false;
+    const retry = async () => {
+      if (running || cancelled) return;
+      running = true;
+      await Promise.allSettled([...retrySaves.current.values()].map(save => save()));
+      if (!cancelled) setRetryAttempt(value => value + 1);
+      running = false;
+    };
+    const timer = window.setTimeout(() => void retry(), Math.min(2000 * 2 ** Math.min(retryAttempt, 4), 30000));
+    window.addEventListener("online", retry);
+    window.addEventListener("focus", retry);
+    return () => { cancelled = true; window.clearTimeout(timer); window.removeEventListener("online", retry); window.removeEventListener("focus", retry); };
+  }, [saveError, retryAttempt]);
+
+  const saveCompletedPlan = useCallback(async (snapshot: ReadinessSnapshot, review: DemandForecastReview) => {
+    if (envelope.session.dataset?.sourceMode !== "user") return;
+    const key = `${uploadToken.current}:${snapshot.id}`;
+    const token = uploadToken.current;
+    const existingOperation = generatedSaves.current.get(key);
+    if (existingOperation) return existingOperation;
+    const targetId = activeSavedId ?? pendingUploadTarget.current;
+    const newUpload = !activeSavedId;
+    const plan: SavedDecision = {
+      id: `generated:${newUpload ? key : snapshot.id}`, recordedAt: new Date().toISOString(),
+      recommendation: {
+        analysisDate: snapshot.analysisDate, sourceSha256: snapshot.sourceSha256,
+        products: joinPurchaseEvidence(snapshot, review).map(product => ({
+          key: product.key, name: product.name,
+          inputs: latestDrafts.current[product.key] ?? product.fileInputs,
+          plan: evaluatePurchaseProduct(product, snapshot.analysisDate,
+            latestDrafts.current[product.key] ?? product.fileInputs, evaluateProductPurchasePlan, product.fileExpiry),
+        })),
+      },
+      note: `Generated purchase plan for ${snapshot.analysisDate}`,
+    };
+    const operation = (async () => {
+      setSaveState("saving");
+      try {
+        // Finish outstanding edits to the old plan before freezing its history entry.
+        for (const [id, work] of pendingWork.current) await persistWork(id, work);
+        if (pendingWork.current.size > 0) throw new Error("Earlier edits are still waiting to save.");
+        const saved = await saveGeneratedPurchasePlan({
+          envelope, analysisDate, dateConfirmations, readiness: snapshot, forecast: review,
+          purchaseDrafts: latestDrafts.current, supplierOrderDrafts: latestSupplierDrafts.current, supplierTerms: {},
+        }, plan, targetId, newUpload);
+        if (!mounted.current || uploadToken.current !== token) return saved;
+        pendingUploadTarget.current = undefined;
+        lastSavedEnvelope.current = envelope;
+        setActiveSavedId(saved.id);
+        setUploadTarget(summarizeSavedDataset(saved));
+        setWorkspaceInfo(summarizeSavedDataset(saved));
+        // Include edits made while the initial write was in progress.
+        await persistWork(saved.id, { purchaseDrafts: latestDrafts.current, supplierOrderDrafts: latestSupplierDrafts.current });
+        retrySaves.current.delete(`plan:${key}`);
+        if (retrySaves.current.size === 0 && pendingWork.current.size === 0) { setSaveError(null); setSaveState("saved"); }
+        window.history.replaceState(null, "", `#dataset/${encodeURIComponent(saved.id)}`);
+        void refreshSavedDatasets().catch(() => undefined);
+        return saved;
+      } catch {
+        generatedSaves.current.delete(key);
+        if (!mounted.current || uploadToken.current !== token) return undefined;
+        retrySaves.current.set(`plan:${key}`, () => saveCompletedPlan(snapshot, review));
+        setSaveState("error");
+        setSaveError("Your plan is ready. Saving on this device failed; we will try again automatically. Keep this page open.");
+        return undefined;
+      }
+    })();
+    generatedSaves.current.set(key, operation);
+    return operation;
+  }, [activeSavedId, analysisDate, dateConfirmations, envelope, persistWork, refreshSavedDatasets]);
 
   useEffect(() => {
     if (!activeSavedId || !dataset || lastSavedEnvelope.current === envelope) return;
@@ -231,6 +325,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       setShowImpact(destination === "impact");
     };
     if (forecast?.snapshotId === snapshot.id && forecast.policyVersion === EPIC3_POLICY_VERSION && forecast.analysisDate === snapshot.analysisDate) {
+      if (!activeSavedId) await saveCompletedPlan(snapshot, forecast);
       enterResults();
       return;
     }
@@ -245,7 +340,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       const review = await runDemandForecastInWorker(snapshot, controller.signal);
       if (forecastRun.current !== runId) return;
       setForecast(review);
-      if (activeSavedId) await persistWork(activeSavedId, { forecast: review });
+      await saveCompletedPlan(snapshot, review);
       if (forecastRun.current !== runId) return;
       enterResults();
     } catch (error) {
@@ -255,7 +350,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
       if (forecastAbort.current === controller) forecastAbort.current = null;
       if (forecastRun.current === runId) setForecastLoading(false);
     }
-  }, [activeSavedId, forecast, goTo, persistWork, readiness]);
+  }, [activeSavedId, forecast, goTo, readiness, saveCompletedPlan]);
 
   const openSavedDataset = useCallback(async (id: string, destination: "purchase" | "impact" = "purchase") => {
     const saved = await getSavedDataset(id);
@@ -291,7 +386,9 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setShowImpact(false);
     setReadinessError(null);
     setForecastError(null);
+    pendingUploadTarget.current = undefined;
     setActiveSavedId(id);
+    setSaveState("saved");
     setUploadTarget(summarizeSavedDataset(saved));
     setWorkspaceActive(true);
     const furthest: StepId = restoredForecast ? 4 : restoredReadiness ? 3 : 2;
@@ -396,30 +493,31 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
     const target = updateTargetId ? await getSavedDataset(updateTargetId) : undefined;
     if (updateTargetId && !target) throw new Error("The dataset selected for update is no longer saved.");
-    if (target && !window.confirm(`Use ${sourceName} as your current sales file? The previous upload will stay in Upload History (up to 12 uploads).`)) {
-      return;
-    }
     const proposed = await proposeMappings(parsed, createLocalSemanticScorer(signal));
     const importedEnvelope = updateSessionMapping(next, seedFromProposals(next.session.mapping, proposed));
-    const uploaded = target ? await replaceSavedDataset(target.id, importedEnvelope, malaysiaDate()) : undefined;
+    pendingUploadTarget.current = target?.id;
+    uploadToken.current = globalThis.crypto.randomUUID();
+    for (const key of retrySaves.current.keys()) if (key.startsWith("plan:")) retrySaves.current.delete(key);
+    generatedSaves.current.clear();
+    setSaveError(null);
+    setSaveState("idle");
     resetReadinessEvidence();
     setProposals(proposed);
     setMappingUndo(null);
     setEnvelope(importedEnvelope);
-    lastSavedEnvelope.current = target ? importedEnvelope : null;
+    lastSavedEnvelope.current = null;
     setMappingError(null);
     setMappingNotice(null);
     setProductKey(null);
     setAnalysisDate(malaysiaDate());
-    setActiveSavedId(target?.id ?? null);
-    setWorkspaceInfo({ datasetName: uploaded?.datasetName ?? parsed.sourceName, shopName: target?.shopName ?? "", rowCount: parsed.rows.length });
+    setActiveSavedId(null);
+    setWorkspaceInfo({ datasetName: parsed.sourceName.replace(/\.[^.]+$/, ""), shopName: target?.shopName ?? "", rowCount: parsed.rows.length });
     setUpdateTargetId(null);
     if (target) {
-      setUploadTarget(summarizeSavedDataset(uploaded!));
+      setUploadTarget(summarizeSavedDataset(target));
       window.history.replaceState(null, "", `#dataset/${encodeURIComponent(target.id)}`);
       setPurchaseDrafts(target.purchaseDrafts);
       setSupplierOrderDrafts(target.supplierOrderDrafts ?? {});
-      await refreshSavedDatasets();
     }
     setSessionNotice(previousMode && previousMode !== sourceMode
       ? `${previousMode === "sample" ? "Sample data" : "The retailer file"} was replaced. Dataset-specific mappings and results were cleared.`
@@ -487,6 +585,12 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setReached(1);
     setStep(1);
     setActiveSavedId(null);
+    pendingUploadTarget.current = undefined;
+    retrySaves.current.clear();
+    generatedSaves.current.clear();
+    pendingWork.current.clear();
+    setSaveError(null);
+    setSaveState("idle");
     lastSavedEnvelope.current = null;
     setUpdateTargetId(null);
     setSessionNotice(cleared.message);
@@ -494,55 +598,6 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
     setWorkspaceActive(false);
     setWorkspaceInfo(null);
   }, [envelope, resetReadinessEvidence]);
-
-  const handleSaveDataset = useCallback(async (shop: string, datasetName: string) => {
-    try {
-      const latest = (await listSavedDatasets())[0];
-      const existing = latest ? await getSavedDataset(latest.id) : undefined;
-      const saved = existing
-        ? window.confirm(`Use ${dataset?.sourceName} as your current sales file? The previous upload will stay in Upload History (up to 12 uploads).`)
-          ? await replaceSavedDataset(existing.id, envelope, analysisDate, datasetName) : null
-        : await createSavedDataset(shop, datasetName, envelope, analysisDate);
-      if (!saved) return;
-      await saveDatasetWork(saved.id, { envelope, analysisDate, dateConfirmations, readiness, forecast, purchaseDrafts, supplierOrderDrafts });
-      setActiveSavedId(saved.id);
-      if (step === 4) window.history.replaceState(null, "", `#dataset/${encodeURIComponent(saved.id)}`);
-      setWorkspaceInfo(summarizeSavedDataset(saved));
-      lastSavedEnvelope.current = saved.envelope;
-      setSaveError(null);
-      setSessionNotice(`${saved.shopName} / ${saved.datasetName} saved.`);
-      await refreshSavedDatasets();
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Dataset could not be saved.");
-    }
-  }, [analysisDate, dataset?.sourceName, envelope, refreshSavedDatasets, dateConfirmations, readiness, forecast, purchaseDrafts, supplierOrderDrafts, step]);
-
-  const handleSaveDecision = useCallback(async () => {
-    if (!activeSavedId || !readiness || !forecast) return;
-    const products = joinPurchaseEvidence(readiness, forecast).map((product) => ({
-      key: product.key, name: product.name,
-      inputs: purchaseDrafts[product.key] ?? product.fileInputs,
-      plan: evaluatePurchaseProduct(product, readiness.analysisDate,
-        purchaseDrafts[product.key] ?? product.fileInputs, evaluateProductPurchasePlan, product.fileExpiry),
-    }));
-    const decision = {
-      id: globalThis.crypto.randomUUID(), recordedAt: new Date().toISOString(),
-      recommendation: { analysisDate: readiness.analysisDate, sourceSha256: readiness.sourceSha256, products },
-      note: `Purchase plan for ${readiness.analysisDate}`,
-    };
-    const retry = async () => {
-      const saved = await recordDecision(activeSavedId, decision);
-      setSelectedSaved((current) => current?.id === activeSavedId ? saved : current);
-      await refreshSavedDatasets();
-      setSaveError(null);
-      retrySave.current = null;
-      setSessionNotice("Decision saved with its original recommendation and date.");
-    };
-    try { await retry(); } catch {
-      retrySave.current = retry;
-      setSaveError("The decision could not be saved. Your current plan is still here.");
-    }
-  }, [activeSavedId, forecast, purchaseDrafts, readiness, refreshSavedDatasets]);
 
   const mappingSubmit = useRef(false);
   const [mappingSubmitting, setMappingSubmitting] = useState(false);
@@ -627,7 +682,8 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
         onImpact: () => void navigateResults("impact").catch(() => setSaveError("The dataset could not be opened.")),
       } : undefined}
     >
-      {saveError && <p role="alert">{saveError} {retrySave.current && <button type="button" onClick={() => void retrySave.current?.()}>Retry</button>}</p>}
+      {saveError && <p role="alert">{t(saveError)}</p>}
+      {workspaceActive && dataset?.sourceMode === "user" && <p className="workspace-autosave" role="status" aria-live="polite">{t(saveState === "saving" ? "Saving automatically…" : saveState === "saved" ? "Saved automatically on this device" : saveState === "error" ? "Waiting to save automatically" : "Your upload will be saved automatically when your purchase plan is ready.")}</p>}
       {!showImpact && <StorageExplanation />}
       {t(step === 1 && (
         <UploadScreen
@@ -652,13 +708,7 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
           onBack={() => workspaceActive ? beginReupload() : setStep(1)}
           checking={readinessLoading || mappingSubmitting}
           onConfirmAllAndContinue={() => void handleConfirmAllAndContinue()}
-        >
-          {dataset.sourceMode === "user" && !activeSavedId && (
-            <SaveDatasetControls key={envelope.session.id} defaultName={dataset.sourceName.replace(/\.[^.]+$/, "")}
-              shops={[...new Set(savedDatasets.map((item) => item.shopName))]}
-              onSave={handleSaveDataset} />
-          )}
-        </MappingScreen>
+        />
       ))}
 
       {t(step === 3 && dataset && readiness && (
@@ -711,24 +761,20 @@ export default function App({ initialDatasetId, updateDatasetId }: AppProps = {}
 
       {t(step === 4 && readiness && forecast && !showImpact && (
         <>
-        {dataset?.sourceMode === "user" && !activeSavedId && <div className="workspace-save">
-          <p>{t("Save this upload to reopen your purchase plan on your next visit.")}</p>
-          <SaveDatasetControls defaultName={dataset.sourceName.replace(/\.[^.]+$/, "")}
-            shops={[...new Set(savedDatasets.map(item => item.shopName))]} onSave={handleSaveDataset} />
-        </div>}
-        {activeSavedId && <div className="workspace-plan-actions"><button type="button" className="btn btn--small btn--ghost" onClick={() => void handleSaveDecision()}>{t("Save current plan as decision")}</button></div>}
         <PurchasePlanScreen
           snapshot={readiness}
           forecast={forecast}
           drafts={purchaseDrafts}
           onDraftChange={(key, inputs) => {
             const next = { ...purchaseDrafts, [key]: inputs };
+            latestDrafts.current = next;
             setPurchaseDrafts(next);
             if (activeSavedId) void persistWork(activeSavedId, { purchaseDrafts: next });
           }}
           supplierDrafts={supplierOrderDrafts}
           onSupplierChange={(key, terms) => {
             const next = { ...supplierOrderDrafts, [key]: terms };
+            latestSupplierDrafts.current = next;
             setSupplierOrderDrafts(next);
             if (activeSavedId) void persistWork(activeSavedId, { supplierOrderDrafts: next });
           }}
