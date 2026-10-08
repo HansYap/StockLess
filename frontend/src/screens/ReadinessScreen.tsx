@@ -18,6 +18,8 @@ interface ReadinessScreenProps {
   readonly onFilter: (kind: ReadinessIssueFilter | null) => void;
   readonly onConfirmDateFormat: (sourceColumnId: string, format: ConfirmedDateFormat) => void;
   readonly onBack: () => void; readonly onContinue: () => void; readonly onClear?: () => void; readonly reportFilename: string;
+  /** Search text for the product a Step 4 correction action points at. */
+  readonly focusQuery?: string | null;
 }
 const GROUPS: readonly [FindingType, string][] = [["date", "Dates we couldn't read"], ["quantity", "Quantities to check"], ["identity", "Rows with no product"], ["stock", "Stock counts to check"], ["other", "Other things to check"], ["tidy", "Safe tidy-ups applied"]];
 const OUTCOMES = { out: "Left out", in: "Still counted", done: "Done" };
@@ -130,7 +132,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
         const next = event.key === "ArrowRight" || event.key === "ArrowLeft" ? 1 - index : event.key === "Home" ? 0 : event.key === "End" ? 1 : -1;
         if (next < 0) return; event.preventDefault(); const target = next === 0 ? "products" : "rows"; setView(target); document.getElementById("readiness-view-" + target)?.focus();
       }}><span aria-hidden="true">{item === "products" ? "🛒" : "📄"}</span>{t(item === "products" ? "Products" : "Rows in your file")}<span className="rd-view-count num">{(item === "products" ? products.length : props.snapshot.reconciliation.rowsIn).toLocaleString()}</span></button>)}</div>
-      <div id="readiness-view-panel-products" role="tabpanel" aria-labelledby="readiness-view-products" hidden={view !== "products"}><ReadinessOverview snapshot={props.snapshot} timelines={timelines} products={products} /></div>
+      <div id="readiness-view-panel-products" role="tabpanel" aria-labelledby="readiness-view-products" hidden={view !== "products"}><ReadinessOverview snapshot={props.snapshot} timelines={timelines} products={products} initialSearch={props.focusQuery ?? undefined} /></div>
       <div id="readiness-view-panel-rows" role="tabpanel" aria-labelledby="readiness-view-rows" hidden={view !== "rows"}><ReadinessRowsTab key={props.snapshot.id} snapshot={props.snapshot} findings={findings} onShowGroup={showGroup} onDownload={() => downloadText(createCorrectionReport(props.snapshot).csvText, props.reportFilename)} /></div>
       <div className="rd-layout"><section className="rd-card rd-findings" aria-labelledby="readiness-findings-title">
         <div className="rd-card__head"><span className="rd-group-icon rd-group-icon--search"><ReadinessIcon name="search" /></span><div><h2 id="readiness-findings-title">{t("What we found")}</h2><p>{props.snapshot.reconciliation.rowsExcluded} {t("rows left out of")} {props.snapshot.reconciliation.rowsIn.toLocaleString()} · {t("Your file isn't changed")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={() => downloadText(findingsCsv(shown, props.dataset.sourceName, props.snapshot.analysisDate, props.dataset.worksheetName, props.snapshot.sourceMode, filtered), props.reportFilename.replace(/\.csv$/i, filtered ? "-filtered.csv" : ".csv"))}><ReadinessIcon name="download" />{t("Download list")}</button></div>

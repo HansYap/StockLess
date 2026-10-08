@@ -21,14 +21,14 @@ function WeeklySales({ product, date }: { product: ProductSummary; date: string 
   </span></div>;
 }
 
-export function ReadinessOverview({ snapshot, timelines, products: supplied }: { snapshot: ReadinessSnapshot; timelines: readonly ProductTimeline[]; products?: readonly ProductSummary[] }) {
+export function ReadinessOverview({ snapshot, timelines, products: supplied, initialSearch }: { snapshot: ReadinessSnapshot; timelines: readonly ProductTimeline[]; products?: readonly ProductSummary[]; initialSearch?: string }) {
   useLanguage();
   const derived = useMemo(() => supplied ?? buildReadinessProducts(snapshot, timelines), [supplied, snapshot, timelines]);
-  const [search, setSearch] = useState(""), [category, setCategory] = useState<FoodCategory | null>(null);
+  const [search, setSearch] = useState(initialSearch ?? ""), [category, setCategory] = useState<FoodCategory | null>(null);
   const [status, setStatus] = useState<ProductStatus | null>(null), [expanded, setExpanded] = useState(false);
   const [selected, setSelected] = useState<ProductSummary | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => { setSearch(""); setCategory(null); setStatus(null); setExpanded(false); dialog.current?.close(); setSelected(null); }, [snapshot.id]);
+  useEffect(() => { setSearch(initialSearch ?? ""); setCategory(null); setStatus(null); setExpanded(false); dialog.current?.close(); setSelected(null); }, [snapshot.id, initialSearch]);
   const counts = { ready: 0, review: 0, missing: 0 }; derived.forEach(product => counts[product.status]++);
   const categories = [null, ...FOOD_CATEGORIES.filter(item => derived.some(product => product.category === item))];
   const query = search.trim().replace(/^sku\s*:?\s*/i, "").toLowerCase();

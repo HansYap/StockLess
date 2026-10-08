@@ -89,6 +89,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const [mappingError, setMappingError] = useState<string | null>(null);
   const [mappingNotice, setMappingNotice] = useState<string | null>(null);
   const [issueFilter, setIssueFilter] = useState<ReadinessIssueFilter | null>(null);
+  const [readinessFocus, setReadinessFocus] = useState<string | null>(null);
   const [productKey, setProductKey] = useState<string | null>(null);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<ReadinessSnapshot | null>(null);
@@ -272,7 +273,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [step]);
+  }, [step, showImpact]);
 
   const goTo = useCallback((next: StepId) => {
     setShowImpact(false);
@@ -696,7 +697,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
       onNavigate={next => { if (next === 1 && workspaceActive) beginReupload(); else goTo(next); }}
       sourceMode={envelope.session.sourceMode}
       sourceName={dataset?.sourceName}
-      notice={updateTargetId || step === 2 || step === 3 || (step === 4 && !showImpact) ? null : sessionNotice}
+      notice={updateTargetId || step === 2 || step === 3 || step === 4 ? null : sessionNotice}
       workflowStyle={workspaceActive || step !== 4 || !showImpact}
       onClear={dataset ? workspaceActive ? beginReupload : handleClearSession : undefined}
       workspaceSidebar={workspaceActive ? {
@@ -757,6 +758,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           onBack={() => setStep(2)}
           onContinue={() => void executeForecast()}
           reportFilename={reportMetadata.filename}
+          focusQuery={readinessFocus}
         />
       ))}
 
@@ -818,8 +820,9 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           }}
           selectedKey={productKey}
           onSelect={setProductKey}
-          onBack={() => setStep(3)}
-          onImpact={() => { setProductKey(null); setShowImpact(true); }}
+          onBack={() => { setReadinessFocus(null); setStep(3); }}
+          onReviewProduct={key => { const values = readiness.rows.find(row => row.productKey === key)?.interpretedValues; setReadinessFocus(values?.productCode ?? values?.productName ?? null); setStep(3); }}
+          onImpact={() => setShowImpact(true)}
         />
         </>
       ))}

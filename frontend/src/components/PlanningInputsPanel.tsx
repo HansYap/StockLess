@@ -8,6 +8,7 @@ export function PlanningInputsPanel({ snapshot, productKey, value, onChange }: {
   const active = activePlanningContext(snapshot,value);
   const [category,setCategory] = useState(active?.category ?? '');
   const [cost,setCost] = useState(active?.unitCost === undefined ? '' : String(active.unitCost));
+  const [price,setPrice] = useState(active?.sellingPrice === undefined ? '' : String(active.sellingPrice));
   const [weight,setWeight] = useState(active?.kgPerUnit === undefined ? '' : String(active.kgPerUnit));
   const [date,setDate] = useState(active?.restockDate ?? '');
   const [storage,setStorage] = useState<'pantry'|'refrigerate'|'freeze'>(active?.storageSelection?.storage ?? 'refrigerate');
@@ -15,7 +16,7 @@ export function PlanningInputsPanel({ snapshot, productKey, value, onChange }: {
   const [storageProduct,setStorageProduct] = useState(active?.storageSelection?.productId ?? '');
   const [referenceCode,setReferenceCode] = useState(active?.priceCatcherItemCode ?? '');
   const [error,setError] = useState('');
-  useEffect(() => { setCategory(active?.category ?? ''); setCost(active?.unitCost === undefined ? '' : String(active.unitCost)); setWeight(active?.kgPerUnit === undefined ? '' : String(active.kgPerUnit)); setDate(active?.restockDate ?? ''); setStorage(active?.storageSelection?.storage ?? 'refrigerate'); setStorageCategory(active?.storageSelection?.categoryId?.toString() ?? ''); setStorageProduct(active?.storageSelection?.productId ?? ''); setReferenceCode(active?.priceCatcherItemCode ?? ''); },[productKey,active]);
+  useEffect(() => { setCategory(active?.category ?? ''); setCost(active?.unitCost === undefined ? '' : String(active.unitCost)); setPrice(active?.sellingPrice === undefined ? '' : String(active.sellingPrice)); setWeight(active?.kgPerUnit === undefined ? '' : String(active.kgPerUnit)); setDate(active?.restockDate ?? ''); setStorage(active?.storageSelection?.storage ?? 'refrigerate'); setStorageCategory(active?.storageSelection?.categoryId?.toString() ?? ''); setStorageProduct(active?.storageSelection?.productId ?? ''); setReferenceCode(active?.priceCatcherItemCode ?? ''); },[productKey,active]);
   const name = snapshot.rows.find(r => r.productKey === productKey)?.interpretedValues.productName ?? productKey;
   const suggestion = suggestProductCategory(name);
   const mass = planningMass(snapshot,productKey,active,true), window = planningStorageWindow(snapshot,active);
@@ -26,10 +27,10 @@ export function PlanningInputsPanel({ snapshot, productKey, value, onChange }: {
   const save = () => {
     if (!snapshot.evidenceKey) { setError(c('Refresh readiness first.','请先刷新就绪检查。','Muat semula semakan data dahulu.')); return; }
     const decimal = (raw:string, positive:boolean) => raw === '' || (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw) && Number.isFinite(Number(raw)) && (positive ? Number(raw)>0 : Number(raw)>=0));
-    if (!decimal(cost,false) || !decimal(weight,true) || (date && (!parseIsoDate(date) || date > snapshot.analysisDate))) {
-      setError(c('Enter a non-negative seller cost, a positive kg per unit, and a restock date no later than the analysis date.','请输入非负采购成本、正数的每单位公斤数，以及不晚于分析日期的补货日期。','Masukkan kos penjual bukan negatif, kg seunit positif dan tarikh stok semula sebelum tarikh analisis.')); return;
+    if (!decimal(cost,false) || !decimal(price,false) || !decimal(weight,true) || (date && (!parseIsoDate(date) || date > snapshot.analysisDate))) {
+      setError(c('Enter a non-negative seller cost and selling price, a positive kg per unit, and a restock date no later than the analysis date.','请输入非负的采购成本和售价、正数的每单位公斤数，以及不晚于分析日期的补货日期。','Masukkan kos penjual dan harga jualan bukan negatif, kg seunit positif dan tarikh stok semula sebelum tarikh analisis.')); return;
     }
-    onChange({ evidenceKey:snapshot.evidenceKey, category: category || undefined, categoryConfirmed: Boolean(category), isFood: Boolean(category) && category !== 'non_food', unitCost: cost === '' ? undefined : Number(cost), kgPerUnit: weight === '' ? undefined : Number(weight), restockDate: date || undefined,
+    onChange({ evidenceKey:snapshot.evidenceKey, category: category || undefined, categoryConfirmed: Boolean(category), isFood: Boolean(category) && category !== 'non_food', unitCost: cost === '' ? undefined : Number(cost), sellingPrice: price === '' ? undefined : Number(price), kgPerUnit: weight === '' ? undefined : Number(weight), restockDate: date || undefined,
       storageSelection: storageCategory ? { confirmed:true,storage,categoryId:Number(storageCategory),productId:storageProduct || undefined } : undefined, priceCatcherItemCode:referenceCode || undefined });
     setError('');
   };
@@ -41,6 +42,7 @@ export function PlanningInputsPanel({ snapshot, productKey, value, onChange }: {
     <div className="cp3-fields">
       <label>{c('Food category','食品类别','Kategori makanan')}<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">{c('Not confirmed','未确认','Belum disahkan')}</option><option value="non_food">{c('Not food','非食品','Bukan makanan')}</option>{categories.map(v=><option key={v} value={v}>{v.replaceAll('_',' ')}</option>)}</select></label>
       <label>{c('Your purchase cost / sales unit (MYR)','每销售单位采购成本（MYR）','Kos belian anda / unit jualan (MYR)')}<input inputMode="decimal" value={cost} onChange={e=>setCost(e.target.value)} placeholder={c('Keep file cost if blank','留空使用文件成本','Kos fail jika kosong')} /></label>
+      <label>{c('Your selling price / sales unit (MYR)','每销售单位售价（MYR）','Harga jualan anda / unit jualan (MYR)')}<input inputMode="decimal" value={price} onChange={e=>setPrice(e.target.value)} placeholder={c('Optional · for estimated sales value','选填 · 用于预计销售额','Pilihan · untuk anggaran nilai jualan')} /></label>
       <label>{c('Measured kg / sales unit','每销售单位实测公斤数','Kg diukur / unit jualan')}<input inputMode="decimal" value={weight} onChange={e=>setWeight(e.target.value)} placeholder={c('Keep file / parsed pack weight','留空使用文件或包装重量','Berat fail / bungkusan jika kosong')} /></label>
       <label>{c('Last restock date','最近补货日期','Tarikh stok semula terakhir')}<input type="date" value={date} max={snapshot.analysisDate} onChange={e=>setDate(e.target.value)} /></label>
       <label>{c('Storage method','储存方式','Cara penyimpanan')}<select value={storage} onChange={e=>{setStorage(e.target.value as typeof storage);setStorageProduct('');}}><option value="refrigerate">{c('Refrigerated','冷藏','Peti sejuk')}</option><option value="freeze">{c('Frozen','冷冻','Beku')}</option><option value="pantry">{c('Pantry','常温储藏','Pantri')}</option></select></label>

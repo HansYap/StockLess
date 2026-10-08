@@ -144,5 +144,5 @@ export function purchaseGroup(plan: ProductPurchasePlan | undefined): PurchaseGr
   return plan.audit.verdict === "Overstock risk" ? "check_order" : plan.audit.verdict === "Looks balanced" ? "balanced" : "order_needed";
 }
 export const purchaseGroupLabels: Record<PurchaseGroup, string> = {
-  order_needed: "Order more", check_order: "Check order", balanced: "Balanced", need_data: "Need data",
+  order_needed: "Order needed", check_order: "Check your order", balanced: "Looks balanced", need_data: "Need more data",
 };

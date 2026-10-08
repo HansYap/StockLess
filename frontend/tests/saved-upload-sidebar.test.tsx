@@ -160,7 +160,7 @@ it("adds saved-dataset navigation and graphics to reupload, without saved manage
   expect(within(sidebar).getByRole("link", { name: "Upload history" }).getAttribute("href")).toBe("#history");
   expect(screen.queryByText("Manage saved information")).toBeNull();
   expect(screen.queryByRole("button", { name: "Use sample file" })).toBeNull();
-  expect(within(screen.getByRole("navigation", { name: "Progress" })).getAllByRole("listitem")).toHaveLength(3);
+  expect(within(screen.getByRole("navigation", { name: "Progress" })).getAllByRole("button")).toHaveLength(3);
   expect(document.querySelectorAll(".saved-workspace__content .ws-decor img")).toHaveLength(2);
 });
 it("keeps the fresh upload screen without a sidebar when there is no saved history", async () => {

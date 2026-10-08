@@ -27,7 +27,7 @@ it("only saves an explicit choice and supplies frozen source, labels and policy 
   const input = props(); render(<DecisionOutcomeControls {...input} />);
   fireEvent.change(screen.getByLabelText("Response"), { target: { value: "Changed" } });
   fireEvent.change(screen.getByLabelText("Final quantity"), { target: { value: "6" } });
-  fireEvent.change(screen.getByLabelText("Reason for changing (required)"), { target: { value: "Shelf space" } });
+  fireEvent.change(screen.getByLabelText("Reason (optional)"), { target: { value: "Shelf space" } });
   fireEvent.change(screen.getByLabelText("Supplier (optional)"), { target: { value: "Local supplier" } });
   fireEvent.click(screen.getByRole("button", { name: "Save decision" }));
   await waitFor(() => expect(savePurchaseDecision).toHaveBeenCalledOnce());

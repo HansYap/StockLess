@@ -25,7 +25,7 @@ export class CsvImportError extends Error {
 const REJECTION: Readonly<Record<CsvErrorCode, Readonly<{ check: string; action: string }>>> = Object.freeze({
   UNSUPPORTED_FILE_TYPE: Object.freeze({
     check: "Not a CSV file",
-    action: "Choose a file whose name ends in .csv.",
+    action: "Choose a .csv, .xlsx or .xls file (Excel files: pick the worksheet with your records).",
   }),
   INVALID_UTF8: Object.freeze({
     check: "The text cannot be read",

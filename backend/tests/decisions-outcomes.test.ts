@@ -20,12 +20,12 @@ function outcome(id: string, quantity: number | string, date = REF, unit: "piece
   return createStockOutcome({ id, datasetId: "dataset-1", productKey: "A", kind: "discarded", date, quantity, unit, referenceDate: REF, recordedAt: NOW, ...extra });
 }
 
-test("explicit decisions validate response, final whole quantity, Changed reason and permit zero", () => {
+test("explicit decisions validate response and final whole quantity, keep the reason optional and permit zero", () => {
   assert.equal(createPurchaseDecision({ datasetId: "dataset-1", response: "Followed", referenceDate: REF, recordedAt: NOW, recommendation: recommendation() }).finalQuantity, 12);
   for (const finalQuantity of ["", " ", -1, "no", 1.5, Infinity, "1e2", 1_000_000]) {
     assert.throws(() => createPurchaseDecision({ datasetId: "dataset-1", response: "Ignored", finalQuantity, referenceDate: REF, recordedAt: NOW, recommendation: recommendation() }), DecisionValidationError);
   }
-  assert.throws(() => createPurchaseDecision({ datasetId: "dataset-1", response: "Changed", finalQuantity: 6, referenceDate: REF, recordedAt: NOW, recommendation: recommendation() }), /reason/);
+  assert.equal(createPurchaseDecision({ datasetId: "dataset-1", response: "Changed", finalQuantity: 6, referenceDate: REF, recordedAt: NOW, recommendation: recommendation() }).reason, undefined);
   assert.throws(() => createPurchaseDecision({ datasetId: "dataset-1", response: "Followed", finalQuantity: 6, referenceDate: REF, recordedAt: NOW, recommendation: recommendation() }), /Followed/);
   assert.equal(createPurchaseDecision({ datasetId: "dataset-1", response: "Ignored", finalQuantity: "0", referenceDate: REF, recordedAt: NOW, recommendation: recommendation() }).finalQuantity, 0);
   assert.throws(() => createPurchaseDecision({ datasetId: "dataset-1", response: "Ignored", finalQuantity: 0, decisionDate: "2026-10-09", referenceDate: REF, recordedAt: NOW, recommendation: recommendation() }), /future/);

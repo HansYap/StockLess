@@ -10,6 +10,8 @@ export interface ProductPlanningContext {
   readonly categoryConfirmed?: boolean;
   readonly isFood?: boolean;
   readonly unitCost?: number;
+  /** Retailer's selling price per sales unit (MYR); only for the estimated sales value, never a cost. */
+  readonly sellingPrice?: number;
   readonly kgPerUnit?: number;
   readonly restockDate?: string;
   readonly storageSelection?: StorageWindowSelection;

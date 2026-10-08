@@ -262,3 +262,7 @@
   .purchase-plan--new .pp-period-labels small { font-size: 11px; }
   .purchase-plan--new .pp-detail-footer .btn { width: 100%; }
 }
+
+/* US8.2 AC2: products without a usable excess-stock cost are set apart when sorting by financial risk. */
+.pp-cost-divider td{padding:10px 16px;background:#F7FAF9;border-top:1px dashed var(--border-strong,#B8C8C4);font-size:13px;font-weight:700;color:var(--muted,#66767D)}
+.pp-check-inputs{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink-2,#243238)}

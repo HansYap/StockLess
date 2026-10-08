@@ -14,6 +14,8 @@ function costEvidence() {
   ] } };
 }
 function summary(title: string): HTMLElement { return screen.getByText(title).parentElement!; }
+// The restored design opens the Environmental lens first; business checks open their tab.
+function businessPanel() { fireEvent.click(screen.getByRole("tab", { name: /Business/ })); return within(screen.getByRole("tabpanel", { name: "Business" })); }
 
 describe("impact dashboard", () => {
   it("uses checked purchase quantities and excludes products without a usable check", () => {
@@ -36,7 +38,7 @@ describe("impact dashboard", () => {
     expect(screen.getByRole("heading", { name: "See the impact of your purchase plan" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Understanding your impact" })).toBeTruthy();
     expect(screen.getByText(`Potential excess: ${lines[0].units} sales units · 1/3 assessed`)).toBeTruthy();
-    const business = within(screen.getByRole("tabpanel", { name: "Business" }));
+    const business = businessPanel();
     expect(business.getAllByText("No planned order entered.")).toHaveLength(2);
     expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("Unavailable");
   });
@@ -47,7 +49,10 @@ describe("impact dashboard", () => {
 
     const environment = screen.getByRole("tab", { name: /Environmental/ });
     const business = screen.getByRole("tab", { name: /Business/ });
-    expect(environment.getAttribute("aria-selected")).toBe("false");
+    expect(environment.getAttribute("aria-selected")).toBe("true");
+    expect(business.getAttribute("aria-selected")).toBe("false");
+    expect(document.getElementById("business-impact")?.hidden).toBe(true);
+    fireEvent.click(business);
     expect(business.getAttribute("aria-selected")).toBe("true");
     expect(document.getElementById("business-impact")?.hidden).toBe(false);
     fireEvent.click(environment);
@@ -74,7 +79,7 @@ describe("impact dashboard", () => {
     const excess = lines.reduce((total, line) => total + line.units, 0);
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
     expect(screen.getByText(`Potential excess: ${excess} sales units · 2/3 assessed`)).toBeTruthy();
-    expect(within(screen.getByRole("tabpanel", { name: "Business" })).getAllByText("No planned order entered.")).toHaveLength(1);
+    expect(businessPanel().getAllByText("No planned order entered.")).toHaveLength(1);
   });
 
   it("uses validated seller costs, shows real zero and updates current totals after a quantity edit", () => {
@@ -83,7 +88,7 @@ describe("impact dashboard", () => {
     const { rerender } = render(<ImpactDashboard {...props} drafts={{ A: entered(100), B: entered(0) }} />);
     expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 250.00");
     expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
-    const row = within(screen.getByRole("tabpanel", { name: "Business" })).getByText(/000202/).closest("tr")!;
+    const row = businessPanel().getByText(/000202/).closest("tr")!;
     expect(within(row).getAllByText("MYR 0.00").length).toBeGreaterThan(0);
     rerender(<ImpactDashboard {...props} drafts={{ A: entered(50), B: entered(0) }} />);
     expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 125.00");
