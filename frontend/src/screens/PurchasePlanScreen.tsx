@@ -9,6 +9,7 @@ import { purchaseDate } from "../purchase-plan/PurchaseDemandChart.tsx";
 import { numberText } from "../purchase-plan/SourceTag.tsx";
 import { purchasePlanFilename, serializePurchasePlanCsv } from "../purchase-plan/purchase-plan-export.ts";
 import "../purchase-plan/purchase-plan.css";
+import { GrowthIcon } from "../components/GrowthIcon.tsx";
 
 export type SupplierDrafts = Readonly<Record<string, SupplierOrderTerms | undefined>>;
 interface Props {
@@ -116,7 +117,7 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
     const link = document.createElement("a"); link.href = url; link.download = purchasePlanFilename(snapshot.sourceMode); link.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
   }
   return <main className="purchase-plan purchase-plan--new">
-    <section className={`pp-hero${compactHero ? " is-compact" : ""}`}><div className="pp-wrap pp-hero-box"><div className="pp-hero-main"><div><p className="pp-kicker"><span aria-hidden="true">🌳</span> {t("Purchase plan")}</p><h1>{t("Plan your next order")}</h1><p className="pp-hero-lede">{t(`For the next 4 weeks from ${purchaseDate(snapshot.analysisDate, true)}.`)} {t("Start from our estimate, type what you plan to buy, and we'll check it against expected demand.")}</p></div>
+    <section className={`pp-hero${compactHero ? " is-compact" : ""}`}><div className="pp-wrap pp-hero-box"><div className="pp-hero-main"><div><p className="pp-kicker"><GrowthIcon stage="tree" size={16} className="growth-icon--inline" /> {t("Purchase plan")}</p><h1>{t("Plan your next order")}</h1><p className="pp-hero-lede">{t(`For the next 4 weeks from ${purchaseDate(snapshot.analysisDate, true)}.`)} {t("Start from our estimate, type what you plan to buy, and we'll check it against expected demand.")}</p></div>
       <button type="button" className="pp-excess" disabled={!onImpact} onClick={onImpact}><span className="pp-icon pp-icon--amber" aria-hidden="true">▣</span><span><small>{t("Possible excess stock")}</small><b className="num">{excessSummary.state === "assessed" ? `${numberText(excessSummary.quantity)} ${t("units")}` : t(excessSummary.state === "not_entered" ? "Not entered" : "Unavailable")}</b>{excessSummary.state === "assessed" ? <><small>{t("Assessed orders")}: {excessSummary.assessedCount} · {t("Orders with excess")}: {excessSummary.excessOrderCount}</small>{excessSummary.excludedCount > 0 && <small>{t("Unassessable orders excluded")}: {excessSummary.excludedCount}</small>}</> : <small>{t(excessSummary.reason)} {t(excessSummary.correctiveAction)}</small>}</span><span className="pp-excess-go">{t("See impact →")}</span></button>
     </div><div className="pp-hero-actions"><button type="button" className="pp-back" onClick={onBack}>{t("← Back to readiness")}</button><span className="pp-action-spacer" /><button type="button" className="btn btn--ghost" onClick={download}>{t("↓ Download plan")}</button><button type="button" className="btn btn--primary" disabled={!onImpact} onClick={onImpact}>{t("See your impact →")}</button></div></div></section>
     <div className="pp-wrap pp-main">

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { SourceMode } from "../engine.ts";
 import { WorkspaceDecor } from "./WorkspaceDecor.tsx";
 import { Logo } from "./Logo.tsx";
+import { GrowthIcon, STEP_GROWTH } from "./GrowthIcon.tsx";
 import { SavedWorkspaceSidebar, type SavedWorkspaceSidebarProps } from "./SavedWorkspaceSidebar.tsx";
 import "./workflow-shell.css";
 import "./i3-typography.css";
@@ -62,11 +63,19 @@ export function AppShell({
             return <li key={step.id} className={`step${done ? " step--done" : ""}${isCurrent ? " step--current" : ""}`}>
               <button type="button" className="step__button" disabled={step.id > reached || isCurrent}
                 aria-current={isCurrent ? "step" : undefined} onClick={() => onNavigate(step.id)}>
-                <span className="step__plant" aria-hidden="true">{["🌱", "🌿", "🪴"][step.id - 1]}</span>
+                <span className="step__plant" aria-hidden="true"><GrowthIcon stage={STEP_GROWTH[step.id - 1]} size={22} /></span>
                 <span className="step__dot">{done ? "✓" : step.id}</span><span className="step__label">{t(step.label)}</span>
-              </button><span className="step__line" aria-hidden="true" />
+              </button><span className={`step__line${step.id === 3 ? " step__line--tail" : ""}`} aria-hidden="true" />
             </li>;
           })}
+          {/* Not a numbered step: the tree the plants grow into, waiting after Step 3. */}
+          <li className={`step step--next${current === 3 ? " step--next-near" : ""}`}>
+            <span className="step__next">
+              <span className="step__plant" aria-hidden="true"><GrowthIcon stage="tree" size={22} /></span>
+              <span className="step__dot step__dot--next" aria-hidden="true">→</span>
+              <span className="step__label">{t("Purchase plan")}</span>
+            </span>
+          </li>
         </ol>
       </nav>}
       <div className="page">

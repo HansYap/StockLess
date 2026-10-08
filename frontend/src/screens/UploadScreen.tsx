@@ -5,6 +5,7 @@ import type { DragEvent } from "react";
 import { inspectExcelWorkbook, importExcelWorksheet, type ExcelWorksheet } from "./excel-import.ts";
 import "./upload.css";
 import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
+import { GrowthIcon } from "../components/GrowthIcon.tsx";
 import {
   CsvImportError,
   PRIVACY_NOTICE,
@@ -250,7 +251,7 @@ export function UploadScreen({
     <div className="upload-screen">
       <header className={compactTitle ? "upload-hero upload-hero--compact" : "upload-hero"}>
         <div className="upload-wrap upload-hero__inner">
-          <p className="upload-hero__eyebrow"><span aria-hidden="true">🌱</span> {t("Step 1 of 3")}</p>
+          <p className="upload-hero__eyebrow"><GrowthIcon stage="sprout" size={16} className="growth-icon--inline" /> {t("Step 1 of 3")}</p>
           <h1>{t(updating ? "Reupload your sales file" : "Upload your sales file")}</h1>
           <p className="upload-hero__lede">{t(updating ? "Upload one CSV or Excel sales file for your store. Your previous file stays in Upload History, up to 12 uploads." : "Use the CSV or Excel export from your POS, marketplace or spreadsheet. Column names don't need to match ours.")}</p>
         </div>
@@ -316,7 +317,7 @@ export function UploadScreen({
           </section>
           <aside className="upload-guidance" aria-label={t("Required and optional columns")}>
             <section className="upload-card upload-needed">
-              <h2><span aria-hidden="true">🌱</span> {t("Your file needs three columns")}</h2>
+              <h2><GrowthIcon stage="sprout" size={20} className="growth-icon--inline" /> {t("Your file needs three columns")}</h2>
               <p>{t("You'll pair them up in the next step.")}</p>
               <ul>{REQUIRED_COLUMNS.map(([icon, title, description, example]) => <li key={title}>
                 <span className="upload-guidance__icon"><WorkflowIcon name={icon} /></span>
@@ -325,7 +326,7 @@ export function UploadScreen({
               </li>)}</ul>
             </section>
             <section className="upload-card upload-optional">
-              <h2><span aria-hidden="true">🪴</span> {t("Optional columns add more")}</h2>
+              <h2><GrowthIcon stage="potted" size={20} className="growth-icon--inline" /> {t("Optional columns add more")}</h2>
               <ul>{OPTIONAL_COLUMNS.map(([icon, title, description, tag]) => <li key={title}>
                 <span className="upload-guidance__icon"><WorkflowIcon name={icon} /></span>
                 <span className="upload-guidance__text"><b>{t(title)}</b><small>{t(description)}</small></span>
