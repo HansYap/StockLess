@@ -5,6 +5,7 @@ import { ReturningPage } from "./screens/ReturningPage.tsx";
 import { listSavedDatasets } from "./storage/saved-datasets.ts";
 import { datasetIdFromRoute, isWorkspaceRoute, startRouteFor } from "./visit-routing.ts";
 import { OnboardingProvider } from "./onboarding/Onboarding.tsx";
+import { OpeningScreen } from "./components/OpeningScreen.tsx";
 
 const Workspace = lazy(() => import("./App.tsx"));
 const currentRoute = () => window.location.hash || "#home";
@@ -62,11 +63,11 @@ function SiteContent() {
     document.title = t(workspace ? "StockLess | Your restocking workspace" : returning ? "StockLess | Upload history" : "StockLess | Less food waste. Smarter restocking.");
   }, [workspace, returning, language]);
 
-  if (route === "#start" || route === "#entry") return <main className="start-routing" role="status"><p>{t("Opening your workspace…")}</p></main>;
+  if (route === "#start" || route === "#entry") return <OpeningScreen />;
 
   if (returning) return <ReturningPage />;
 
-  if (workspace) return <div className="workspace-view"><Suspense fallback={<p className="notice" role="status">{t("Opening your workspace…")}</p>}>
+  if (workspace) return <div className="workspace-view"><Suspense fallback={<OpeningScreen />}>
     <Workspace key={`${route}:${visit}`} initialDatasetId={route.startsWith("#dataset/") ? datasetIdFromRoute(route) : undefined}
       updateDatasetId={route.startsWith("#update/") ? datasetIdFromRoute(route) : undefined}
       guidedImport={route === "#guide" || route.startsWith("#guide/")}

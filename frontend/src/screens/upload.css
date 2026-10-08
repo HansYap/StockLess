@@ -84,3 +84,20 @@
 .upload-sheet__table { max-width: 100%; overflow: auto; max-height: 260px; }
 .upload-sheet table { border-collapse: collapse; width: 100%; }
 .upload-sheet th, .upload-sheet td { padding: 8px; text-align: left; border: 1px solid #d9e3e3; white-space: nowrap; font-size: 15px; }
+
+/* ===== reading an upload: file chip + four ticked steps ===== */
+.upload-screen .upload-busy-file { display: flex; align-items: center; gap: 10px; max-width: 100%; padding: 8px 14px 8px 10px; border-radius: 12px; background: #fff; border: 1px solid #d6e8e2; text-align: left; margin-bottom: 4px; }
+.upload-screen .upload-busy-file span { min-width: 0; display: flex; flex-direction: column; }
+.upload-screen .upload-busy-file b { font: 700 14px/1.3 var(--display); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 32ch; }
+.upload-screen .upload-busy-file small { font-size: 12px; color: var(--muted); }
+.upload-screen .upload-zone .upload-steps { list-style: none; margin: 4px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 8px; width: min(100%, 280px); text-align: left; }
+.upload-screen .upload-step { display: flex; align-items: center; gap: 10px; font: 400 14px/1.4 var(--body); color: var(--muted-2); }
+.upload-screen .upload-step--done, .upload-screen .upload-step--current { color: var(--ink); }
+.upload-screen .upload-step--current .upload-step__label { font-weight: 700; }
+.upload-screen .upload-step__dot { flex: none; box-sizing: border-box; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; border: 2px solid #cfe4de; font: 800 11px/1 var(--display); color: #fff; }
+.upload-screen .upload-step--done .upload-step__dot { border: 0; background: var(--teal); }
+.upload-screen .upload-step--current .upload-step__dot { border: 2.5px solid #cfe4de; border-top-color: var(--teal-deep); animation: upload-spin .9s linear infinite; }
+.upload-screen .upload-step__extra { margin-left: auto; font: 700 12px var(--data); color: var(--muted); }
+.upload-screen .upload-zone p[role="status"] { font-size: 14px; }
+@keyframes upload-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .upload-screen .upload-step--current .upload-step__dot { animation: none; border-color: var(--teal-deep); } }
