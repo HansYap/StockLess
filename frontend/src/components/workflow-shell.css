@@ -50,3 +50,23 @@
   .frame--workflow .page > :not(.upload-screen):not(.mapping-screen):not(.readiness-screen):not(.purchase-plan--new) { width: calc(100% - 32px); }
 }
 @media (max-width: 420px) { .frame--workflow .workflow-language, .returning-page .workflow-language { padding: 0 6px; } .frame--workflow .workflow-language select, .returning-page .workflow-language select { max-width: 120px; } }
+
+/* ===== drawn growth path =====
+   Steps 1–3 show drawn plants (sprout → leaves → potted plant). The tree after
+   Step 3 is not a step: it is where the path leads, the Purchase plan. */
+.step__plant{display:inline-flex;align-items:flex-end;justify-content:center}
+.step__plant .growth-icon{display:block}
+.frame--workflow .step__plant { height: 22px; }
+.frame--workflow .step:not(.step--done):not(.step--current):not(.step--next) .step__plant { opacity: .4; filter: grayscale(1); }
+.frame--workflow .step--current .step__plant .growth-icon { transform: scale(1.15); transform-origin: 50% 100%; }
+.frame--workflow .step:nth-last-child(2) .step__line { display: block; }
+.frame--workflow .step__line--tail,
+.frame--workflow .step--done .step__line--tail { background: none; border-top: 2px dashed var(--border-strong); height: 0; }
+.frame--workflow .step--next { flex: 1 1 0; }
+.frame--workflow .step__next { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 96px; opacity: .45; transition: opacity .2s ease; }
+.frame--workflow .step--next-near .step__next { opacity: .8; }
+.frame--workflow .step__dot--next { background: #fff; border: 2px dashed var(--border-strong); color: var(--muted); }
+.frame--workflow .step--next .step__label { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .frame--workflow .step__next { transition: none; } }
+@media (max-width: 560px) { .frame--workflow .step--next { display: none; } .frame--workflow .step:nth-last-child(2) .step__line { display: none; } }
+.growth-icon--inline { display: inline-block; vertical-align: -3px; margin-right: 2px; }
