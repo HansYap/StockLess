@@ -111,8 +111,8 @@ export function createPurchaseDecision(input: PurchaseDecisionInput): PurchaseDe
     ? recommended : wholeQuantity(input.finalQuantity);
   if (finalQuantity === undefined) fields.finalQuantity = "Enter a whole final quantity from 0 to 999999. Zero means you decided not to order.";
   if (input.response === "Followed" && finalQuantity !== undefined && finalQuantity !== recommended) fields.finalQuantity = "A Followed decision must use the original recommended quantity. Choose Changed to use another quantity.";
+  // US8.3 AC2: a reason is optional for every response, including Changed.
   const reason = text(input.reason);
-  if (input.response === "Changed" && !reason) fields.reason = "Enter a reason for changing the recommendation.";
   const restockDate = text(input.restockDate);
   if (restockDate && !parseIsoDate(restockDate)) fields.restockDate = "Enter a real restock date using YYYY-MM-DD.";
   if (Object.keys(fields).length) throw new DecisionValidationError(fields);

@@ -177,8 +177,8 @@ export function UploadScreen({
       } else if (error instanceof CsvImportError) {
         setFailure({ message: error.message, recovery: error.recovery });
       } else {
-        const rejection = createCsvImportError("INVALID_UTF8", name);
-        setFailure({ message: rejection.message, recovery: rejection.recovery });
+        // Not a content rejection (for example the sample could not be fetched or a browser worker stopped).
+        setFailure({ message: `The file could not be imported: “${name}”`, recovery: "Try again. If it keeps failing, reload the page, or export the file again as CSV or Excel." });
       }
     } finally {
       if (abortRef.current === controller) {

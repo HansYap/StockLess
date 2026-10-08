@@ -79,7 +79,7 @@ describe("purchase planning", () => {
     fireEvent.change(screen.getByLabelText("Search name or code"), { target: { value: "000202" } });
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(detail().getByText(/000202 · Counted/)).toBeTruthy();
-    fireEvent.click(within(groups).getByRole("button", { name: /Need data/ }));
+    fireEvent.click(within(groups).getByRole("button", { name: /Need more data/ }));
     expect(screen.queryByRole("region", { name: "Same product name" })).toBeNull();
     expect(screen.getAllByText("No products match.").length).toBeGreaterThan(0);
     expect(Array.from(groups.querySelectorAll(".pp-kpi-number")).map(el => el.textContent)).toEqual(counts);

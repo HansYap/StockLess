@@ -2,6 +2,7 @@ import { epic123Messages } from "./epic123.ts";
 import { purchaseMessages } from "./purchase-refresh.ts";
 import { savedWorkspaceMessages } from "./saved-workspace.ts";
 import { onboardingMessages } from "./onboarding.ts";
+import { i3CompletionMessages } from "./i3-completion.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
 export const messages: Record<string, readonly [string, string]> = {
   "Language": [
@@ -3683,6 +3684,7 @@ Object.assign(messages, savedWorkspaceMessages);
 
 Object.assign(messages, epic123Messages);
 Object.assign(messages, onboardingMessages);
+Object.assign(messages, i3CompletionMessages);
 Object.assign(messages, {
   "Readiness view": ["检查结果视图", "Paparan kesediaan"],
   "Products": ["商品", "Produk"],
