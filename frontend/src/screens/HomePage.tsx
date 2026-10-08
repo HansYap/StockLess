@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { Logo } from "../components/Logo.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
 import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
@@ -195,6 +195,10 @@ function HomeHeader() {
 function Hero() {
   const { copy, startHref, asset } = useHomeView();
   const story = useHeroStory();
+  const openDemo = (event: MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("a, button")) return;
+    document.getElementById("example")?.scrollIntoView({ behavior: story.reducedMotion ? "auto" : "smooth", block: "start" });
+  };
   return (
     <section className="hp-hero">
       <svg className="hp-hero__leaf hp-hero__leaf--2 hp-sway" viewBox="0 0 48 48" aria-hidden="true">
@@ -279,7 +283,8 @@ function Hero() {
           </ul>
         </div>
         <div className="hp-card-wrap hp-float">
-          <div className="hp-card">
+          {/* The whole card opens the interactive demo; the Pause button keeps its own job. */}
+          <div className="hp-card hp-card--link" onClick={openDemo}>
             <div className="hp-card__top">
               <div>
                 <span className="hp-k">
@@ -352,9 +357,14 @@ function Hero() {
                 <i className={story.phase === 1 ? "is-on" : ""} />
                 <i className={story.phase === 2 ? "is-on" : ""} />
               </div>
-              <button type="button" className="hp-anim__play" id="ha-play" onClick={story.toggle} hidden={story.reducedMotion}>
-                {copy(story.playing ? "hp.anim.pause" : "hp.anim.play")}
-              </button>
+              <span className="hp-anim__actions">
+                <a className="hp-anim__try" href="#example">
+                  {copy("hp.anim.try")}
+                </a>
+                <button type="button" className="hp-anim__play" id="ha-play" onClick={story.toggle} hidden={story.reducedMotion}>
+                  {copy(story.playing ? "hp.anim.pause" : "hp.anim.play")}
+                </button>
+              </span>
             </div>
           </div>
         </div>
