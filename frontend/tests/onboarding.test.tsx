@@ -20,16 +20,28 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); localStorage.removeItem(ONBOARDING_KEY); });
 
-it("invites only on eligible Upload, remembers skip, and does not invite on landing or preparation with sidebar", async () => {
+it("invites only on eligible Upload and remembers a skip for the current visit", async () => {
   const view = render(<OnboardingProvider><Screen page={null} /></OnboardingProvider>);
   expect(screen.getByRole("dialog", { hidden: true }).hasAttribute("open")).toBe(false);
   view.rerender(<OnboardingProvider><Screen invite /></OnboardingProvider>);
   await waitFor(() => expect(screen.getByRole("dialog").hasAttribute("open")).toBe(true));
   fireEvent.click(screen.getByRole("button", { name: "Skip for now" }));
   expect(screen.getByRole("dialog", { hidden: true }).hasAttribute("open")).toBe(false);
+  view.rerender(<OnboardingProvider><Screen page={null} /></OnboardingProvider>);
+  view.rerender(<OnboardingProvider><Screen invite /></OnboardingProvider>);
+  expect(screen.getByRole("dialog", { hidden: true }).hasAttribute("open")).toBe(false);
   cleanup();
   render(<OnboardingProvider><Screen invite /></OnboardingProvider>);
-  expect(screen.getByRole("dialog", { hidden: true }).hasAttribute("open")).toBe(false);
+  await waitFor(() => expect(screen.getByRole("dialog").hasAttribute("open")).toBe(true));
+});
+
+it("invites again after a skipped guide on a fresh visit without saved work", async () => {
+  render(<OnboardingProvider><Screen invite /></OnboardingProvider>);
+  fireEvent.click(await screen.findByRole("button", { name: "Follow along" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Skip guide" }));
+  cleanup();
+  render(<OnboardingProvider><Screen invite /></OnboardingProvider>);
+  expect(await screen.findByRole("button", { name: "Follow along" })).toBeTruthy();
 });
 
 it("lets users perform the highlighted action and advances only after the successful event", async () => {

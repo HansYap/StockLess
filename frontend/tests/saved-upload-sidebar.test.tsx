@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ComponentProps } from "react";
 import App from "../src/App.tsx";
+import Site from "../src/Site.tsx";
+import { ONBOARDING_KEY } from "../src/onboarding/guides.ts";
 import { createEmptySession, readinessEvidenceKey, READINESS_POLICY_VERSION, createMappingState, setMapping, confirmIdentityMode } from "../src/engine.ts";
 import { getSavedDataset, listSavedDatasets, saveGeneratedPurchasePlan, replaceSavedDataset, saveDatasetWork, createSavedDataset, summarizeSavedDataset, type SavedDataset } from "../src/storage/saved-datasets.ts";
 import { runReadinessCheckInWorker } from "../src/workers/readiness-client.ts";
@@ -289,14 +291,14 @@ it.each(["mapping", "readiness"])("Clear session from %s returns to upload with 
   expect(runDemandForecastInWorker).not.toHaveBeenCalled();
 });
 
-it("retains a sidebar when the first uploaded file is cleared before a plan is generated", async () => {
+it("returns to first-use Upload when an unfinished first file is cleared", async () => {
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<App />);
   fireEvent.click(screen.getByText("Import test replacement"));
   await screen.findByRole("heading", { name: "Test mapping" });
   fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
-  await screen.findByRole("heading", { name: "Reupload your sales file" });
-  expect(sidebar()).toBeTruthy();
+  await screen.findByRole("heading", { name: "Upload your sales file" });
+  noSidebar();
   expect(screen.queryByRole("heading", { name: "Test mapping" })).toBeNull();
   expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
   expect(window.location.hash).toBe("#workspace");
@@ -309,12 +311,57 @@ it("opens Upload with a sidebar when saved history already exists", async () => 
   expect(window.location.hash).toBe("#update/existing");
 });
 
-it("keeps returning Upload with a sidebar after the last history item is removed", async () => {
+it("ignores the old upload flag when no saved work remains", async () => {
   localStorage.setItem("stockless.hasUploaded", "true");
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<App />);
-  await screen.findByRole("heading", { name: "Reupload your sales file" });
-  expect(sidebar()).toBeTruthy();
+  await screen.findByRole("heading", { name: "Upload your sales file" });
+  noSidebar();
+});
+
+it.each(["Skip for now", "Skip guide"])("reopens landing and invites again after %s without an upload or plan", async skip => {
+  vi.mocked(listSavedDatasets).mockResolvedValue([]);
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ invited: false, completed: [] }));
+  vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([{ width: 200, height: 44 }] as unknown as DOMRectList);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(new DOMRect(100, 150, 200, 44));
+  window.history.replaceState(null, "", "#home");
+  let view = render(<Site />);
+  await waitFor(() => expect(document.getElementById("home-title")).toBeTruthy());
+  await act(async () => { window.location.hash = "#start"; });
+  await screen.findByRole("button", { name: "Skip for now" });
+  if (skip === "Skip guide") fireEvent.click(screen.getByRole("button", { name: "Follow along" }));
+  fireEvent.click(await screen.findByRole("button", { name: skip }));
+  noSidebar();
+  view.unmount();
+
+  // Simulate opening the site again with the last address still in the browser.
+  view = render(<Site />);
+  await waitFor(() => expect(window.location.hash).toBe("#home"));
+  expect(document.getElementById("home-title")).toBeTruthy();
+  await act(async () => { window.location.hash = "#start"; });
+  expect(await screen.findByRole("button", { name: "Skip for now" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Upload your sales file" })).toBeTruthy();
+  noSidebar();
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  view.unmount();
+  localStorage.removeItem(ONBOARDING_KEY);
+});
+
+it("returns to first-use Upload after clearing an unsaved sample plan", async () => {
+  vi.mocked(listSavedDatasets).mockResolvedValue([]);
+  vi.mocked(replaceSessionSourceInWorker).mockImplementationOnce(async () => {
+    const envelope = importedEnvelope();
+    return { ...envelope, session: { ...envelope.session, sourceMode: "sample", dataset: { ...envelope.session.dataset!, sourceMode: "sample" } } };
+  });
+  render(<App />);
+  fireEvent.click(screen.getByText("Import test sample"));
+  fireEvent.click(await screen.findByText("Check test readiness"));
+  fireEvent.click(await screen.findByText("Calculate test plan"));
+  fireEvent.click(await screen.findByText("Back to test readiness"));
+  fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
+  await screen.findByRole("heading", { name: "Upload your sales file" });
+  noSidebar();
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
 });
 
 it("offers upload history through the sidebar without the old dataset picker", async () => {

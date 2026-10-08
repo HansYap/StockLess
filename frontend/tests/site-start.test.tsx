@@ -28,12 +28,17 @@ it.each(["", "#home", "#start"])("opens returning visitors directly in the lates
   expect(screen.queryByRole("heading", { name: "Upload history" })).toBeNull();
 });
 
-it("keeps the landing page for first-time visitors", async () => {
-  window.location.hash = "";
+it.each(["", "#home", "#workspace", "#guide", "#history", "#returning"])("returns visitors without saved work to the landing page when reopening %s", async hash => {
+  window.location.hash = hash;
+  localStorage.setItem("stockless.hasUploaded", "true");
+  localStorage.setItem("stockless.onboarding.v1", JSON.stringify({ invited: true, completed: [] }));
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<Site />);
   await waitFor(() => expect(window.location.hash).toBe("#home"));
   expect(document.getElementById("home-title")).toBeTruthy();
+  expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
+  localStorage.removeItem("stockless.hasUploaded");
+  localStorage.removeItem("stockless.onboarding.v1");
 });
 
 it("keeps the landing page accessible when local storage is unavailable", async () => {

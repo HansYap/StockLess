@@ -8,13 +8,14 @@ import { OnboardingProvider } from "./onboarding/Onboarding.tsx";
 
 const Workspace = lazy(() => import("./App.tsx"));
 const currentRoute = () => window.location.hash || "#home";
+const initialRoute = () => ["", "#home", "#workspace", "#guide", "#history", "#returning"].includes(window.location.hash) ? "#entry" : currentRoute();
 
 /** New visitors see the landing page; returning visitors resume their latest upload. */
 export default function Site() { return <OnboardingProvider><SiteContent /></OnboardingProvider>; }
 
 function SiteContent() {
   const language = useLanguage();
-  const [route, setRoute] = useState(() => !window.location.hash || window.location.hash === "#home" ? "#entry" : currentRoute());
+  const [route, setRoute] = useState(initialRoute);
   const [visit, setVisit] = useState(0);
   const workspace = isWorkspaceRoute(route);
   const returning = route === "#history" || route === "#returning";

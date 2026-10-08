@@ -8,6 +8,7 @@ import { downloadAnalysisWorkbook, downloadFinalisedOrdersWorkbook, printAnalysi
 import { PlanningInputsPanel } from '../components/PlanningInputsPanel.tsx';
 import { OutcomePeriodComparison } from '../components/OutcomePeriodComparison.tsx';
 import { DecisionOutcomeControls } from '../components/DecisionOutcomeControls.tsx';
+import { ImpactStory } from '../components/ImpactStory.tsx';
 import './impact-reference.css';
 import '../components/cp3-controls.css';
 
@@ -78,6 +79,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
       <details className="cp3-controls"><summary>{c('Recorded waste breakdown','实际报损明细','Pecahan pembaziran direkodkan')}</summary>{outcomes.filter(o=>['discarded','expired'].includes(o.kind)).map(o=><p key={o.id}>{o.date} · {o.productKey} · {o.quantity} {o.unit} · {o.kind}</p>)}{environmental.actualResults.map(explain)}</details>
       <p>{c('Illustrative comparison only','仅作直观比较','Perbandingan ilustrasi sahaja')}: {environmental.potential.kgCO2e===undefined?unavailable:`${n(environmental.potential.kgCO2e/CARBON_MALAYSIA_ILLUSTRATION.kgCO2ePerPersonPerDay)} ${c('Malaysia person-days','马来西亚人均排放天数','hari-orang Malaysia')}`} · 29.95 kg CO₂e/{c('person/day','人／天','orang/hari')} · {CARBON_MALAYSIA_ILLUSTRATION.source}. {c('All sectors; not a food-waste reduction baseline.','包括所有行业，不是食品浪费减排基线。','Semua sektor; bukan garis dasar pengurangan pembaziran makanan.')}</p>
     </section>
+    <ImpactStory lines={impact.products.flatMap(p=>p.excessUnits===undefined?[]:[{key:p.productKey,name:p.name,sku:p.code,available:p.available!,demandHigh:p.demandHigh!,units:p.excessUnits}])} />
     <section className="cp3-controls"><h2>{c('Review a product and record your decision','核对商品并记录决策','Semak produk dan rekod keputusan')}</h2><label>{c('Product','商品','Produk')} <select value={selected} onChange={e=>setSelected(e.target.value)}>{products.map(p=><option key={p.key} value={p.key}>{p.title} · {p.sku} · {p.pack}</option>)}</select></label>
       {selectedProduct&&onContextChange&&<PlanningInputsPanel key={`${snapshot.id}-${selected}`} snapshot={snapshot} productKey={selected} value={contexts[selected]} onChange={value=>onContextChange(selected,value)} />}
       {selectedProduct&&<DecisionOutcomeControls key={`decision-${selected}`} datasetId={datasetId} product={selectedProduct} snapshot={snapshot} plan={selectedPlan} onChanged={refresh} />}
