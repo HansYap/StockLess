@@ -462,3 +462,27 @@ html[lang^="zh"] .sl-home h1,html[lang^="zh"] .sl-home h2,html[lang^="zh"] .sl-h
 .sl-home .hp-shared-chart--compact .pp-stock-row-label { font-size: 11px; margin-bottom: 4px; }
 .sl-home .hp-shared-chart--compact .pp-stock-rows { gap: 10px; }
 .sl-home .hp-shared-chart--compact .pp-stock-track { height: 12px; }
+
+/* ===== Stocky in "How it works" =====
+   One Stocky on the homepage, walking with the active step card. Decorative. */
+.sl-home .hp-step__plant{line-height:0}
+.sl-home .hp-guide-lane{position:relative;height:96px;margin-top:22px}
+.sl-home .hp-guide{position:absolute;bottom:2px;display:flex;align-items:flex-end;gap:8px;
+  left:min(calc(var(--hp-guide-step, 0) * (100% + 16px) / 4 + 8px), calc(100% - 300px));
+  transition:left .5s ease}
+.sl-home .hp-guide__bubble{margin:0 0 34px;max-width:206px;padding:9px 13px;border-radius:14px 14px 14px 4px;
+  background:#fff;border:1.5px solid #CFE4DE;box-shadow:0 6px 16px rgba(22,49,59,.08);
+  font-size:14px;line-height:1.4;color:var(--ink)}
+.sl-home .hp-guide__bubble b{color:var(--teal-deep)}
+.sl-home .hp-guide-lane + .hp-steps__line{margin-top:0}
+@media(max-width:960px){.sl-home .hp-guide{left:0;transition:none}.sl-home .hp-guide__bubble{max-width:260px}}
+@media(prefers-reduced-motion:reduce){.sl-home .hp-guide{transition:none}}
+
+/* ===== hero card opens the interactive demo ===== */
+.sl-home .hp-card--link{cursor:pointer;transition:box-shadow .2s ease,transform .2s ease}
+.sl-home .hp-card--link:hover{box-shadow:0 22px 48px rgba(17,101,94,.18);transform:translateY(-2px)}
+.sl-home .hp-anim__actions{display:inline-flex;align-items:center;gap:8px}
+.sl-home .hp-anim__try{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:10px;background:var(--teal-deep);color:#fff;font-family:var(--display);font-weight:700;font-size:13px;text-decoration:none}
+.sl-home .hp-anim__try:hover{background:var(--teal)}
+.sl-home .hp-anim__try:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.sl-home .hp-card--link{transition:none}.sl-home .hp-card--link:hover{transform:none}}
