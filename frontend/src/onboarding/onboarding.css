@@ -9,3 +9,12 @@
 .onboarding-slot{position:relative;z-index:201;flex:0 0 100%;width:100%;margin:18px 0}.onboarding-slot .onboarding-coach{position:relative;top:auto!important;left:auto!important;width:100%}.upload-picked:has(.onboarding-slot),.saved-sidebar-mobile:has(.onboarding-slot){flex-wrap:wrap}
 @media(max-width:760px){.onboarding-coach{padding:18px}.onboarding-welcome__art{height:155px}.onboarding-welcome__art img{height:150px}.onboarding-welcome__copy{padding:24px}.onboarding-welcome h2{font-size:24px}.onboarding-welcome__copy>p:not(.onboarding-eyebrow){font-size:17px}.onboarding-welcome__actions{gap:10px}.onboarding-welcome__actions button{font-size:13px}.onboarding-guide-button{padding:9px 11px;font-size:13px}.guided-import-notice{width:calc(100% - 32px);padding:14px}}
 @media(prefers-reduced-motion:reduce){.onboarding-guide-button,.onboarding-button{transition:none}}
+
+/* Stocky, the guide character: welcome popup and the Step 1–2 tips only */
+.onboarding-welcome__art{position:relative;height:200px;align-items:end;padding-bottom:6px;box-sizing:border-box}
+.onboarding-welcome__art .stocky{margin-right:96px}
+.onboarding-welcome__bubble{position:absolute;right:40px;top:40px;padding:10px 14px;border-radius:16px 16px 16px 4px;background:#fff;box-shadow:0 6px 16px #16313b14;font-family:var(--display);font-weight:800;font-size:16px;color:var(--teal-deep)}
+.onboarding-coach--stocky{padding-top:30px;margin-top:22px}
+.onboarding-coach__stocky{position:absolute;top:-46px;right:16px;line-height:0;pointer-events:none}
+.onboarding-slot .onboarding-coach--stocky{margin-top:46px}
+@media(max-width:760px){.onboarding-welcome__art{height:175px}.onboarding-welcome__art .stocky{width:140px;height:144px;margin-right:84px}.onboarding-welcome__bubble{right:24px;top:30px;font-size:15px}}
