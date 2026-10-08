@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { Logo } from "../components/Logo.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { BrandIcon } from "../components/BrandIcon.tsx";
 import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
 import { localizedWorkspaceHref, setLanguage, t, useLanguage, type Language } from "../i18n/index.ts";
 import { homepageRefreshMessages } from "../i18n/homepage-refresh.ts";
@@ -213,7 +214,7 @@ function Hero() {
         <div className="hp-hero__text">
           <p className="hp-eyebrow">
             <span aria-hidden="true">
-              {"🌱"}
+              <GrowthIcon stage="sprout" size={16} className="hp-inline-icon" />
             </span>
             {" "}
             <span>
@@ -1291,7 +1292,7 @@ function StartBanner() {
         <div className="hp-band__text">
           <p className="hp-k3 hp-k3--light">
             <span aria-hidden="true">
-              {"🌳"}
+              <GrowthIcon stage="tree" size={16} className="hp-inline-icon" />
             </span>
             {" "}
             <span>
@@ -1400,7 +1401,7 @@ function FAQs() {
           <details className="hp-faq" open={faqOpen[0]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 0 ? !open : open)); }}>
               <span className="hp-faq__ic" aria-hidden="true">
-                {"🌱"}
+                <GrowthIcon stage="sprout" size={26} />
               </span>
               <span>
                 {copy("hp.q0")}
@@ -1414,7 +1415,7 @@ function FAQs() {
           <details className="hp-faq" open={faqOpen[1]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 1 ? !open : open)); }}>
               <span className="hp-faq__ic" aria-hidden="true">
-                {"📄"}
+                <BrandIcon name="file" size={26} />
               </span>
               <span>
                 {copy("hp.q1")}
@@ -1428,7 +1429,7 @@ function FAQs() {
           <details className="hp-faq" open={faqOpen[2]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 2 ? !open : open)); }}>
               <span className="hp-faq__ic" aria-hidden="true">
-                {"🛒"}
+                <BrandIcon name="cart" size={26} />
               </span>
               <span>
                 {copy("hp.q2")}
@@ -1442,7 +1443,7 @@ function FAQs() {
           <details className="hp-faq" open={faqOpen[3]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 3 ? !open : open)); }}>
               <span className="hp-faq__ic" aria-hidden="true">
-                {"♻️"}
+                <BrandIcon name="reuse" size={26} />
               </span>
               <span>
                 {copy("hp.q3")}
