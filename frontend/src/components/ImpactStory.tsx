@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { getLocale, useLanguage } from "../i18n/index.ts";
+import "./impact-band.css";
 
 export interface ImpactLine { key: string; name: string; sku?: string; available: number; demandHigh: number; units: number; }
 /** A hero tile shows a figure only when the engine produced one; otherwise it says why. */
@@ -42,18 +43,20 @@ function useCountUp(target: number, running: boolean, ms = 900) {
 }
 
 /** The Step 5 story from the supplied design: planned shelf → expected demand → potential excess. */
-export function ImpactStory({ head, lines, business, emissions }: { head: ReactNode; lines: readonly ImpactLine[]; business: ImpactTile; emissions: ImpactTile }) {
+export function ImpactStory({ head, lines, business, emissions, onBack }: { head: ReactNode; lines: readonly ImpactLine[]; business: ImpactTile; emissions: ImpactTile; onBack?: () => void }) {
   const language = useLanguage();
   const copy: Translate = (en, zh, ms) => language === "zh" ? zh : language === "ms" ? ms : en;
   const number = (value: number) => Math.round(value).toLocaleString(getLocale());
-  const story = [...lines].sort((a, b) => b.units - a.units || b.available - a.available).slice(0, 2);
+  const story = [...lines].sort((a, b) => b.units - a.units || b.available - a.available).slice(0, 3);
   const storyPlanned = story.reduce((sum, item) => sum + Math.max(0, item.available), 0);
   const storyExpected = story.reduce((sum, item) => sum + Math.min(Math.max(0, item.available), Math.max(0, item.demandHigh)), 0);
   const planned = lines.reduce((sum, item) => sum + Math.max(0, item.available), 0);
   const excess = lines.reduce((sum, item) => sum + Math.max(0, item.units), 0);
   const expected = planned - excess;
   const ratio = storyPlanned ? Math.round(storyExpected / storyPlanned * 100) : 0;
-  const storyAvoided = Math.max(0, storyPlanned - storyExpected);
+  const planRatio = planned ? Math.round(expected / planned * 100) : 0;
+  const moreCount = Math.max(0, lines.length - story.length);
+  const moreExtra = Math.max(0, excess - story.reduce((sum, item) => sum + Math.max(0, item.units), 0));
   const motion = typeof window !== "undefined" && typeof IntersectionObserver === "function"
     && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const [phase, setPhase] = useState<Phase>(motion && lines.length ? "idle" : "after");
@@ -107,17 +110,21 @@ export function ImpactStory({ head, lines, business, emissions }: { head: ReactN
   useEffect(() => () => reset(), []);
 
   const classes = ["sx-hero", phase === "after" ? "is-after is-scanned" : "is-armed", phase === "play" || phase === "scanned" || phase === "fly" ? "is-play" : "", phase === "scanned" || phase === "fly" ? "is-scanned" : ""].filter(Boolean).join(" ");
-  const beat = phase === "idle" || phase === "play" ? 1 : phase === "after" ? 3 : 2;
-  const beats: readonly [number, string, string][] = [
-    [planned, copy("Your planned stock", "原本计划的库存", "Stok yang anda rancang"), copy("Stock after your planned orders", "按计划下单后的库存", "Stok selepas pesanan dirancang")],
-    [expected, copy("Expected to sell", "预计卖得掉", "Jangkaan jualan"), copy("The top of your demand range", "预计销量的上限", "Had atas jangkaan jualan")],
-    [excess, copy("Potential excess", "潜在多余库存", "Lebihan berpotensi"), copy("Above the range: reconsider before ordering", "超出上限：下单前再考虑", "Melebihi julat: semak semula sebelum memesan")],
-  ];
   return <>
-    <div className="sx-head">
-      <div>{head}</div>
-      {lines.length > 0 && <button className="btn btn--primary sx-play" type="button" onClick={play}><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z" /></svg> {copy("Play story", "播放演示", "Main animasi")}</button>}
+    <div className="sx-band">
+      <div className="sx-band__main">{head}</div>
+      <div className="sx-band__actions">
+        {onBack && <button type="button" className="sx-back" onClick={onBack}>{copy("← Back to purchase plan", "← 返回进货计划", "← Kembali ke pelan belian")}</button>}
+        <span className="sx-band__spacer" />
+        {lines.length > 0 && <button className="btn btn--primary sx-play" type="button" onClick={play}><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z" /></svg> {copy("Play story", "播放演示", "Main animasi")}</button>}
+      </div>
     </div>
+    {lines.length > 0 && <ul className="sx-kpis">
+      <li><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true">🌱</span><span><b>{number(excess)} <small>{copy("items", "件", "item")}</small></b><em>{copy("you may not sell in 4 weeks", "4 周内可能卖不完", "mungkin tidak terjual dalam 4 minggu")}</em></span></li>
+      <li><span className="sx-kpi__ic sx-kpi__ic--amber" aria-hidden="true">💰</span><span><b>{business.value ?? copy("Not yet", "暂无", "Belum ada")}</b><em>{business.value ? copy("cash you keep by ordering less", "少订就能留住的现金", "tunai yang kekal jika memesan kurang") : copy("Add unit cost to see it", "填写单位成本后显示", "Tambah kos seunit untuk melihatnya")}</em></span></li>
+      <li><span className="sx-kpi__ic sx-kpi__ic--blue" aria-hidden="true">🌍</span><span><b>{emissions.value ?? "CO₂e"}</b><em>{emissions.value ? copy("from the extra stock", "来自多余库存", "daripada stok lebihan") : copy("Confirm product types to see it", "确认商品类别后显示", "Sahkan jenis produk untuk melihatnya")}</em></span></li>
+      <li><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true">✓</span><span><b>{planRatio}% → 100%</b><em>{copy("of your stock fits your sales", "的库存符合销量", "stok anda sepadan dengan jualan")}</em></span></li>
+    </ul>}
     <div className={classes} id="sx-story" ref={storyRef}>
       <div className="sx-card sx-shelfcard">
         <div className="sx-cap">
@@ -128,15 +135,9 @@ export function ImpactStory({ head, lines, business, emissions }: { head: ReactN
           {story.length ? story.map(line => <ShelfRow key={line.key} line={line} copy={copy} />) : <p className="impact__empty">{copy("Enter a planned order in Step 4 to see this comparison.", "在第 4 步填写计划订购量后即可查看对比。", "Masukkan pesanan dirancang dalam Langkah 4 untuk melihat perbandingan ini.")}</p>}
           <div className="sx-scan" aria-hidden="true"><span>StockLess</span></div>
         </div>
-        {lines.length > 2 && <p className="sx-story-more">{copy(`Showing the 2 products with the most potential excess, of ${lines.length} checked`, `显示 ${lines.length} 件已核对商品中潜在多余最多的 2 件`, `Memaparkan 2 produk dengan lebihan berpotensi tertinggi daripada ${lines.length} yang disemak`)}</p>}
+        {moreCount > 0 && <p className="sx-story-more"><span>{copy(`+ ${moreCount} more products · ${moreExtra} extra`, `另外 ${moreCount} 件商品 · 多余 ${moreExtra} 件`, `+ ${moreCount} produk lagi · ${moreExtra} lebihan`)}</span>{onBack && <button type="button" className="sx-more-link" onClick={onBack}>{copy("See all in plan →", "在计划中查看全部 →", "Lihat semua dalam pelan →")}</button>}</p>}
         <div className="sx-bar"><span>{copy("Matched to demand", "符合预计销量", "Ikut jangkaan jualan")}</span><span className="sx-bar__track"><i style={{ "--ratio": `${ratio}%` } as CSSProperties} /></span><b>{story.length ? <><span className="t-before">{number(storyExpected)} / {number(storyPlanned)}</span><span className="t-after">{number(storyExpected)} / {number(storyExpected)}</span></> : "— / —"}</b></div>
         {lines.length > 0 && <div className="sx-chg">
-          <div className="sx-chg__head"><h3 className="sx-chg__title"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 21c0-6 3-10 9-11-1 6-4 9-9 9" fill="#3E9B5A" /><path d="M12 21c0-5-2-8-8-9 0 5 3 8 8 8" fill="#65C9BC" /></svg>{copy("What changed with StockLess?", "StockLess 带来了什么变化？", "Apa yang berubah dengan StockLess?")}</h3><span className="sx-chg__pill"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" /><path d="M12 11v6M12 7.5v.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" /></svg>{copy("Compared to current purchase plan", "与当前采购计划相比", "Berbanding pelan belian semasa")}</span></div>
-          <ul className="sx-chg__tiles">
-            <li className="sx-chg__tile"><span className="sx-chg__ic sx-chg__ic--teal"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11h11L21 7H6.2" /><circle cx="9" cy="19.5" r="1.5" /><circle cx="17" cy="19.5" r="1.5" /></svg></span><span><b>{number(storyExpected)} <small>{copy("units", "件", "unit")}</small></b><strong>{copy("Matched to demand", "与需求匹配", "Sepadan dengan permintaan")}</strong><small>{copy("Stock within the upper demand estimate", "需求上限估算内的库存", "Stok dalam anggaran had atas permintaan")}</small></span></li>
-            <li className="sx-chg__tile"><span className="sx-chg__ic sx-chg__ic--leaf"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 20c0-7 3-12 9-13-1 7-4 11-9 11" fill="currentColor" /><path d="M12 20c0-5-2-9-8-10 0 6 3 9 8 9" fill="currentColor" opacity=".7" /></svg></span><span><b>{number(storyAvoided)} <small>{copy("units", "件", "unit")}</small></b><strong>{copy("Potential excess to reconsider", "值得重新考虑的潜在过量库存", "Lebihan berpotensi untuk dinilai semula")}</strong><small>{copy("Illustration, not recorded waste reduction", "示意情景，并非实际减损记录", "Ilustrasi, bukan pengurangan sisa direkod")}</small></span></li>
-            <li className="sx-chg__tile sx-chg__tile--blue"><span className="sx-chg__ic sx-chg__ic--blue"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><rect x="4" y="11" width="4" height="9" rx="1" /><rect x="10" y="6" width="4" height="14" rx="1" /><rect x="16" y="9" width="4" height="11" rx="1" /></svg></span><span><b>{storyPlanned ? "100%" : "—"}</b><strong>{copy("Demand matched", "需求匹配度", "Permintaan dipadankan")}</strong><small>{copy(`Up from ${ratio}% in your current plan`, `当前计划为 ${ratio}%`, `Naik daripada ${ratio}% dalam pelan semasa`)}</small></span></li>
-          </ul>
           <div className="sx-chg__note"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 22V12" stroke="#2F7F48" strokeWidth="2" strokeLinecap="round" /><path d="M12 13c0-5 3-8 8-8 0 5-3 8-8 8" fill="#3E9B5A" /><path d="M12 13c0-4-2-7-7-7 0 4 2 7 7 7" fill="#65C9BC" /></svg><span><b>{copy("Better aligned purchasing with expected demand", "采购与预期需求更一致", "Pembelian lebih sejajar dengan permintaan dijangka")}</b>{copy("StockLess helps you buy the right amount, reducing unnecessary stock before it becomes waste.", "StockLess 帮您买对数量，在库存变成浪费之前减少不必要的库存。", "StockLess membantu anda membeli jumlah yang betul, mengurangkan stok yang tidak perlu sebelum ia menjadi sisa.")}</span></div>
         </div>}
       </div>
@@ -144,16 +145,20 @@ export function ImpactStory({ head, lines, business, emissions }: { head: ReactN
         <div className="sx-globe">
           <img className="sx-orbit" src="/impact/sx-orbit.svg" alt="" />
           <img className="sx-earth" src="/impact/sx-earth.svg" alt="" />
-          <div className="sx-badge" aria-live="polite"><span className="sx-badge__num" ref={badgeRef}>{lines.length ? number(phase === "play" || phase === "scanned" ? 0 : badge) : "—"}</span><span>{copy("UNITS", "件", "UNIT")}</span></div>
+          <div className="sx-badge" aria-live="polite"><span className="sx-badge__num" ref={badgeRef}>{lines.length ? number(phase === "play" || phase === "scanned" ? 0 : badge) : "—"}</span><span>{copy("ITEMS", "件", "ITEM")}</span></div>
         </div>
         <h2 className="sx-impact__title">{copy("What your plan could avoid", "这个计划可以避免的", "Apa yang pelan anda boleh elakkan")}</h2>
         <div className="sx-tiles">
-          <div className="sx-tile sx-tile--env"><span className="sx-tile__k"><span aria-hidden="true">🌱</span> {copy("Environment", "环境", "Alam sekitar")}</span>{lines.length ? <b>{number(phase === "play" || phase === "scanned" || phase === "fly" ? 0 : envUnits)} <small>{copy("units", "件", "unit")}</small></b> : <b className="sx-tile__locked">{copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b>}<span>{lines.length ? copy("of food stock above expected demand", "件食品库存超出预计销量", "stok makanan melebihi jangkaan jualan") : copy("Enter planned orders in Step 4.", "请在第 4 步填写计划订购量。", "Masukkan pesanan dirancang dalam Langkah 4.")}</span></div>
-          <div className="sx-tile sx-tile--biz"><span className="sx-tile__k"><span aria-hidden="true">💰</span> {copy("Business", "生意", "Perniagaan")}</span>{business.value ? <b className="sx-tile__money">{business.value}</b> : <b className="sx-tile__locked">{copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b>}<span>{business.note}</span></div>
+          <div className="sx-tile sx-tile--env"><span className="sx-tile__k"><span aria-hidden="true">🌱</span> {copy("Environment", "环境", "Alam sekitar")}</span>{lines.length ? <b>{number(phase === "play" || phase === "scanned" || phase === "fly" ? 0 : envUnits)} <small>{copy("items", "件", "item")}</small></b> : <b className="sx-tile__locked">{copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b>}<span>{lines.length ? copy("you may not sell in 4 weeks", "4 周内可能卖不完", "mungkin tidak terjual dalam 4 minggu") : copy("Enter planned orders in Step 4.", "请在第 4 步填写计划订购量。", "Masukkan pesanan dirancang dalam Langkah 4.")}</span></div>
+          <div className="sx-tile sx-tile--biz"><span className="sx-tile__k"><span aria-hidden="true">💰</span> {copy("Business", "生意", "Perniagaan")}</span>{business.value ? <b className="sx-tile__money">{business.value}</b> : <b className="sx-tile__locked">{copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b>}<span>{business.value ? copy("cash you keep by ordering less", "少订就能留住的现金", "tunai yang kekal jika memesan kurang") : business.note}</span></div>
           <div className="sx-tile sx-tile--co2"><span className="sx-tile__k"><span aria-hidden="true">🌍</span> {copy("Emissions", "碳排放", "Pelepasan karbon")}</span>{emissions.value ? <b className="sx-tile__value">{emissions.value}</b> : <b>{copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b>}<span>{emissions.note}</span></div>
         </div>
       </div>
     </div>
-    <ol className="sx-beats">{beats.map(([value, title, note], index) => <li key={title} style={{ opacity: index < beat ? 1 : .5 }}><span className="sx-ring"><span className={`sx-disc${number(value).length > 4 ? " sx-disc--long" : ""}`}>{lines.length ? number(value) : "—"}</span></span><span><b>{title}</b><small>{note}</small></span></li>)}</ol>
+    {lines.length > 0 && <div className="sx-sum">
+      <p className="sx-sum__eq"><span>{copy("You plan", "您计划进货", "Anda rancang")} <b>{number(planned)}</b></span><i aria-hidden="true">−</i><span>{copy("likely to sell", "可能卖出", "mungkin terjual")} <b className="is-teal">{number(expected)}</b></span><i aria-hidden="true">=</i><span><b className="is-amber">{number(excess)}</b> {copy("extra", "多余", "lebihan")}</span></p>
+      <div className="sx-sum__bar" role="img" aria-label={copy(`${number(expected)} likely to sell, ${number(excess)} extra`, `可能卖出 ${number(expected)}，多余 ${number(excess)}`, `${number(expected)} mungkin terjual, ${number(excess)} lebihan`)}><span style={{ flexGrow: Math.max(0, expected) }} /><span style={{ flexGrow: Math.max(0, excess) }} /></div>
+      <small>{copy("Next 4 weeks · lower the orange part before you order.", "未来 4 周 · 下单前减少橙色部分。", "4 minggu akan datang · kurangkan bahagian oren sebelum memesan.")}</small>
+    </div>}
   </>;
 }
