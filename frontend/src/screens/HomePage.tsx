@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Logo } from "../components/Logo.tsx";
+import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
 import { localizedWorkspaceHref, setLanguage, t, useLanguage, type Language } from "../i18n/index.ts";
 import { homepageRefreshMessages } from "../i18n/homepage-refresh.ts";
 import "../homepage.css";
@@ -459,6 +461,8 @@ function WasteContext() {
   );
 }
 
+const GUIDE_POSES: readonly StockyPose[] = ["hello", "magnify", "magnify", "great"];
+
 function Workflow() {
   const { copy, startHref } = useHomeView();
   const reducedMotion = useReducedMotion();
@@ -486,6 +490,15 @@ function Workflow() {
             {copy("hp.how.h2")}
           </em>
         </h2>
+        {/* Stocky's only homepage appearance: a guide that walks with the active step. Decorative. */}
+        <div className="hp-guide-lane" aria-hidden="true">
+          <div className="hp-guide" style={{ "--hp-guide-step": activeStep } as CSSProperties}>
+            <Stocky pose={GUIDE_POSES[activeStep]} size={78} />
+            <p className="hp-guide__bubble">
+              <b>{copy(`hp.guide.h${activeStep + 1}`)}</b> {copy(`hp.guide.t${activeStep + 1}`)}
+            </p>
+          </div>
+        </div>
         <div className="hp-steps__line" aria-hidden="true">
           <span id="hs-line" style={{ width: `${(activeStep + 1) * 25}%` }} />
         </div>
@@ -495,7 +508,7 @@ function Workflow() {
               {"1"}
             </span>
             <span className="hp-step__plant" aria-hidden="true">
-              {"🌱"}
+              <GrowthIcon stage="sprout" size={28} />
             </span>
             <b>
               {copy("hp.s1")}
@@ -509,7 +522,7 @@ function Workflow() {
               {"2"}
             </span>
             <span className="hp-step__plant" aria-hidden="true">
-              {"🌿"}
+              <GrowthIcon stage="leaves" size={28} />
             </span>
             <b>
               {copy("hp.s2")}
@@ -523,7 +536,7 @@ function Workflow() {
               {"3"}
             </span>
             <span className="hp-step__plant" aria-hidden="true">
-              {"🪴"}
+              <GrowthIcon stage="potted" size={28} />
             </span>
             <b>
               {copy("hp.s3")}
@@ -537,7 +550,7 @@ function Workflow() {
               {"4"}
             </span>
             <span className="hp-step__plant" aria-hidden="true">
-              {"🌳"}
+              <GrowthIcon stage="tree" size={28} />
             </span>
             <b>
               {copy("hp.s4")}
