@@ -1327,7 +1327,7 @@ function StartBanner() {
 function Sustainability() {
   const { copy } = useHomeView();
   return (
-    <section className="wrap hp-sdg">
+    <section className="wrap hp-sdg" id="sdg">
       <div className="hp-sdg__card">
         <div className="hp-sdg__top">
           <b>
@@ -1478,10 +1478,20 @@ function HomeFooter() {
         <a className="brand" href="#home" aria-label="StockLess">
           <Logo height={36} />
         </a>
-        <p>
-          <span>
-            {copy("hp.foot")}
-          </span>
+        <p className="hp-foot__legal">
+          <b>
+            {"© 2026 StockLess"}
+          </b>
+          {" "}
+          {copy("hp.foot.by")}
+          <i aria-hidden="true">·</i>
+          {copy("hp.foot.made")}
+          <i aria-hidden="true">·</i>
+          {copy("hp.foot.tag")}
+          <i aria-hidden="true">·</i>
+          <a className="hp-foot__sdg" href="#sdg" title={copy("hp.foot")} aria-label={copy("hp.foot")}>
+            {"SDG 12.3"}
+          </a>
         </p>
         <a className="hp-link" href="#top">
           <span>
