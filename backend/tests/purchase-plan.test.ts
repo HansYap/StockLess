@@ -166,6 +166,8 @@ test("an empty planned order has no audit, while estimated restock remains avail
   assert.deepEqual(result.estimatedRestock, {
     state: "available",
     quantity: { value: 15, source: "worked out by StockLess" },
+    beforeQuantity: { value: 15, source: "worked out by StockLess" },
+    afterQuantity: { value: 15, source: "worked out by StockLess" },
     midpointTarget: { value: 25, source: "worked out by StockLess" },
   });
 });

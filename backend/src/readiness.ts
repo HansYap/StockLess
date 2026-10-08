@@ -34,7 +34,7 @@ const CONFIRMABLE_DATE_FORMATS: readonly ConfirmedDateFormat[] = Object.freeze([
   "MM-DD-YYYY",
 ]);
 
-export const READINESS_POLICY_VERSION = "stockless-readiness-v3-e123";
+export const READINESS_POLICY_VERSION = "stockless-readiness-v4-cp3";
 
 interface MappedColumn {
   readonly id: string;
@@ -382,12 +382,30 @@ function buildProductStockEvidence(
 }
 
 /** Consolidates optional mapped Epic 5 values without summing repeated product snapshots. */
+/** Repeated sales rows carry a batch snapshot once, not additive inventory. */
+function batchEvidence(rows: readonly RowDraft[], stock: ProductStockEvidence | undefined) {
+  const anchored = rows.filter(row => row.useState === "used" && row.interpretedValues.stockAsOfDate === stock?.stockAsOfDate && row.interpretedValues.expiryDate && row.interpretedValues.expiryQuantity !== undefined);
+  const batches = new Map<string, { date: string; quantity: number; stockAsOfDate: string; sourceRows: number[] }>();
+  let reason: string | undefined;
+  if (rows.some(row => row.interpretedValues.stockAsOfDate === stock?.stockAsOfDate && row.issueIds.some(id => id.startsWith("INVALID_EXPIRY_QUANTITY")))) reason = "Expiry quantities contain invalid values in the current stock count.";
+  for (const row of anchored) {
+    const date = row.interpretedValues.expiryDate!, quantity = row.interpretedValues.expiryQuantity!;
+    const previous = batches.get(date);
+    if (previous && previous.quantity !== quantity) reason = "Conflicting batch quantities for one expiry date; provide one aggregate batch quantity per date.";
+    if (previous) previous.sourceRows.push(row.sourceRow);
+    else batches.set(date, { date, quantity, stockAsOfDate: row.interpretedValues.stockAsOfDate!, sourceRows: [row.sourceRow] });
+  }
+  return { expiryBatches: Object.freeze([...batches.values()].sort((a,b) => a.date.localeCompare(b.date))), ...(reason ? { expiryBatchReason: reason } : {}) };
+}
+
 function buildPurchaseFileEvidence(
   drafts: readonly RowDraft[],
   issues: DataIssue[],
   plannedOrderColumn: MappedColumn | undefined,
   incomingStockColumn: MappedColumn | undefined,
   expiryDateColumn: MappedColumn | undefined,
+  expiryQuantityColumn: MappedColumn | undefined,
+  productStock: readonly ProductStockEvidence[],
 ): PurchaseFileEvidence {
   if (!plannedOrderColumn && !incomingStockColumn && !expiryDateColumn) {
     return Object.freeze({
@@ -461,6 +479,7 @@ function buildPurchaseFileEvidence(
         plannedOrderQuantity: plannedValues.length === 1 ? plannedValues[0] : undefined,
         incomingStockQuantity: incomingValues.length === 1 ? incomingValues[0] : undefined,
         expiryDates: Object.freeze(expiryDates),
+        ...(expiryQuantityColumn ? batchEvidence(rows, productStock.find(p => p.productKey === productKey)) : {}),
         reasonCodes: Object.freeze(reasonCodes),
       }));
     }
@@ -523,6 +542,7 @@ export async function runReadinessCheck(
   const plannedOrderColumn = mappedColumn(dataset, mapping, "planned_order_quantity");
   const incomingStockColumn = mappedColumn(dataset, mapping, "incoming_stock_quantity");
   const expiryDateColumn = mappedColumn(dataset, mapping, "expiry_date");
+  const expiryQuantityColumn = mappedColumn(dataset, mapping, "expiry_quantity");
   const confirmations = confirmationMap(dataset, options.dateConfirmations ?? []);
   const transactionDateDetection = detectDateFormatCandidate(dataset, transactionDateColumn.id);
   const stockDateDetection = stockDateColumn
@@ -795,6 +815,15 @@ export async function runReadinessCheck(
       }
     }
 
+    const expiryQuantityRaw = expiryQuantityColumn ? normalizedValue(row, expiryQuantityColumn) : "";
+    const expiryQuantity = expiryQuantityRaw === "" ? undefined : parseFiniteDecimal(expiryQuantityRaw);
+    if (expiryQuantityRaw !== "" && (expiryQuantity === undefined || expiryQuantity < 0)) {
+      const issue = addIssue(issues, { sourceRow: row.sourceRow, productKey, originalProductHint: hint,
+        issueCode: "INVALID_EXPIRY_QUANTITY", field: "expiry_quantity", sourceColumn: expiryQuantityColumn?.header,
+        observedValue: originalValue(row, expiryQuantityColumn!), reason: "Expiry batch quantity must be a finite non-negative decimal.",
+        correctiveAction: "Enter batch quantities in the same unit as stock and link them to the current stock count.", resolutionState: "unresolved" });
+      issueIds.push(issue.id);
+    }
     const interpretedValues = Object.freeze({
       transactionDate: date.value,
       quantitySold,
@@ -806,6 +835,7 @@ export async function runReadinessCheck(
       plannedOrderQuantity,
       incomingStockQuantity,
       expiryDate,
+      ...(expiryQuantityRaw !== "" ? { expiryQuantity: expiryQuantity !== undefined && expiryQuantity >= 0 ? expiryQuantity : undefined } : {}),
     });
     const hasCoreIssue = date.value === undefined || futureTransactionDate || quantitySold === undefined || productKey === undefined;
     drafts.push({
@@ -931,6 +961,8 @@ export async function runReadinessCheck(
     plannedOrderColumn,
     incomingStockColumn,
     expiryDateColumn,
+    expiryQuantityColumn,
+    productStock,
   );
   const reconciliation = reconcileRows(drafts, normalizations);
   const rows: readonly ValidatedRow[] = Object.freeze(drafts.map((row) => Object.freeze({

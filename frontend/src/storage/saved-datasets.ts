@@ -1,7 +1,10 @@
 import type {
   DateFormatConfirmation, DemandForecastReview,
   ProductPurchaseInputs, ProductPurchasePlan, ReadinessSnapshot, SessionEnvelope, SupplierOrderTerms,
+  PurchaseDecision, PurchaseDecisionInput, PurchaseDecisionEdit, RecordedStockOutcome, StockOutcomeInput,
 } from "../engine.ts";
+import { createPurchaseDecision, updatePurchaseDecision, createStockOutcome, updateStockOutcome, emptyProductPurchaseInputs } from "../engine.ts";
+import { applyPlanningContexts, planningMass, parsePackQuantity } from "../engine.ts";
 import type { PurchaseDrafts } from "../purchase-plan/model.ts";
 import { withStore, withTransaction } from "./browser-db.ts";
 
@@ -22,7 +25,14 @@ export function newestUploads<T extends Pick<SavedDataset, "createdAt">>(items: 
 }
 
 function writeUpload(store: IDBObjectStore, saved: SavedDataset, previous?: SavedDataset): void {
-  if (previous) store.add({ ...previous, id: globalThis.crypto.randomUUID() });
+  if (previous) {
+    const archiveId = globalThis.crypto.randomUUID();
+    // The historical file becomes its own selectable dataset; evidence and dates stay intact.
+    store.add({ ...previous, id: archiveId,
+      decisions: previous.decisions.map(item => item.purchaseDecision ? { ...item, purchaseDecision: { ...item.purchaseDecision, datasetId: archiveId } } : item),
+      outcomes: previous.outcomes.map(item => item.stockOutcome ? { ...item, stockOutcome: { ...item.stockOutcome, datasetId: archiveId } } : item),
+    });
+  }
   store.put(saved);
   const request = store.getAll() as IDBRequest<SavedDataset[]>;
   request.onsuccess = () => {
@@ -47,6 +57,7 @@ export interface SavedDataset {
   readonly forecast: DemandForecastReview | null;
   readonly purchaseDrafts: PurchaseDrafts;
   readonly supplierTerms: Readonly<Record<string, string>>;
+  readonly cp3Inputs?: import("../engine.ts").PlanningContexts;
   readonly supplierOrderDrafts?: Readonly<Record<string, SupplierOrderTerms | undefined>>;
   readonly decisions: readonly SavedDecision[];
   readonly outcomes: readonly SavedOutcome[];
@@ -67,6 +78,8 @@ export interface SavedDecision {
     }[];
   };
   readonly note?: string;
+  /** Absent on legacy automatically saved plan previews, which are not user decisions. */
+  readonly purchaseDecision?: PurchaseDecision;
 }
 
 export interface SavedOutcome {
@@ -74,6 +87,8 @@ export interface SavedOutcome {
   readonly recordedAt: string;
   readonly decisionId?: string;
   readonly details: Readonly<Record<string, unknown>>;
+  /** Legacy free-text notes remain available without pretending to be measured waste. */
+  readonly stockOutcome?: RecordedStockOutcome;
 }
 
 export type SavedDatasetSummary = Pick<SavedDataset,
@@ -161,7 +176,7 @@ export async function createSavedDataset(
 }
 
 export type SavedWork = Pick<SavedDataset,
-  "envelope" | "analysisDate" | "dateConfirmations" | "readiness" | "forecast" | "purchaseDrafts" | "supplierTerms" | "supplierOrderDrafts">;
+  "envelope" | "analysisDate" | "dateConfirmations" | "readiness" | "forecast" | "purchaseDrafts" | "supplierTerms" | "supplierOrderDrafts" | "cp3Inputs">;
 
 /** Commit a complete plan and its upload together; incomplete imports never replace saved work. */
 export async function saveGeneratedPurchasePlan(
@@ -208,18 +223,23 @@ function mutateSavedDataset(
   upload = false,
 ): Promise<SavedDataset> {
   const previous = pendingMutations.get(id) ?? Promise.resolve();
-  const operation = previous.catch(() => undefined).then(() => withTransaction<SavedDataset>(["datasets"], "readwrite", (transaction, result) => {
+  const operation = previous.catch(() => undefined).then(() => {
+    let mutationError: unknown;
+    return withTransaction<SavedDataset>(["datasets"], "readwrite", (transaction, result) => {
     const store = transaction.objectStore("datasets");
     const request = store.get(id) as IDBRequest<SavedDataset | undefined>;
     request.onsuccess = () => {
       const current = request.result;
       if (!current) { transaction.abort(); return; }
-      const next = change(current);
-      if (upload) writeUpload(store, next, current);
-      else store.put(next);
-      result(next);
+      try {
+        const next = change(current);
+        if (upload) writeUpload(store, next, current);
+        else store.put(next);
+        result(next);
+      } catch (error) { mutationError = error; transaction.abort(); }
     };
-  }));
+    }).catch(error => { throw mutationError ?? error; });
+  });
   pendingMutations.set(id, operation);
   void operation.finally(() => {
     if (pendingMutations.get(id) === operation) pendingMutations.delete(id);
@@ -268,11 +288,114 @@ export function recordOutcome(id: string, outcome: SavedOutcome): Promise<SavedD
   }));
 }
 
+function decisionRecord(decision: PurchaseDecision): SavedDecision {
+  const evidence = decision.recommendation;
+  return {
+    id: decision.id, recordedAt: decision.recordedAt, note: decision.reason,
+    recommendation: { analysisDate: evidence.analysisDate, sourceSha256: evidence.sourceSha256,
+      products: [{ key: decision.productKey, name: evidence.productName,
+        inputs: evidence.inputs ?? emptyProductPurchaseInputs(), plan: evidence.plan }] },
+    purchaseDecision: decision,
+  };
+}
+
+/** Only explicit user choices enter typed decision history; generated previews stay separate. */
+export function savedPurchaseDecisions(dataset: SavedDataset): readonly PurchaseDecision[] {
+  return dataset.decisions.flatMap(item => item.purchaseDecision ? [item.purchaseDecision] : []);
+}
+
+export function savedStockOutcomes(dataset: SavedDataset): readonly RecordedStockOutcome[] {
+  return dataset.outcomes.flatMap(item => item.stockOutcome ? [item.stockOutcome] : []);
+}
+
+export function savePurchaseDecision(datasetId: string, input: Omit<PurchaseDecisionInput, "datasetId">): Promise<SavedDataset> {
+  const decision = createPurchaseDecision({ ...input, datasetId });
+  if (decision.recommendation.sourceMode !== "user") return Promise.reject(new Error("Sample decisions are illustrative and cannot enter business outcome history."));
+  return mutateSavedDataset(datasetId, current => {
+    requireImport(current.envelope);
+    if (current.decisions.some(item => item.id === decision.id)) throw new Error("This decision already exists. Use the edit action to correct it.");
+    if (!current.readiness || current.readiness.sourceSha256 !== decision.recommendation.sourceSha256
+      || current.readiness.analysisDate !== decision.recommendation.analysisDate
+      || current.envelope.session.dataset!.sourceSha256 !== decision.recommendation.sourceSha256
+      || !current.readiness.rows.some(row => row.productKey === decision.productKey)) {
+      throw new Error("The recommendation does not match this dataset's checked product evidence. Run readiness and purchase planning again.");
+    }
+    if (decision.recommendation.unitCost !== undefined) {
+      const cost = applyPlanningContexts(current.readiness, current.cp3Inputs ?? {}).productCosts?.find(item => item.productKey === decision.productKey);
+      if (cost?.state !== "usable" || cost.value !== decision.recommendation.unitCost) throw new Error("The preserved Unit Cost must match this dataset's validated product cost.");
+    }
+    return { ...current, decisions: [...current.decisions, decisionRecord(decision)], updatedAt: new Date().toISOString() };
+  });
+}
+
+/** Editing never substitutes a fresh recommendation for the original decision evidence. */
+export function updateSavedPurchaseDecision(datasetId: string, decisionId: string, edit: PurchaseDecisionEdit): Promise<SavedDataset> {
+  return mutateSavedDataset(datasetId, current => {
+    const existing = current.decisions.find(item => item.id === decisionId)?.purchaseDecision;
+    if (!existing || existing.datasetId !== datasetId) throw new Error("Select an explicitly recorded purchase decision to edit.");
+    const decision = updatePurchaseDecision(existing, edit);
+    return { ...current, decisions: current.decisions.map(item => item.id === decisionId ? decisionRecord(decision) : item), updatedAt: new Date().toISOString() };
+  });
+}
+
+function outcomeRecord(outcome: RecordedStockOutcome): SavedOutcome {
+  return { id: outcome.id, recordedAt: outcome.recordedAt, decisionId: outcome.decisionId,
+    details: { description: outcome.description ?? `${outcome.kind}: ${outcome.quantity} ${outcome.unit}`, productKey: outcome.productKey,
+      date: outcome.date, quantity: outcome.quantity, unit: outcome.unit, kind: outcome.kind }, stockOutcome: outcome };
+}
+
+function requireOutcomeProduct(current: SavedDataset, outcome: RecordedStockOutcome): void {
+  requireImport(current.envelope);
+  const decision = outcome.decisionId ? current.decisions.find(item => item.id === outcome.decisionId)?.purchaseDecision : undefined;
+  if (outcome.decisionId && (!decision || decision.productKey !== outcome.productKey || decision.datasetId !== current.id)) {
+    throw new Error("The related decision must belong to this dataset and product.");
+  }
+  if (!current.readiness?.rows.some(row => row.productKey === outcome.productKey)
+    && !current.decisions.some(item => item.purchaseDecision?.productKey === outcome.productKey || item.recommendation.products.some(product => product.key === outcome.productKey))) {
+    throw new Error("Select a product from this dataset or its saved decision history.");
+  }
+}
+
+export function saveStockOutcome(datasetId: string, input: Omit<StockOutcomeInput, "datasetId">): Promise<SavedDataset> {
+  return mutateSavedDataset(datasetId, current => {
+    const outcome = createStockOutcome({ ...input, datasetId, conversion: input.conversion ?? frozenOutcomeConversion(current, input.productKey, input.unit) });
+    requireOutcomeProduct(current, outcome);
+    if (current.outcomes.some(item => item.id === outcome.id)) throw new Error("This outcome already exists. Use the edit action to correct it.");
+    return { ...current, outcomes: [...current.outcomes, outcomeRecord(outcome)], updatedAt: new Date().toISOString() };
+  });
+}
+
+/** Freeze the conversion with the observation; later product edits must not rewrite history. */
+function frozenOutcomeConversion(current: SavedDataset, productKey: string, unit: StockOutcomeInput['unit']) {
+  if (!current.readiness || unit === 'kg') return undefined;
+  const context = current.cp3Inputs?.[productKey];
+  const mass = planningMass(current.readiness, productKey, context, true);
+  if (mass.state !== 'available') return undefined;
+  const estimated = mass.method !== 'manual' && (mass.method !== 'pack_parser' || mass.approximate);
+  if (unit === 'pieces') return { kilogramsPerUnit: mass.kgPerUnit, estimated, source: `At recording: ${mass.provenance}` };
+  const pack = parsePackQuantity(current.readiness.rows.find(row => row.productKey === productKey)?.interpretedValues.packVariant ?? '');
+  return pack.state === 'available' && pack.dimension === 'l'
+    ? { kilogramsPerUnit: mass.kgPerUnit / pack.quantity, estimated, source: `At recording: ${mass.provenance}; ${pack.quantity} litres per sales unit` } : undefined;
+}
+
+export function updateSavedStockOutcome(datasetId: string, outcomeId: string, edit: Omit<StockOutcomeInput, "id" | "datasetId" | "productKey">): Promise<SavedDataset> {
+  return mutateSavedDataset(datasetId, current => {
+    const existing = current.outcomes.find(item => item.id === outcomeId)?.stockOutcome;
+    if (!existing || existing.datasetId !== datasetId) throw new Error("Select a measured stock outcome to edit.");
+    const conversion = edit.conversion ?? (existing.unit === edit.unit ? existing.conversion : frozenOutcomeConversion(current, existing.productKey, edit.unit));
+    const outcome = updateStockOutcome(existing, { ...edit, conversion });
+    requireOutcomeProduct(current, outcome);
+    return { ...current, outcomes: current.outcomes.map(item => item.id === outcomeId ? outcomeRecord(outcome) : item), updatedAt: new Date().toISOString() };
+  });
+}
+
 export function removeSavedDecision(datasetId: string, decisionId: string): Promise<SavedDataset> {
   return mutateSavedDataset(datasetId, (current) => ({
     ...current,
     decisions: current.decisions.filter((item) => item.id !== decisionId),
-    outcomes: current.outcomes.filter((item) => item.decisionId !== decisionId),
+    // Removing a recommendation must not erase actual discarded stock already recorded.
+    outcomes: current.outcomes.map(item => item.decisionId === decisionId
+      ? { ...item, decisionId: undefined, stockOutcome: item.stockOutcome && { ...item.stockOutcome, decisionId: undefined } } : item),
     updatedAt: new Date().toISOString(),
   }));
 }

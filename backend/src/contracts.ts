@@ -287,6 +287,7 @@ export type DataIssueCode =
   | "CONFLICTING_PLANNED_ORDER"
   | "CONFLICTING_INCOMING_STOCK"
   | "INVALID_EXPIRY_DATE"
+  | "INVALID_EXPIRY_QUANTITY"
   | "UNUSUAL_SALE"
   | "PRODUCT_IDENTITY_CONFLICT"
   | "DUPLICATE_CANDIDATE"
@@ -317,6 +318,7 @@ export interface InterpretedRowValues {
   readonly plannedOrderQuantity?: number;
   readonly incomingStockQuantity?: number;
   readonly expiryDate?: string;
+  readonly expiryQuantity?: number;
   readonly unitCost?: number;
   readonly unitWeightKg?: number;
 }
@@ -401,6 +403,8 @@ export interface ProductPurchaseFileEvidence {
   readonly plannedOrderQuantity?: number;
   readonly incomingStockQuantity?: number;
   readonly expiryDates: readonly string[];
+  readonly expiryBatches?: readonly { readonly date: string; readonly quantity: number; readonly stockAsOfDate: string; readonly sourceRows: readonly number[] }[];
+  readonly expiryBatchReason?: string;
   readonly reasonCodes: readonly (
     | "CONFLICTING_PLANNED_ORDER"
     | "CONFLICTING_INCOMING_STOCK"
@@ -661,6 +665,7 @@ export interface PurchaseWorkedFigures {
   readonly demandLow: PurchaseFigure;
   readonly demandHigh: PurchaseFigure;
   readonly availableAfterOrder: PurchaseFigure;
+  readonly expiryAtRisk?: PurchaseFigure;
 }
 
 export type PurchaseAuditResult =
@@ -685,6 +690,10 @@ export type RestockEstimate =
       readonly state: "available";
       readonly quantity: PurchaseFigure;
       readonly midpointTarget: PurchaseFigure;
+      readonly beforeQuantity?: PurchaseFigure;
+      readonly afterQuantity?: PurchaseFigure;
+      readonly afterUnavailableReason?: string;
+      readonly shelfLifeCap?: number;
     }
   | {
       readonly state: "unavailable";
@@ -695,6 +704,8 @@ export type RestockEstimate =
 export interface ExpiryCheckInput {
   readonly columnConfirmed: boolean;
   readonly dates: readonly string[];
+  readonly batches?: readonly { readonly date: string; readonly quantity: number; readonly stockAsOfDate: string; readonly sourceRows?: readonly number[] }[];
+  readonly batchReason?: string;
 }
 
 export type ExpiryCheckResult =
@@ -720,12 +731,16 @@ export type ExpiryCheckResult =
     };
 
 export interface ProductPurchasePlan {
+  readonly analysisDate?: string;
   readonly productKey: string;
   readonly inputs: ProductPurchaseInputs;
   readonly estimatedRestock: RestockEstimate;
   readonly audit: PurchaseAuditResult;
   readonly expiry: ExpiryCheckResult;
   readonly purchasePolicyVersion: string;
+  readonly expiryRisk?: import("./expiry-risk.ts").ExpiryRisk;
+  readonly storageWindow?: import("./storage-window.ts").StorageWindowResult;
+  readonly restockAge?: import("./storage-window.ts").RestockAge;
 }
 
 export interface PurchasePlanReview {

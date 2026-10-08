@@ -40,6 +40,7 @@ export function compareSupplierOrders(estimate: RestockEstimate | undefined, sce
 export function suggestSupplierOrder(estimate: RestockEstimate | undefined, terms: SupplierOrderTerms, analysisDate: string): SupplierOrderSuggestion {
   if (!parseIsoDate(analysisDate)) throw new Error("A valid analysis date is required.");
   if (!estimate || estimate.state !== "available") return { state: "unavailable", reason: "A reliable restock estimate is required first." };
+  if (estimate.afterUnavailableReason) return { state: "unavailable", reason: estimate.afterUnavailableReason };
   const valid = (value: number | undefined, minimum: number, maximum: number) => value === undefined || (Number.isSafeInteger(value) && value >= minimum && value <= maximum);
   if (!valid(terms.caseSize, 1, EPIC5_POLICY.maximumQuantity) || !valid(terms.minimumOrder, 0, EPIC5_POLICY.maximumQuantity) || !valid(terms.leadTimeDays, 0, 3650)) {
     return { state: "unavailable", reason: "Enter valid whole-number supplier terms." };

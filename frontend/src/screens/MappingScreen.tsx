@@ -40,6 +40,7 @@ const OPTIONAL_FIELDS = [
   ["planned_order_quantity", "document", "Orders you plan to place"],
   ["incoming_stock_quantity", "truck", "Ordered but not yet arrived"],
   ["expiry_date", "expiry", "When each batch expires"],
+  ["expiry_quantity", "box", "Units in each expiry batch at the stock count date; batch totals must equal stock"],
   ["unit_cost", "cost", "Purchase cost per unit in MYR; checked in Step 3"],
   ["unit_weight_kg", "box", "Food weight in kilograms for one sales unit"],
 ] as const;

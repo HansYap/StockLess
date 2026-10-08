@@ -139,11 +139,11 @@ export const FIELD_REGISTRY: Readonly<Record<CanonicalField, FieldDefinition>> =
     field: "expiry_quantity",
     label: "Expiry quantity",
     description: "The quantity affected by a product-lot expiry date.",
-    status: "later_locked",
+    status: "feature_dependent",
     valueKind: "non_negative_decimal",
     grain: "lot",
     unlocks: ["Expiry-aware note"],
-    aliases: ["expiry quantity", "expiring quantity", "expiry qty"],
+    aliases: ["expiry quantity", "expiring quantity", "expiry qty", "batch quantity", "lot quantity", "batch qty"],
     acquisitionSource: "either",
   },
   supplier_id_or_name: {

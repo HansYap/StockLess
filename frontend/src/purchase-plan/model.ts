@@ -13,6 +13,7 @@ import {
   type ExpiryCheckInput,
   type ProductPurchasePlan,
   type ProductLabels,
+  activePlanningContext, planningStorageWindow, type ProductPlanningContext, type PlanningContexts,
 } from "../engine.ts";
 
 export type PurchaseDrafts = Readonly<
@@ -35,12 +36,14 @@ export interface PurchaseProduct {
   readonly fileExpiry: ExpiryCheckInput;
   readonly readinessSnapshot?: ReadinessSnapshot;
   readonly labels?: ProductLabels;
+  readonly planningContext?: ProductPlanningContext;
 }
 
 /** Presentation join only. All calculations stay behind engine.ts. Never join by display name. */
 export function joinPurchaseEvidence(
   snapshot: ReadinessSnapshot,
   forecast: DemandForecastReview,
+  contexts: PlanningContexts = {},
 ): PurchaseProduct[] {
   const labels = collectProductLabels(snapshot);
   const evidence = new Map(
@@ -92,6 +95,7 @@ export function joinPurchaseEvidence(
               : undefined;
     return {
       key,
+      planningContext: activePlanningContext(snapshot, contexts[key]),
       title: row?.productName || row?.productCode || evidence.get(key)?.displayName || key,
       name:
         evidence.get(key)?.displayName ||
@@ -128,6 +132,8 @@ export function evaluatePurchaseProduct(
     inputs,
     expiry,
     previewEmptyOrder,
+    storageWindow: product.readinessSnapshot ? planningStorageWindow(product.readinessSnapshot, product.planningContext) : undefined,
+    restockDate: product.planningContext?.restockDate,
   });
 }
 

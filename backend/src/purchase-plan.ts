@@ -19,9 +19,12 @@ import type {
   RestockEstimate,
 } from "./contracts.ts";
 import { calendarDaysBetween, parseIsoDate } from "./dates.ts";
+import { estimateExpiryRisk, type ExpiryRisk } from "./expiry-risk.ts";
+import { activePlanningContext, planningStorageWindow, type PlanningContexts } from "./planning-context.ts";
+import { restockElapsedDays, type StorageWindowResult } from "./storage-window.ts";
 
 /** Domain policy for submitted Epic 5 US5.1-US5.6. */
-export const EPIC5_POLICY_VERSION = "stockless-i2-e5-v1.1.0";
+export const EPIC5_POLICY_VERSION = "stockless-i3-cp3-e5-v2";
 
 export const EPIC5_POLICY = Object.freeze({
   maximumQuantity: 999_999,
@@ -40,9 +43,12 @@ export interface EvaluatePurchasePlanOptions {
   readonly expiry?: ExpiryCheckInput;
   /** Visual preview only: an empty order stays empty in inputs and saved plans. */
   readonly previewEmptyOrder?: boolean;
+  readonly storageWindow?: StorageWindowResult;
+  readonly restockDate?: string;
 }
 
 export interface BuildPurchasePlanReviewOptions {
+  readonly contexts?: PlanningContexts;
   readonly inputsByProduct?: Readonly<Record<string, ProductPurchaseInputs | undefined>>;
   readonly expiryByProduct?: Readonly<Record<string, ExpiryCheckInput | undefined>>;
   readonly currentStockSourceByProduct?: Readonly<Record<string, PurchaseInputSource | undefined>>;
@@ -86,6 +92,7 @@ export function expiryInputFromFileEvidence(
   return Object.freeze({
     columnConfirmed: fileEvidence?.expiryDateColumnConfirmed ?? false,
     dates: product?.expiryDates ?? Object.freeze([]),
+    ...(product?.expiryBatches ? { batches: product.expiryBatches, batchReason: product.expiryBatchReason } : {}),
   });
 }
 
@@ -188,6 +195,8 @@ function estimateRestock(
   stock: ProductStockEvidence | undefined,
   inputs: ProductPurchaseInputs,
   analysisDate: string,
+  expiryRisk: ExpiryRisk,
+  storageWindow?: StorageWindowResult,
 ): RestockEstimate {
   const cannotReason = cannotJudgeReason(demand, stock, analysisDate);
   if (cannotReason) return Object.freeze({ state: "unavailable", reason: cannotReason, correctiveAction: cannotReason === "the product is Cannot assess" ? demand.historyEvidence?.correctiveAction ?? correctiveAction(cannotReason) : correctiveAction(cannotReason) });
@@ -198,9 +207,17 @@ function estimateRestock(
   // Planned order accepts whole units. Ceiling prevents an adopted estimate
   // from falling short of the midpoint when stock on hand is fractional.
   const quantity = Math.max(0, Math.ceil(midpointTarget - stock!.currentStock! - incoming));
+  const afterUnavailableReason = range.low === 0 ? "Cannot tell how much will expire: demand could be zero" : undefined;
+  const atRisk = expiryRisk.state === "estimated" ? expiryRisk.quantity : 0;
+  const shelfLifeCap = storageWindow?.state === "estimated" ? Math.floor(range.low / 28 * storageWindow.days) : undefined;
+  const adjusted = Math.max(0, Math.ceil(midpointTarget - Math.max(0, stock!.currentStock! - atRisk) - incoming));
+  const after = shelfLifeCap === undefined ? adjusted : Math.min(adjusted, shelfLifeCap);
   return Object.freeze({
     state: "available",
-    quantity: figure(quantity, "worked out by StockLess"),
+    quantity: figure(afterUnavailableReason ? quantity : after, "worked out by StockLess"),
+    beforeQuantity: figure(quantity, "worked out by StockLess"),
+    ...(afterUnavailableReason ? { afterUnavailableReason } : { afterQuantity: figure(after, "worked out by StockLess") }),
+    ...(shelfLifeCap === undefined ? {} : { shelfLifeCap }),
     midpointTarget: figure(midpointTarget, "worked out by StockLess"),
   });
 }
@@ -212,6 +229,7 @@ function auditPurchase(
   analysisDate: string,
   currentStockSource: PurchaseInputSource,
   previewEmptyOrder = false,
+  expiryRisk?: ExpiryRisk,
 ): PurchaseAuditResult {
   if (inputs.plannedOrder.state === "empty" && !previewEmptyOrder) return Object.freeze({ state: "not_planned" });
 
@@ -231,7 +249,8 @@ function auditPurchase(
   const plannedOrder = inputs.plannedOrder.state === "value"
     ? figure(inputs.plannedOrder.value, inputs.plannedOrder.source)
     : figure(0, "worked out by StockLess");
-  const available = stock!.currentStock! + incomingStock.value + plannedOrder.value;
+  const atRisk = expiryRisk?.state === "estimated" ? expiryRisk.quantity : 0;
+  const available = Math.max(0, stock!.currentStock! - atRisk) + incomingStock.value + plannedOrder.value;
   const availableText = formatQuantity(available);
 
   let verdict: "Overstock risk" | "Needs review" | "Looks balanced";
@@ -260,6 +279,7 @@ function auditPurchase(
       demandLow: figure(range.low, "worked out by StockLess"),
       demandHigh: figure(range.high, "worked out by StockLess"),
       availableAfterOrder: figure(available, "worked out by StockLess"),
+      ...(expiryRisk?.state === "estimated" ? { expiryAtRisk: figure(atRisk, "worked out by StockLess") } : {}),
     }),
   });
 }
@@ -308,10 +328,17 @@ export function evaluateProductPurchasePlan(
 ): ProductPurchasePlan {
   assertAnalysisDate(options.analysisDate);
   const inputs = options.inputs ?? emptyProductPurchaseInputs();
+  const expiryRisk = estimateExpiryRisk({ analysisDate: options.analysisDate, stock: options.stock?.currentStock,
+    stockAsOfDate: options.stock?.stockAsOfDate, low: demand.label === "Cannot assess" ? undefined : demand.range?.low,
+    high: demand.label === "Cannot assess" ? undefined : demand.range?.high, batches: options.expiry?.batches, reason: options.expiry?.batchReason });
   return Object.freeze({
     productKey: demand.productKey,
+    analysisDate: options.analysisDate,
     inputs,
-    estimatedRestock: estimateRestock(demand, options.stock, inputs, options.analysisDate),
+    estimatedRestock: estimateRestock(demand, options.stock, inputs, options.analysisDate, expiryRisk, options.storageWindow),
+    expiryRisk,
+    ...(options.storageWindow ? { storageWindow: options.storageWindow } : {}),
+    ...(options.restockDate ? { restockAge: restockElapsedDays(options.restockDate, options.analysisDate) } : {}),
     audit: auditPurchase(
       demand,
       options.stock,
@@ -319,6 +346,7 @@ export function evaluateProductPurchasePlan(
       options.analysisDate,
       options.currentStockSource ?? "from your file",
       options.previewEmptyOrder,
+      expiryRisk,
     ),
     expiry: checkExpiry(options.expiry, options.analysisDate),
     purchasePolicyVersion: EPIC5_POLICY_VERSION,
@@ -357,6 +385,8 @@ export function buildPurchasePlanReview(
         fileEvidenceByProduct.get(demand.productKey),
       ),
     currentStockSource: options.currentStockSourceByProduct?.[demand.productKey],
+    storageWindow: planningStorageWindow(snapshot, options.contexts?.[demand.productKey]),
+    restockDate: activePlanningContext(snapshot, options.contexts?.[demand.productKey])?.restockDate,
     });
   });
 

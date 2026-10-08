@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { t, useLanguage } from "../i18n/index.ts";
 import { ProductLabelList } from "../components/ProductLabelList.tsx";
-import { summarizePurchaseExcess } from "../engine.ts";
+import { summarizePurchaseExcess, estimatePurchaseCost, type PlanningContexts, type ProductPlanningContext } from "../engine.ts";
 import { evaluateProductPurchasePlan, type DemandForecastReview, type ReadinessSnapshot, type ProductPurchaseInputs, type ExpiryCheckInput, type ProductPurchasePlan, type SupplierOrderTerms } from "../engine.ts";
 import { evaluatePurchaseProduct, joinPurchaseEvidence, purchaseGroup, purchaseGroupLabels, type PurchaseDrafts, type PurchaseEvaluator, type PurchaseProduct, type PurchaseGroup } from "../purchase-plan/model.ts";
 import { ProductPurchasePanel } from "../purchase-plan/ProductPurchasePanel.tsx";
@@ -12,6 +12,7 @@ import "../purchase-plan/purchase-plan.css";
 
 export type SupplierDrafts = Readonly<Record<string, SupplierOrderTerms | undefined>>;
 interface Props {
+  contexts?: PlanningContexts; datasetId?: string; onContextChange?: (key:string, value:ProductPlanningContext)=>void;
   snapshot: ReadinessSnapshot; forecast: DemandForecastReview; drafts: PurchaseDrafts;
   selectedKey: string | null; onSelect: (key: string | null) => void;
   onDraftChange: (key: string, inputs: ProductPurchaseInputs) => void; onBack: () => void; onImpact?: () => void;
@@ -30,10 +31,12 @@ const groups: readonly { id: PurchaseGroup; label: string; help: string; icon: s
 ];
 const rank: Record<PurchaseGroup, number> = { check_order: 0, order_needed: 1, balanced: 2, need_data: 3 };
 
-export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, onSelect, onDraftChange, onBack, onImpact, evaluatePurchase = evaluateProductPurchasePlan, expiryByProduct, supplierDrafts, onSupplierChange }: Props) {
+export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, onSelect, onDraftChange, onBack, onImpact, evaluatePurchase = evaluateProductPurchasePlan, expiryByProduct, supplierDrafts, onSupplierChange, contexts, datasetId, onContextChange }: Props) {
   useLanguage();
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<PurchaseGroup | "all">("all");
+  const [positiveOnly, setPositiveOnly] = useState(false);
+  const [financialSort, setFinancialSort] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const detailColumn = useRef<HTMLElement>(null);
   const [compactHero, setCompactHero] = useState(false);
@@ -49,7 +52,7 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
   }, []);
   const [localTerms, setLocalTerms] = useState<SupplierDrafts>({});
   const terms = supplierDrafts ?? localTerms;
-  const products = useMemo(() => joinPurchaseEvidence(snapshot, forecast), [snapshot, forecast]);
+  const products = useMemo(() => joinPurchaseEvidence(snapshot, forecast, contexts), [snapshot, forecast, contexts]);
   const planCache = useRef(new Map<string, PlanCacheEntry>());
   const plans = useMemo(() => {
     const nextCache = new Map<string, PlanCacheEntry>(), nextPlans = new Map<string, ProductPurchasePlan | undefined>();
@@ -65,10 +68,11 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
     return nextPlans;
   }, [products, snapshot.analysisDate, drafts, evaluatePurchase, expiryByProduct]);
   const inputsFor = (product: PurchaseProduct) => drafts[product.key] ?? product.fileInputs;
-  const sorted = useMemo(() => [...products].sort((a, b) => rank[purchaseGroup(plans.get(a.key))] - rank[purchaseGroup(plans.get(b.key))] || (a.sku ?? a.key).localeCompare(b.sku ?? b.key)), [products, plans]);
+  const financialRisk = (key:string) => { const p = plans.get(key); const q = p?.audit.state === 'verdict' ? Math.max(0, p.audit.figures.availableAfterOrder.value - p.audit.figures.demandHigh.value) : undefined; const cost = estimatePurchaseCost(snapshot,key,q); return cost.state === 'estimated' ? cost.amount : -1; };
+  const sorted = useMemo(() => [...products].sort((a, b) => (financialSort ? financialRisk(b.key) - financialRisk(a.key) : rank[purchaseGroup(plans.get(a.key))] - rank[purchaseGroup(plans.get(b.key))]) || (a.sku ?? a.key).localeCompare(b.sku ?? b.key)), [products, plans, financialSort]);
   const filtered = (search: string, selectedGroup: PurchaseGroup | "all") => {
     const term = search.trim().replace(/^sku\s*:?\s*/i, "").toLocaleLowerCase();
-    return sorted.filter(product => [product.title, product.pack, product.name, product.sku, ...(product.labels?.names ?? []), ...(product.labels?.codes ?? []), ...(product.labels?.packs ?? [])].join(" ").toLocaleLowerCase().includes(term) && (selectedGroup === "all" || purchaseGroup(plans.get(product.key)) === selectedGroup));
+    return sorted.filter(product => (!positiveOnly || (inputsFor(product).plannedOrder.state === "value" && (inputsFor(product).plannedOrder as {value:number}).value > 0)) && [product.title, product.pack, product.name, product.sku, ...(product.labels?.names ?? []), ...(product.labels?.codes ?? []), ...(product.labels?.packs ?? [])].join(" ").toLocaleLowerCase().includes(term) && (selectedGroup === "all" || purchaseGroup(plans.get(product.key)) === selectedGroup));
   };
   const visible = filtered(query, group), shown = expanded ? visible : visible.slice(0, 12);
   const selected = products.find(product => product.key === selectedKey), selectedIndex = visible.findIndex(product => product.key === selectedKey);
@@ -118,7 +122,8 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
     <div className="pp-wrap pp-main">
       {mismatchCount > 0 && <p className="notice notice--error" role="alert">{t(`Evidence mismatch affects ${mismatchCount} products. Return to readiness and refresh the forecast.`)}</p>}
       <div className="pp-kpis" role="group" aria-label={t("Filter by what each product needs")}>{groups.map(item => <button key={item.id} type="button" className={`pp-kpi pp-kpi--${item.id}`} aria-pressed={group === item.id} onClick={() => changeFilter(query, group === item.id ? "all" : item.id)}><span className="pp-icon" aria-hidden="true">{item.icon}</span><span><b className="pp-kpi-number num">{counts[item.id]}</b> <b>{t(item.label)}</b><small>{t(item.help)}</small></span></button>)}</div>
-      <div className="pp-layout"><aside className="pp-detail-column" ref={detailColumn}>{selected ? <ProductPurchasePanel key={selected.key} product={selected} plan={plans.get(selected.key)} inputs={inputsFor(selected)} analysisDate={snapshot.analysisDate} terms={terms[selected.key] ?? {}} onTermsChange={nextTerms => onSupplierChange ? onSupplierChange(selected.key, nextTerms) : setLocalTerms(previous => ({ ...previous, [selected.key]: nextTerms }))} onChange={inputs => onDraftChange(selected.key, inputs)} onReviewData={onBack} position={selectedIndex >= 0 ? selectedIndex : undefined} total={visible.length} onPrevious={selectedIndex > 0 ? () => select(visible[selectedIndex - 1].key) : undefined} onNext={visible.length > 1 ? next : undefined} onDone={done} /> : <section className="pp-detail pp-empty"><h2>{t("Purchase details")}</h2><p>{t(visible.length ? "Select a product to enter quantities and review its evidence." : "No products match.")}</p></section>}
+      <div className="cp3-actions"><label><input type="checkbox" checked={positiveOnly} onChange={e=>setPositiveOnly(e.target.checked)} /> {t("Only positive planned orders")}</label><label><input type="checkbox" checked={financialSort} onChange={e=>setFinancialSort(e.target.checked)} /> {t("Sort by estimated financial risk")}</label></div>
+      <div className="pp-layout"><aside className="pp-detail-column" ref={detailColumn}>{selected ? <ProductPurchasePanel datasetId={datasetId} onPlanningChange={onContextChange ? value => onContextChange(selected.key, value) : undefined} key={selected.key} product={selected} plan={plans.get(selected.key)} inputs={inputsFor(selected)} analysisDate={snapshot.analysisDate} terms={terms[selected.key] ?? {}} onTermsChange={nextTerms => onSupplierChange ? onSupplierChange(selected.key, nextTerms) : setLocalTerms(previous => ({ ...previous, [selected.key]: nextTerms }))} onChange={inputs => onDraftChange(selected.key, inputs)} onReviewData={onBack} position={selectedIndex >= 0 ? selectedIndex : undefined} total={visible.length} onPrevious={selectedIndex > 0 ? () => select(visible[selectedIndex - 1].key) : undefined} onNext={visible.length > 1 ? next : undefined} onDone={done} /> : <section className="pp-detail pp-empty"><h2>{t("Purchase details")}</h2><p>{t(visible.length ? "Select a product to enter quantities and review its evidence." : "No products match.")}</p></section>}
         <div className="pp-privacy"><span className="pp-icon" aria-hidden="true">✓</span><div><b>{t("Your data stays on your device")}</b><p>{t("Quantities are never sent to a supplier.")}</p><small>{snapshot.sourceName} · {t(snapshot.sourceMode === "sample" ? "Sample data" : "Retailer file")}</small></div></div>
       </aside><section className="pp-list" aria-label={t("Products to review")}><div className="pp-list-toolbar"><label className="pp-search"><span aria-hidden="true">⌕</span><input type="search" aria-label={t("Search name or code")} placeholder={t("Search name or code")} value={query} onChange={event => changeFilter(event.currentTarget.value, group)} /></label>{group !== "all" && <><span className="pp-filter-chip">{t(groups.find(item => item.id === group)!.label)} · {counts[group]}</span><button type="button" className="pp-link-button" onClick={() => changeFilter(query, "all")}>{t("Clear")}</button></>}</div>
         <div className="pp-table-wrap"><table className="pp-table"><thead><tr>{["Product", "Expected, 4 weeks", "In stock", "Your order", "Check"].map(label => <th key={label} scope="col">{t(label)}</th>)}</tr></thead><tbody>{shown.map(product => {

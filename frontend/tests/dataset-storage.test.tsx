@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { confirmIdentityMode, createEmptySession, setMapping, updateSessionMapping, type SessionEnvelope } from "../src/engine.ts";
 import { makeEvidence } from "./fixtures.ts";
 import { withStore } from "../src/storage/browser-db.ts";
-import { clearEverything, createSavedDataset, getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork, saveGeneratedPurchasePlan, type SavedWork } from "../src/storage/saved-datasets.ts";
+import { clearEverything, createSavedDataset, getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork, saveGeneratedPurchasePlan,
+  savePurchaseDecision, updateSavedPurchaseDecision, saveStockOutcome, updateSavedStockOutcome, savedPurchaseDecisions, savedStockOutcomes, removeSavedDecision, type SavedWork } from "../src/storage/saved-datasets.ts";
 
 // Exercise the real storage callers against an asynchronous browser database adapter.
 function browserDatabase(version: number, stores: Map<string, Map<IDBValidKey, unknown>>) {
@@ -22,6 +23,9 @@ function browserDatabase(version: number, stores: Map<string, Map<IDBValidKey, u
       }
       const transaction = {
         oncomplete: null as (() => void) | null,
+        onabort: null as (() => void) | null,
+        aborted: false,
+        abort() { this.aborted = true; queueMicrotask(() => this.onabort?.()); },
         objectStore: (name: string) => {
           const records = stores.get(name)!;
           const request = (value: unknown) => {
@@ -41,7 +45,7 @@ function browserDatabase(version: number, stores: Map<string, Map<IDBValidKey, u
           };
         },
       };
-      setTimeout(() => transaction.oncomplete?.(), 0);
+      setTimeout(() => { if (!transaction.aborted) transaction.oncomplete?.(); }, 0);
       return transaction;
     }),
   };
@@ -189,4 +193,56 @@ it("does not create or replace saved work before the purchase plan is ready", as
   await expect(saveGeneratedPurchasePlan({ ...completedWork(), forecast: null }, planRecord("second"), first.id, true)).rejects.toThrow("Generate a purchase plan");
   expect(await getSavedDataset(first.id)).toEqual(before);
   expect(await listSavedDatasets()).toHaveLength(1);
+});
+
+it("explicit decisions and measured zero outcomes persist without converting generated previews or free-text notes", async () => {
+  const stores = new Map<string, Map<IDBValidKey, unknown>>(); browserDatabase(0, stores);
+  const saved = await saveGeneratedPurchasePlan(completedWork(), planRecord("generated"));
+  const recommendation = { productKey: "A", productName: "Tea", productCode: "0001", packSize: "250 g", sourceName: "sales.csv", sourceSha256: "hash", sourceMode: "user" as const,
+    analysisDate: saved.analysisDate, policyVersion: "cp3-v2", recommendedQuantity: 12, quantityUnit: "pieces" };
+  // The checked source must agree with the imported file before a decision can be saved.
+  await saveDatasetWork(saved.id, { readiness: { ...saved.readiness!, sourceSha256: "hash" } });
+  const withDecision = await savePurchaseDecision(saved.id, { id: "chosen", response: "Changed", finalQuantity: 6, reason: "Shelf capacity", referenceDate: "2026-10-08", recordedAt: "2026-10-08T10:00:00Z", recommendation });
+  expect(withDecision.decisions).toHaveLength(2);
+  expect(savedPurchaseDecisions(withDecision)).toHaveLength(1);
+  expect(withDecision.decisions[0].purchaseDecision).toBeUndefined();
+  await saveStockOutcome(saved.id, { id: "observed-zero", productKey: "A", decisionId: "chosen", kind: "discarded", date: "2026-10-08", quantity: 0, unit: "pieces", referenceDate: "2026-10-08", recordedAt: "2026-10-08T11:00:00Z" });
+  const reopened = (await getSavedDataset(saved.id))!;
+  expect(savedStockOutcomes(reopened)[0].quantity).toBe(0);
+  const corrected = await updateSavedPurchaseDecision(saved.id, "chosen", { response: "Changed", finalQuantity: 4, reason: "Corrected count", referenceDate: "2026-10-08" });
+  expect(savedPurchaseDecisions(corrected)[0].recommendation).toEqual(recommendation);
+  expect(savedPurchaseDecisions(corrected)[0].finalQuantity).toBe(4);
+  await removeSavedDecision(saved.id, "chosen");
+  const afterDelete = (await getSavedDataset(saved.id))!;
+  expect(savedPurchaseDecisions(afterDelete)).toEqual([]);
+  expect(savedStockOutcomes(afterDelete)[0].quantity).toBe(0);
+  expect(savedStockOutcomes(afterDelete)[0].decisionId).toBeUndefined();
+});
+
+it("rejects wrong-source decisions and wrong-product outcome links without adding records", async () => {
+  const stores = new Map<string, Map<IDBValidKey, unknown>>(); browserDatabase(0, stores);
+  const saved = await saveGeneratedPurchasePlan(completedWork(), planRecord("generated"));
+  await expect(savePurchaseDecision(saved.id, { id: "wrong", response: "Followed", referenceDate: "2026-10-08", recordedAt: "2026-10-08T10:00:00Z",
+    recommendation: { productKey: "A", productName: "Tea", sourceName: "other.csv", sourceSha256: "wrong", sourceMode: "user", analysisDate: saved.analysisDate, policyVersion: "cp3-v2", recommendedQuantity: 12, quantityUnit: "pieces" } })).rejects.toThrow("does not match");
+  await expect(saveStockOutcome(saved.id, { productKey: "A", decisionId: "generated", kind: "expired", date: "2026-10-08", quantity: 1, unit: "pieces", referenceDate: "2026-10-08" })).rejects.toThrow("related decision");
+  const reopened = (await getSavedDataset(saved.id))!;
+  expect(reopened.decisions).toHaveLength(1); expect(reopened.outcomes).toEqual([]);
+});
+
+it("freezes known pack and seller mass at recording while litres require a volume basis", async () => {
+  browserDatabase(0, new Map());
+  const work = completedWork();
+  const readiness = { ...work.readiness!, evidenceKey: 'weight-source', rows: work.readiness!.rows.map(row => ({ ...row, interpretedValues: { ...row.interpretedValues, packVariant: '500g' } })) };
+  const saved = await saveGeneratedPurchasePlan({ ...work, readiness }, planRecord('generated'));
+  const input = { productKey: 'A', kind: 'discarded' as const, date: '2026-10-08', quantity: 2, unit: 'pieces' as const, referenceDate: '2026-10-08' };
+  await saveStockOutcome(saved.id, { ...input, id: 'pack' });
+  expect(savedStockOutcomes((await getSavedDataset(saved.id))!)[0].conversion?.kilogramsPerUnit).toBe(.5);
+  await saveDatasetWork(saved.id, { cp3Inputs: { A: { evidenceKey: 'weight-source', kgPerUnit: .2 } } });
+  await saveStockOutcome(saved.id, { ...input, id: 'manual' });
+  await updateSavedStockOutcome(saved.id, 'pack', { ...input, quantity: 3 });
+  await saveStockOutcome(saved.id, { ...input, id: 'litres', unit: 'litres' });
+  const outcomes = savedStockOutcomes((await getSavedDataset(saved.id))!);
+  expect(outcomes.find(o=>o.id==='pack')?.conversion?.kilogramsPerUnit).toBe(.5);
+  expect(outcomes.find(o=>o.id==='manual')?.conversion?.kilogramsPerUnit).toBe(.2);
+  expect(outcomes.find(o=>o.id==='litres')?.conversion).toBeUndefined();
 });

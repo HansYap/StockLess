@@ -16,6 +16,7 @@ try {
     "package.json",
     "tsconfig.json",
     "vitest.config.ts",
+    "public/fonts",
   ])
     await cp(path.join(frontend, name), path.join(root, name), {
       recursive: true,

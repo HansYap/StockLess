@@ -1,5 +1,5 @@
 import { t, useLanguage } from "./i18n/index.ts";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
@@ -33,6 +33,7 @@ import {
   type SessionEnvelope,
   type SourceMode,
   evaluateProductPurchasePlan,
+  applyPlanningContexts, type PlanningContexts,
 } from "./engine.ts";
 import { replaceSessionSourceInWorker } from "./workers/import-session-client.ts";
 import { runDemandForecastInWorker } from "./workers/forecast-client.ts";
@@ -93,6 +94,8 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const [readiness, setReadiness] = useState<ReadinessSnapshot | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [cp3Inputs, setCp3Inputs] = useState<PlanningContexts>({});
+  const effectiveReadiness = useMemo(() => readiness ? applyPlanningContexts(readiness, cp3Inputs) : null, [readiness, cp3Inputs]);
   const [purchaseDrafts, setPurchaseDrafts] = useState<PurchaseDrafts>({});
   const [supplierOrderDrafts, setSupplierOrderDrafts] = useState<SupplierDrafts>({});
   const [forecast, setForecast] = useState<DemandForecastReview | null>(null);
@@ -228,7 +231,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
         if (pendingWork.current.size > 0) throw new Error("Earlier edits are still waiting to save.");
         const saved = await saveGeneratedPurchasePlan({
           envelope, analysisDate, dateConfirmations, readiness: snapshot, forecast: review,
-          purchaseDrafts: latestDrafts.current, supplierOrderDrafts: latestSupplierDrafts.current, supplierTerms: {},
+          purchaseDrafts: latestDrafts.current, supplierOrderDrafts: latestSupplierDrafts.current, supplierTerms: {}, cp3Inputs,
         }, plan, targetId, newUpload);
         if (!mounted.current || uploadToken.current !== token) return saved;
         pendingUploadTarget.current = undefined;
@@ -254,7 +257,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     })();
     generatedSaves.current.set(key, operation);
     return operation;
-  }, [activeSavedId, analysisDate, dateConfirmations, envelope, persistWork, refreshSavedDatasets]);
+  }, [activeSavedId, analysisDate, dateConfirmations, envelope, persistWork, refreshSavedDatasets, cp3Inputs]);
 
   useEffect(() => {
     if (!activeSavedId || !dataset || lastSavedEnvelope.current === envelope) return;
@@ -402,6 +405,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     setReadiness(restoredReadiness);
     setForecast(restoredForecast);
     setPurchaseDrafts(saved.purchaseDrafts);
+    setCp3Inputs(saved.cp3Inputs ?? {});
     setSupplierOrderDrafts(saved.supplierOrderDrafts ?? {});
     setProposals(null);
     setProductKey(null);
@@ -527,6 +531,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     setSaveState("idle");
     resetReadinessEvidence();
     setProposals(proposed);
+    setCp3Inputs({});
     setMappingUndo(null);
     setEnvelope(importedEnvelope);
     lastSavedEnvelope.current = null;
@@ -612,6 +617,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     setReached(1);
     setStep(1);
     setShowImpact(false);
+    setCp3Inputs({});
     setActiveSavedId(null);
     pendingUploadTarget.current = undefined;
     uploadToken.current = globalThis.crypto.randomUUID();
@@ -772,7 +778,13 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
 
       {t(step === 4 && readiness && forecast && showImpact && (
         <ImpactDashboard
-          snapshot={readiness}
+          snapshot={effectiveReadiness!}
+          contexts={cp3Inputs}
+          datasetId={activeSavedId ?? undefined}
+          shopName={workspaceDataset.shopName}
+          datasetName={workspaceDataset.datasetName}
+          supplierDrafts={supplierOrderDrafts}
+          onContextChange={(key, value) => { const next = { ...cp3Inputs, [key]: value }; setCp3Inputs(next); if (activeSavedId) void persistWork(activeSavedId, { cp3Inputs: next }); }}
           forecast={forecast}
           drafts={purchaseDrafts}
           onBack={() => setShowImpact(false)}
@@ -783,7 +795,10 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
       {t(step === 4 && readiness && forecast && !showImpact && (
         <>
         <PurchasePlanScreen
-          snapshot={readiness}
+          snapshot={effectiveReadiness!}
+          contexts={cp3Inputs}
+          datasetId={activeSavedId ?? undefined}
+          onContextChange={(key, value) => { const next = { ...cp3Inputs, [key]: value }; setCp3Inputs(next); if (activeSavedId) void persistWork(activeSavedId, { cp3Inputs: next }); }}
           forecast={forecast}
           drafts={purchaseDrafts}
           onDraftChange={(key, inputs) => {
