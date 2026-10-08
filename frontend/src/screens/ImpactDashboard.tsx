@@ -153,7 +153,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
   </>;
 
   return <main className="impact" aria-labelledby="impact-title">
-    <ImpactStory head={head} lines={lines} business={businessTile} emissions={emissionsTile} />
+    <ImpactStory head={head} lines={lines} business={businessTile} emissions={emissionsTile} onBack={onBack} />
     <div className="impact__toolbar" role="group" aria-label={c('Download your results','下载结果','Muat turun hasil anda')}>
       <span className="impact__toolbar-label">{c('Download your results','下载结果','Muat turun hasil anda')}</span>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download()}>{c('Download analysis Excel','下载分析 Excel','Muat turun Excel analisis')}</button>

@@ -1,0 +1,50 @@
+/* Impact dashboard header band, number cards and summary bar. */
+/* ===== Header band matching Steps 1-4 and the Purchase plan ===== */
+.sx-band{width:100%;display:flex;flex-direction:column;gap:18px;padding:28px 32px 20px;border-radius:20px;background:#eef6f2;border:1px solid var(--line-soft,#dce8e3)}
+.sx-band__main{min-width:0}
+.sx-band__main .impact__meta div{background:#fff}
+.sx-band__actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.sx-band__spacer{flex:1}
+.sx-back{border:0;background:none;padding:6px 0;font:700 16px var(--display);color:var(--ink);cursor:pointer}
+.sx-back:hover{color:var(--teal-deep)}
+.sx-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;list-style:none;margin:20px 0 0;padding:0;width:100%}
+.sx-kpis li{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;background:#fff;border:1px solid var(--line)}
+.sx-kpis b{display:block;font-family:var(--display);font-size:22px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.sx-kpis b small{font-size:14px;color:var(--muted);font-weight:600}
+.sx-kpis em{display:block;font-style:normal;font-size:14px;color:var(--muted)}
+.sx-kpi__ic{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:12px;font-size:18px}
+.sx-kpi__ic--teal{background:#e3f1ec;color:var(--teal-deep)}
+.sx-kpi__ic--amber{background:#fff4e2}
+.sx-kpi__ic--blue{background:#eaf0f8}
+.sx-story-more{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.sx-more-link{border:0;background:none;padding:0;font:700 14px var(--body);color:var(--teal-deep);cursor:pointer}
+.sx-sum{display:flex;flex-direction:column;gap:12px;width:100%;margin-top:20px;padding:20px 22px;border-radius:20px;background:#fff;border:1px solid var(--line)}
+.sx-sum__eq{display:flex;align-items:baseline;flex-wrap:wrap;gap:16px;margin:0;font-size:16px;color:var(--muted)}
+.sx-sum__eq b{font-family:var(--display);font-size:26px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.sx-sum__eq b.is-teal{color:var(--teal-deep)}
+.sx-sum__eq b.is-amber{color:#b86e0e}
+.sx-sum__eq i{font-style:normal;font-size:22px;color:#9aa8ad}
+.sx-sum__bar{display:flex;height:18px;border-radius:9px;overflow:hidden;background:#eef3f1}
+.sx-sum__bar span:first-child{background:#8fd2c8}
+.sx-sum__bar span:last-child{background:#d99120}
+.sx-sum small{font-size:14px;color:var(--muted)}
+@media (max-width:1100px){.sx-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.sx-band{padding:20px 16px 16px}.sx-kpis{grid-template-columns:1fr}.sx-sum__eq b{font-size:22px}}
+.sx-hero .sx-shelfcard{justify-content:flex-start}
+@media (max-width:640px){
+  .sx-band .impact__meta{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+  .sx-band .impact__meta div{min-width:0;margin:0}
+  .sx-band .impact__meta div:last-child{grid-column:1 / -1}
+  .sx-band__actions{flex-wrap:nowrap}
+  .sx-band .sx-play{padding:10px 16px}
+  .sx-back{font-size:14px;white-space:nowrap}
+  .sx-kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .sx-kpis li{flex-direction:column;align-items:flex-start;gap:8px;padding:12px}
+  .sx-kpi__ic{width:34px;height:34px;font-size:15px}
+  .sx-kpis b{font-size:19px}
+  .sx-kpis em{font-size:13px}
+  .sx-sum{padding:16px}
+  .sx-sum__eq{gap:6px 10px;font-size:15px}
+  .sx-sum__eq b{font-size:20px}
+  .sx-sum__eq i{font-size:18px}
+}
