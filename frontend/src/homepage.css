@@ -486,3 +486,6 @@ html[lang^="zh"] .sl-home h1,html[lang^="zh"] .sl-home h2,html[lang^="zh"] .sl-h
 .sl-home .hp-anim__try:hover{background:var(--teal)}
 .sl-home .hp-anim__try:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.sl-home .hp-card--link{transition:none}.sl-home .hp-card--link:hover{transform:none}}
+/* drawn icons replace the homepage emoji */
+.sl-home .hp-inline-icon{display:inline-block;vertical-align:-2px}
+.sl-home .hp-faq__ic{display:inline-flex;line-height:0}
