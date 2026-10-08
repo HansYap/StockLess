@@ -1,5 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { Logo } from "../components/Logo.tsx";
+import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { BrandIcon } from "../components/BrandIcon.tsx";
+import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
 import { localizedWorkspaceHref, setLanguage, t, useLanguage, type Language } from "../i18n/index.ts";
 import { homepageRefreshMessages } from "../i18n/homepage-refresh.ts";
 import "../homepage.css";
@@ -193,6 +196,10 @@ function HomeHeader() {
 function Hero() {
   const { copy, startHref, asset } = useHomeView();
   const story = useHeroStory();
+  const openDemo = (event: MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("a, button")) return;
+    document.getElementById("example")?.scrollIntoView({ behavior: story.reducedMotion ? "auto" : "smooth", block: "start" });
+  };
   return (
     <section className="hp-hero">
       <svg className="hp-hero__leaf hp-hero__leaf--2 hp-sway" viewBox="0 0 48 48" aria-hidden="true">
@@ -207,7 +214,7 @@ function Hero() {
         <div className="hp-hero__text">
           <p className="hp-eyebrow">
             <span aria-hidden="true">
-              {"🌱"}
+              <GrowthIcon stage="sprout" size={16} className="hp-inline-icon" />
             </span>
             {" "}
             <span>
@@ -277,7 +284,8 @@ function Hero() {
           </ul>
         </div>
         <div className="hp-card-wrap hp-float">
-          <div className="hp-card">
+          {/* The whole card opens the interactive demo; the Pause button keeps its own job. */}
+          <div className="hp-card hp-card--link" onClick={openDemo}>
             <div className="hp-card__top">
               <div>
                 <span className="hp-k">
@@ -350,9 +358,14 @@ function Hero() {
                 <i className={story.phase === 1 ? "is-on" : ""} />
                 <i className={story.phase === 2 ? "is-on" : ""} />
               </div>
-              <button type="button" className="hp-anim__play" id="ha-play" onClick={story.toggle} hidden={story.reducedMotion}>
-                {copy(story.playing ? "hp.anim.pause" : "hp.anim.play")}
-              </button>
+              <span className="hp-anim__actions">
+                <a className="hp-anim__try" href="#example">
+                  {copy("hp.anim.try")}
+                </a>
+                <button type="button" className="hp-anim__play" id="ha-play" onClick={story.toggle} hidden={story.reducedMotion}>
+                  {copy(story.playing ? "hp.anim.pause" : "hp.anim.play")}
+                </button>
+              </span>
             </div>
           </div>
         </div>
@@ -459,6 +472,8 @@ function WasteContext() {
   );
 }
 
+const GUIDE_POSES: readonly StockyPose[] = ["hello", "magnify", "magnify", "great"];
+
 function Workflow() {
   const { copy, startHref } = useHomeView();
   const reducedMotion = useReducedMotion();
@@ -473,12 +488,12 @@ function Workflow() {
   return (
     <section className="hp-how" id="how">
       <div className="wrap">
-        <p className="hp-k3 hp-center">
+        <p className="hp-k3">
           <span>
             {copy("hp.how.k")}
           </span>
         </p>
-        <h2 className="hp-center">
+        <h2>
           <span>
             {copy("hp.how.h1")}
           </span>
@@ -486,6 +501,15 @@ function Workflow() {
             {copy("hp.how.h2")}
           </em>
         </h2>
+        {/* Stocky's only homepage appearance: a guide that walks with the active step. Decorative. */}
+        <div className="hp-guide-lane" aria-hidden="true">
+          <div className="hp-guide" style={{ "--hp-guide-step": activeStep } as CSSProperties}>
+            <Stocky pose={GUIDE_POSES[activeStep]} size={78} />
+            <p className="hp-guide__bubble">
+              <b>{copy(`hp.guide.h${activeStep + 1}`)}</b> {copy(`hp.guide.t${activeStep + 1}`)}
+            </p>
+          </div>
+        </div>
         <div className="hp-steps__line" aria-hidden="true">
           <span id="hs-line" style={{ width: `${(activeStep + 1) * 25}%` }} />
         </div>
@@ -495,7 +519,7 @@ function Workflow() {
               {"1"}
             </span>
             <span className="hp-step__plant" aria-hidden="true">
-              {"🌱"}
+              <GrowthIcon stage="sprout" size={28} />
             </span>
             <b>
               {copy("hp.s1")}
@@ -509,7 +533,7 @@ function Workflow() {
               {"2"}
             </span>
             <span className="hp-step__plant" aria-hidden="true">
-              {"🌿"}
+              <GrowthIcon stage="leaves" size={28} />
             </span>
             <b>
               {copy("hp.s2")}
@@ -523,7 +547,7 @@ function Workflow() {
               {"3"}
             </span>
             <span className="hp-step__plant" aria-hidden="true">
-              {"🪴"}
+              <GrowthIcon stage="potted" size={28} />
             </span>
             <b>
               {copy("hp.s3")}
@@ -537,7 +561,7 @@ function Workflow() {
               {"4"}
             </span>
             <span className="hp-step__plant" aria-hidden="true">
-              {"🌳"}
+              <GrowthIcon stage="tree" size={28} />
             </span>
             <b>
               {copy("hp.s4")}
@@ -1268,7 +1292,7 @@ function StartBanner() {
         <div className="hp-band__text">
           <p className="hp-k3 hp-k3--light">
             <span aria-hidden="true">
-              {"🌳"}
+              <GrowthIcon stage="tree" size={16} className="hp-inline-icon" />
             </span>
             {" "}
             <span>
@@ -1377,7 +1401,7 @@ function FAQs() {
           <details className="hp-faq" open={faqOpen[0]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 0 ? !open : open)); }}>
               <span className="hp-faq__ic" aria-hidden="true">
-                {"🌱"}
+                <GrowthIcon stage="sprout" size={26} />
               </span>
               <span>
                 {copy("hp.q0")}
@@ -1391,7 +1415,7 @@ function FAQs() {
           <details className="hp-faq" open={faqOpen[1]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 1 ? !open : open)); }}>
               <span className="hp-faq__ic" aria-hidden="true">
-                {"📄"}
+                <BrandIcon name="file" size={26} />
               </span>
               <span>
                 {copy("hp.q1")}
@@ -1405,7 +1429,7 @@ function FAQs() {
           <details className="hp-faq" open={faqOpen[2]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 2 ? !open : open)); }}>
               <span className="hp-faq__ic" aria-hidden="true">
-                {"🛒"}
+                <BrandIcon name="cart" size={26} />
               </span>
               <span>
                 {copy("hp.q2")}
@@ -1419,7 +1443,7 @@ function FAQs() {
           <details className="hp-faq" open={faqOpen[3]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 3 ? !open : open)); }}>
               <span className="hp-faq__ic" aria-hidden="true">
-                {"♻️"}
+                <BrandIcon name="reuse" size={26} />
               </span>
               <span>
                 {copy("hp.q3")}
