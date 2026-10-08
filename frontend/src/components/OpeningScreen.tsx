@@ -1,0 +1,23 @@
+import { t } from "../i18n/index.ts";
+import { Logo } from "./Logo.tsx";
+import { GrowthIcon, STEP_GROWTH } from "./GrowthIcon.tsx";
+import "./opening.css";
+
+/** Branded "Opening your workspace…" screen, shown while the site picks a route or the workspace loads. */
+export function OpeningScreen() {
+  return (
+    <main className="opening-screen" role="status" aria-live="polite">
+      <Logo height={34} />
+      <span className="opening-screen__plants" aria-hidden="true">
+        {STEP_GROWTH.map((stage, index) => (
+          <span key={stage} className={`opening-screen__plant opening-screen__plant--${index + 1}`}>
+            <GrowthIcon stage={stage} size={48} />
+          </span>
+        ))}
+      </span>
+      <p className="opening-screen__title">{t("Opening your workspace…")}</p>
+      <span className="opening-screen__bar" aria-hidden="true"><span /></span>
+      <p className="opening-screen__note">{t("Your data stays on this device.")}</p>
+    </main>
+  );
+}

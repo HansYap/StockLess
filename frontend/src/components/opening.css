@@ -1,0 +1,18 @@
+/* Branded loading screen: logo, the growth plants taking turns, a soft moving bar. */
+.opening-screen { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 32px 16px; background: linear-gradient(180deg, #f6faf8 0%, #eaf4ee 100%); text-align: center; }
+.workspace-view .opening-screen { min-height: 70vh; }
+.opening-screen__plants { position: relative; width: 56px; height: 56px; }
+.opening-screen__plant { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform-origin: 50% 90%; animation: opening-grow 3.6s infinite; }
+.opening-screen__plant--2 { animation-delay: 1.2s; }
+.opening-screen__plant--3 { animation-delay: 2.4s; }
+.opening-screen__title { margin: 0; font: 700 17px/1.4 var(--display); color: var(--ink); }
+.opening-screen__note { margin: 0; font: 400 13px/1.4 var(--body); color: var(--muted); }
+.opening-screen__bar { position: relative; width: 180px; height: 4px; border-radius: 2px; background: #e3eee9; overflow: hidden; }
+.opening-screen__bar span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; border-radius: 2px; background: var(--teal); animation: opening-slide 1.4s ease-in-out infinite; }
+@keyframes opening-grow { 0% { transform: scale(.6); opacity: 0; } 15% { transform: scale(1); opacity: 1; } 85% { transform: scale(1); opacity: 1; } 100% { transform: scale(.9); opacity: 0; } }
+@keyframes opening-slide { 0% { left: -35%; } 100% { left: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .opening-screen__plant, .opening-screen__bar span { animation: none; }
+  .opening-screen__plant--1 { opacity: 1; }
+  .opening-screen__bar { display: none; }
+}
