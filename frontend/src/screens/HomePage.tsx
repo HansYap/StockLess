@@ -488,12 +488,12 @@ function Workflow() {
   return (
     <section className="hp-how" id="how">
       <div className="wrap">
-        <p className="hp-k3 hp-center">
+        <p className="hp-k3">
           <span>
             {copy("hp.how.k")}
           </span>
         </p>
-        <h2 className="hp-center">
+        <h2>
           <span>
             {copy("hp.how.h1")}
           </span>
