@@ -15,6 +15,7 @@ import {
 import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
 import { confirmCurrentMapping } from "../mapping-confirmation.ts";
 import "./mapping.css";
+import { GrowthIcon } from "../components/GrowthIcon.tsx";
 
 type IdentityMode = "stable" | "composite";
 interface MappingScreenProps {
@@ -135,7 +136,7 @@ export function MappingScreen(props: MappingScreenProps) {
       <div className="mapping-wrap mapping-hero__box">
         <div className="mapping-hero__inner">
           <div className="mapping-hero__copy">
-            <p className="mapping-eyebrow"><span aria-hidden="true">🌿</span> {t("Step 2 of 3")}</p>
+            <p className="mapping-eyebrow"><GrowthIcon stage="leaves" size={16} className="growth-icon--inline" /> {t("Step 2 of 3")}</p>
             <h1 id="mapping-title">{t("Check how we read your file")}</h1>
             <p className="mapping-lede">{t("We matched your columns by their names. Fix anything that's wrong, then confirm. Your file isn't changed.")}</p>
           </div>
