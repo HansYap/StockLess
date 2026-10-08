@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { getLocale, useLanguage } from "../i18n/index.ts";
 import "./impact-band.css";
+import { ImpactIcon } from "./ImpactIcon.tsx";
 
 export interface ImpactLine { key: string; name: string; sku?: string; available: number; demandHigh: number; units: number; }
 /** A hero tile shows a figure only when the engine produced one; otherwise it says why. */
@@ -63,7 +64,6 @@ export function ImpactStory({ head, lines, business, emissions, onBack }: { head
   const storyRef = useRef<HTMLDivElement>(null), badgeRef = useRef<HTMLSpanElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]), flights = useRef<Animation[]>([]);
   const badge = useCountUp(excess, phase === "fly");
-  const envUnits = useCountUp(excess, phase === "after" && motion, 1300);
 
   const reset = () => {
     timers.current.forEach(clearTimeout); timers.current = [];
@@ -120,10 +120,10 @@ export function ImpactStory({ head, lines, business, emissions, onBack }: { head
       </div>
     </div>
     {lines.length > 0 && <ul className="sx-kpis">
-      <li><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true">🌱</span><span><b>{number(excess)} <small>{copy("items", "件", "item")}</small></b><em>{copy("you may not sell in 4 weeks", "4 周内可能卖不完", "mungkin tidak terjual dalam 4 minggu")}</em></span></li>
-      <li><span className="sx-kpi__ic sx-kpi__ic--amber" aria-hidden="true">💰</span><span><b>{business.value ?? copy("Not yet", "暂无", "Belum ada")}</b><em>{business.value ? copy("cash you keep by ordering less", "少订就能留住的现金", "tunai yang kekal jika memesan kurang") : copy("Add unit cost to see it", "填写单位成本后显示", "Tambah kos seunit untuk melihatnya")}</em></span></li>
-      <li><span className="sx-kpi__ic sx-kpi__ic--blue" aria-hidden="true">🌍</span><span><b>{emissions.value ?? "CO₂e"}</b><em>{emissions.value ? copy("from the extra stock", "来自多余库存", "daripada stok lebihan") : copy("Confirm product types to see it", "确认商品类别后显示", "Sahkan jenis produk untuk melihatnya")}</em></span></li>
-      <li><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true">✓</span><span><b>{planRatio}% → 100%</b><em>{copy("of your stock fits your sales", "的库存符合销量", "stok anda sepadan dengan jualan")}</em></span></li>
+      <li><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true"><ImpactIcon name="sprout" size={24} /></span><span><b>{number(excess)} <small>{copy("items", "件", "item")}</small></b><em>{copy("you may not sell in 4 weeks", "4 周内可能卖不完", "mungkin tidak terjual dalam 4 minggu")}</em></span></li>
+      <li><span className="sx-kpi__ic sx-kpi__ic--amber" aria-hidden="true"><ImpactIcon name="coins" size={24} /></span><span><b>{business.value ?? copy("Not yet", "暂无", "Belum ada")}</b><em>{business.value ? copy("cash you keep by ordering less", "少订就能留住的现金", "tunai yang kekal jika memesan kurang") : copy("Add unit cost to see it", "填写单位成本后显示", "Tambah kos seunit untuk melihatnya")}</em></span></li>
+      <li><span className="sx-kpi__ic sx-kpi__ic--blue" aria-hidden="true"><ImpactIcon name="globe" size={24} /></span><span><b>{emissions.value ?? "CO₂e"}</b><em>{emissions.value ? copy("from the extra stock", "来自多余库存", "daripada stok lebihan") : copy("Confirm product types to see it", "确认商品类别后显示", "Sahkan jenis produk untuk melihatnya")}</em></span></li>
+      <li><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true"><ImpactIcon name="check" size={24} /></span><span><b>{planRatio}% → 100%</b><em>{copy("of your stock fits your sales", "的库存符合销量", "stok anda sepadan dengan jualan")}</em></span></li>
     </ul>}
     <div className={classes} id="sx-story" ref={storyRef}>
       <div className="sx-card sx-shelfcard">
@@ -148,11 +148,9 @@ export function ImpactStory({ head, lines, business, emissions, onBack }: { head
           <div className="sx-badge" aria-live="polite"><span className="sx-badge__num" ref={badgeRef}>{lines.length ? number(phase === "play" || phase === "scanned" ? 0 : badge) : "—"}</span><span>{copy("ITEMS", "件", "ITEM")}</span></div>
         </div>
         <h2 className="sx-impact__title">{copy("What your plan could avoid", "这个计划可以避免的", "Apa yang pelan anda boleh elakkan")}</h2>
-        <div className="sx-tiles">
-          <div className="sx-tile sx-tile--env"><span className="sx-tile__k"><span aria-hidden="true">🌱</span> {copy("Environment", "环境", "Alam sekitar")}</span>{lines.length ? <b>{number(phase === "play" || phase === "scanned" || phase === "fly" ? 0 : envUnits)} <small>{copy("items", "件", "item")}</small></b> : <b className="sx-tile__locked">{copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b>}<span>{lines.length ? copy("you may not sell in 4 weeks", "4 周内可能卖不完", "mungkin tidak terjual dalam 4 minggu") : copy("Enter planned orders in Step 4.", "请在第 4 步填写计划订购量。", "Masukkan pesanan dirancang dalam Langkah 4.")}</span></div>
-          <div className="sx-tile sx-tile--biz"><span className="sx-tile__k"><span aria-hidden="true">💰</span> {copy("Business", "生意", "Perniagaan")}</span>{business.value ? <b className="sx-tile__money">{business.value}</b> : <b className="sx-tile__locked">{copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b>}<span>{business.value ? copy("cash you keep by ordering less", "少订就能留住的现金", "tunai yang kekal jika memesan kurang") : business.note}</span></div>
-          <div className="sx-tile sx-tile--co2"><span className="sx-tile__k"><span aria-hidden="true">🌍</span> {copy("Emissions", "碳排放", "Pelepasan karbon")}</span>{emissions.value ? <b className="sx-tile__value">{emissions.value}</b> : <b>{copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b>}<span>{emissions.note}</span></div>
-        </div>
+        {lines.length > 0 ? <p className="sx-globe-note">{copy("If you follow the suggested orders,", "按建议数量下单，", "Jika anda ikut pesanan dicadangkan,")} <b>{number(excess)} {copy("items", "件商品", "item")}</b> {copy("won't sit on your shelf waiting to expire.", "就不会堆在货架上等到过期。", "tidak akan terbiar di rak sehingga luput.")}</p>
+          : <p className="sx-globe-note">{copy("Enter planned orders in Step 4.", "请在第 4 步填写计划订购量。", "Masukkan pesanan dirancang dalam Langkah 4.")}</p>}
+        {lines.length > 0 && onBack && <button type="button" className="btn btn--ghost sx-globe-go" onClick={onBack}>{copy("Lower these orders in the plan →", "在计划中减少这些订单 →", "Kurangkan pesanan ini dalam pelan →")}</button>}
       </div>
     </div>
     {lines.length > 0 && <div className="sx-sum">
