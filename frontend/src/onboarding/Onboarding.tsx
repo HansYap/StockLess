@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { t, useLanguage } from "../i18n/index.ts";
 import { listSavedDatasets } from "../storage/saved-datasets.ts";
 import { datasetIdFromRoute } from "../visit-routing.ts";
-import { guideRouteFor, guides, readGuidePreferences, rememberGuide, rememberInvitation, visibleGuideTarget, type GuidePage } from "./guides.ts";
+import { guideRouteFor, guides, rememberGuide, rememberInvitation, visibleGuideTarget, type GuidePage } from "./guides.ts";
 import shop from "./shop.svg";
 import "./onboarding.css";
 
@@ -45,10 +45,11 @@ export function OnboardingProvider({ children }: { readonly children: ReactNode 
   const followingRef = useRef(following);
   const current = useRef<GuidePage | null>(null);
   const seen = useRef(new Set<GuidePage>());
+  const invitationShown = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const startButton = useRef<HTMLButtonElement>(null);
   const updateFollowing = useCallback((next: boolean) => { followingRef.current = next; setFollowing(next); }, []);
-  const stop = useCallback(() => { updateFollowing(false); setActive(false); setWelcome(false); rememberInvitation(); }, [updateFollowing]);
+  const stop = useCallback(() => { invitationShown.current = true; updateFollowing(false); setActive(false); setWelcome(false); rememberInvitation(); }, [updateFollowing]);
   const enterPage = useCallback((next: GuidePage | null, invite = false) => {
     if (current.current === next && !invite) return;
     if (next && next !== current.current) {
@@ -56,7 +57,8 @@ export function OnboardingProvider({ children }: { readonly children: ReactNode 
       if (followingRef.current && !seen.current.has(next)) { seen.current.add(next); setActive(true); }
       else setActive(false);
     } else if (!next) { current.current = null; setPage(null); setActive(false); }
-    if (invite && !readGuidePreferences().invited) { rememberInvitation(); setWelcome(true); }
+    // Eligibility comes from saved work. A skip lasts for this visit only until a plan is saved.
+    if (invite && !invitationShown.current) { invitationShown.current = true; rememberInvitation(); setWelcome(true); }
   }, []);
   const startReplay = useCallback(async (returnId?: string) => {
     let id = returnId ?? datasetIdFromRoute(window.location.hash);

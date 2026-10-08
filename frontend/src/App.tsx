@@ -44,7 +44,7 @@ import { useGuidePage, useOnboarding } from "./onboarding/Onboarding.tsx";
 import {
   getSavedDataset, listSavedDatasets,
   saveGeneratedPurchasePlan, saveDatasetWork, summarizeSavedDataset,
-  hasUploadedBefore, rememberUploadVisit,
+  rememberUploadVisit,
   type SavedDataset, type SavedDatasetSummary, type SavedDecision, type SavedWork,
 } from "./storage/saved-datasets.ts";
 
@@ -104,7 +104,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
   const [updateTargetId, setUpdateTargetId] = useState<string | null>(updateDatasetId ?? null);
   const [uploadTarget, setUploadTarget] = useState<SavedDatasetSummary | null>(null);
-  const [workspaceActive, setWorkspaceActive] = useState(!guidedImport && (Boolean(initialDatasetId || updateDatasetId) || hasUploadedBefore()));
+  const [workspaceActive, setWorkspaceActive] = useState(!guidedImport && Boolean(initialDatasetId || updateDatasetId));
   const [workspaceInfo, setWorkspaceInfo] = useState<{ datasetName: string; shopName: string; rowCount: number } | null>(null);
   const [openingDataset, setOpeningDataset] = useState(Boolean(initialDatasetId || updateDatasetId));
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -132,7 +132,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
 
   const dataset = envelope.session.dataset;
   useGuidePage(workspaceActive ? "sidebar" : step === 1 ? "upload" : step === 2 ? "mapping" : null,
-    historyLoaded && !guidedImport && !workspaceActive && step === 1 && !hasUploadedBefore() && savedDatasets.length === 0);
+    historyLoaded && !guidedImport && !workspaceActive && step === 1 && savedDatasets.length === 0);
   const workspaceDataset = (activeSavedId && savedDatasets.find(item => item.id === activeSavedId)) || workspaceInfo || uploadTarget || {
     datasetName: dataset?.sourceName ?? t("New file"), shopName: "", rowCount: dataset?.rows.length ?? 0,
   };
@@ -600,7 +600,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
 
   const handleClearSession = useCallback(() => {
     const target = savedDatasets[0] ?? uploadTarget;
-    const keepSidebar = workspaceActive || envelope.session.dataset?.sourceMode === "user" || Boolean(target);
+    const keepSidebar = Boolean(target);
     terminateStocklessWorkers();
     const cleared = clearActiveSession(envelope);
     resetReadinessEvidence();
@@ -626,7 +626,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     setWorkspaceInfo(null);
     setMappingUndo(null);
     if (!guidedImport) window.history.replaceState(null, "", target ? `#update/${encodeURIComponent(target.id)}` : "#workspace");
-  }, [envelope, resetReadinessEvidence, savedDatasets, uploadTarget, workspaceActive, guidedImport]);
+  }, [envelope, resetReadinessEvidence, savedDatasets, uploadTarget, guidedImport]);
 
   const mappingSubmit = useRef(false);
   const [mappingSubmitting, setMappingSubmitting] = useState(false);
