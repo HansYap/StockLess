@@ -212,7 +212,7 @@ export function MappingScreen(props: MappingScreenProps) {
             </ul>
           </section>
           <section className="mapping-card" data-guide="mapping-optional" aria-labelledby="mapping-optional">
-            <div className="mapping-card__head"><span className="mapping-icon mapping-icon--amber" aria-hidden="true">🪴</span>
+            <div className="mapping-card__head"><span className="mapping-icon mapping-icon--amber" aria-hidden="true"><GrowthIcon stage="potted" /></span>
               <div><h2 id="mapping-optional">{t("Optional")}</h2><p>{t('Each one adds to your results. Choose "Not in this file" to skip.')}</p></div>
               <span className={"mapping-pill" + (optionalCount === OPTIONAL_FIELDS.length ? " mapping-pill--ok" : "")}>{optionalCount} {t("of")} {OPTIONAL_FIELDS.length} {t("matched")}</span>
             </div>
@@ -244,7 +244,7 @@ export function MappingScreen(props: MappingScreenProps) {
           <div className="mapping-saved-controls">{props.children}</div>
         </div>
         <aside className="mapping-help mapping-card">
-          <h2><span aria-hidden="true">🌱</span> {t("Check your data")}</h2><p>{t("Review your columns and make sure StockLess has the information it needs.")}</p>
+          <h2><GrowthIcon stage="sprout" size={20} className="growth-icon--inline" /> {t("Check your data")}</h2><p>{t("Review your columns and make sure StockLess has the information it needs.")}</p>
           <ol>{["Read your column names", "Match each column to a StockLess field", "Review the data preview", "Confirm your column mappings"].map((label, index) => <li key={label}><span className="mapping-help__number" aria-hidden="true">{index + 1}</span><span>{t(label)}</span></li>)}</ol>
           <h3>{t("Identify your products")}</h3><p>{t("Choose how StockLess should tell your products apart.")}</p>
           <ol>{[["One code column", "SKU, barcode or product code"], ["Product name + pack size", "Product Name + Pack Variant"]].map(([label, description], index) => <li key={label}><span className="mapping-help__number" aria-hidden="true">{index + 1}</span><span><b>{t(label)}</b><small>{t(description)}</small></span></li>)}</ol>

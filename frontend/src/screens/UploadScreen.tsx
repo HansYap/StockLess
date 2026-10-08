@@ -317,7 +317,7 @@ export function UploadScreen({
           </section>
           <aside className="upload-guidance" aria-label={t("Required and optional columns")}>
             <section className="upload-card upload-needed">
-              <h2><span aria-hidden="true">🌱</span> {t("Your file needs three columns")}</h2>
+              <h2><GrowthIcon stage="sprout" size={20} className="growth-icon--inline" /> {t("Your file needs three columns")}</h2>
               <p>{t("You'll pair them up in the next step.")}</p>
               <ul>{REQUIRED_COLUMNS.map(([icon, title, description, example]) => <li key={title}>
                 <span className="upload-guidance__icon"><WorkflowIcon name={icon} /></span>
@@ -326,7 +326,7 @@ export function UploadScreen({
               </li>)}</ul>
             </section>
             <section className="upload-card upload-optional">
-              <h2><span aria-hidden="true">🪴</span> {t("Optional columns add more")}</h2>
+              <h2><GrowthIcon stage="potted" size={20} className="growth-icon--inline" /> {t("Optional columns add more")}</h2>
               <ul>{OPTIONAL_COLUMNS.map(([icon, title, description, tag]) => <li key={title}>
                 <span className="upload-guidance__icon"><WorkflowIcon name={icon} /></span>
                 <span className="upload-guidance__text"><b>{t(title)}</b><small>{t(description)}</small></span>
