@@ -4,7 +4,7 @@ import { t, useLanguage } from "../i18n/index.ts";
 import { listSavedDatasets } from "../storage/saved-datasets.ts";
 import { datasetIdFromRoute } from "../visit-routing.ts";
 import { guideRouteFor, guides, rememberGuide, rememberInvitation, visibleGuideTarget, type GuidePage } from "./guides.ts";
-import shop from "./shop.svg";
+import { Stocky, type StockyPose } from "./Stocky.tsx";
 import "./onboarding.css";
 
 interface Onboarding {
@@ -31,7 +31,7 @@ export function GuideButton({ onStart }: { readonly onStart?: () => Promise<void
   return <button type="button" className="onboarding-guide-button" disabled={busy} aria-busy={busy} onClick={() => {
     setBusy(true);
     void (onStart ? onStart() : onboarding.startReplay()).finally(() => setBusy(false));
-  }}><span aria-hidden="true">✦</span> {t("Guide")}</button>;
+  }}><span className="onboarding-guide-button__face" aria-hidden="true"><Stocky pose="idle" size={28} /></span>{t("Guide")}</button>;
 }
 
 /** Shared controller survives route changes; guides never own or save retailer data. */
@@ -98,7 +98,7 @@ export function OnboardingProvider({ children }: { readonly children: ReactNode 
   return <Context.Provider value={{ available: true, following, startReplay, enterPage, emit, stop }}>
     {children}
     <dialog ref={dialog} className="onboarding-welcome" aria-labelledby="onboarding-welcome-title" aria-describedby="onboarding-welcome-description" onCancel={stop}>
-      <div className="onboarding-welcome__art"><img src={shop} alt={t("A small shop with a sales sheet and a basket of groceries")} /></div>
+      <div className="onboarding-welcome__art"><Stocky pose="hello" size={168} label={t("Stocky, the StockLess guide")} /><span className="onboarding-welcome__bubble" aria-hidden="true">{t("Hi, I’m Stocky!")}</span></div>
       <div className="onboarding-welcome__copy"><p className="onboarding-eyebrow">{t("Welcome to StockLess")}</p><h2 id="onboarding-welcome-title">{t("Want a hand getting started?")}</h2><p id="onboarding-welcome-description">{t("Follow a few simple tips as you upload and check your sales file. You can use the buttons as we go.")}</p>
         <div className="onboarding-welcome__actions"><button type="button" className="onboarding-button" onClick={stop}>{t("Skip for now")}</button><button ref={startButton} type="button" className="onboarding-button onboarding-button--primary" onClick={follow}>{t("Follow along")} <span aria-hidden="true">→</span></button></div>
         <p className="onboarding-welcome__replay">{t("You can start again anytime with Guide.")}</p></div>
@@ -108,6 +108,8 @@ export function OnboardingProvider({ children }: { readonly children: ReactNode 
 }
 
 interface Geometry { target: DOMRect; left: number; top: number; host: HTMLElement; }
+/** Stocky appears only in the Step 1 and Step 2 tips; other pages keep the plain card. */
+const stockyPoses: Partial<Record<GuidePage, readonly StockyPose[]>> = { upload: ["hello", "great"], mapping: ["magnify", "magnify", "great"] };
 function Coachmark({ page, index, onNext, onStop }: { page: GuidePage; index: number; onNext: () => void; onStop: () => void }) {
   const step = guides[page][index];
   const [geometry, setGeometry] = useState<Geometry | null>(null);
@@ -157,9 +159,11 @@ function Coachmark({ page, index, onNext, onStop }: { page: GuidePage; index: nu
   if (!geometry) return null;
   const label = { upload: "Upload", mapping: "Match columns", sidebar: "Your workspace", history: "Upload history" }[page];
   const advance = () => { onNext(); };
+  const pose = stockyPoses[page]?.[index];
   return createPortal(<>
     <div className="onboarding-spotlight" aria-hidden="true" style={{ top: geometry.target.top - 7, left: geometry.target.left - 7, width: geometry.target.width + 14, height: geometry.target.height + 14 }} />
-    <aside ref={coach} className="onboarding-coach" aria-labelledby="onboarding-coach-title" style={{ top: geometry.top, left: geometry.left }}>
+    <aside ref={coach} className={`onboarding-coach${pose ? " onboarding-coach--stocky" : ""}`} aria-labelledby="onboarding-coach-title" style={{ top: geometry.top, left: geometry.left }}>
+      {pose && <span className="onboarding-coach__stocky"><Stocky pose={pose} size={68} /></span>}
       <div className="onboarding-coach__top"><span>{t(label)} · {index + 1} / {guides[page].length}</span><button type="button" onClick={onStop}>{t("Skip guide")}</button></div>
       <h2 id="onboarding-coach-title">{t(step.title)}</h2><p>{t(step.body)}</p>
       <div className="onboarding-coach__bottom"><div className="onboarding-dots" aria-hidden="true">{guides[page].map((_, i) => <i key={i} className={i === index ? "is-active" : undefined} />)}</div>
