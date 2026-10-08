@@ -1216,7 +1216,6 @@ a.btn,a.btn:hover{text-decoration:none}
 .mapping-bulk p{margin:4px 0;color:#456455}.mapping-bulk small{display:block;color:#456455;line-height:1.5}.mapping-bulk .btn{flex-shrink:0}
 .topbar{gap:16px}.topbar .session-status{flex-wrap:wrap}.topbar .workspace-home-link{margin-left:auto}
 html[lang=zh-Hans] .sl-home h1,html[lang=zh-Hans] .sl-home h2,html[lang=zh-Hans] .sl-home h3{letter-spacing:0;line-height:1.3}
-html[lang=ms] .sl-home h1{font-size:clamp(36px,5.8vw,76px);letter-spacing:-.045em}
 @media(max-width:900px){.topbar{height:auto;min-height:76px;padding:16px 20px;flex-wrap:wrap}.topbar .session-status{width:100%}.sl-nav-actions{gap:8px}.mapping-bulk{align-items:flex-start;flex-direction:column}}
 @media(max-width:600px){.sl-nav{flex-wrap:wrap;gap:12px}.sl-nav-actions{flex:1;justify-content:flex-end}.sl-nav-actions .sl-button--small{padding:10px 12px;font-size:12px}.language-switcher{padding:4px}.language-switcher svg{width:23px}.language-switcher select{max-width:102px}.mapping-bulk .btn{width:100%}.mapping-bulk{padding:18px}}
 
