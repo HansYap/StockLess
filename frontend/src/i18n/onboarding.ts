@@ -4,6 +4,8 @@ export const onboardingMessages: Record<string, readonly [string, string]> = {
   "Want a hand getting started?": ["需要我们带您开始吗？", "Mahu bantuan untuk bermula?"],
   "Follow a few simple tips as you upload and check your sales file. You can use the buttons as we go.": ["上传和检查销售文件时，我们会提供几个简单提示。您可以一边看提示，一边使用按钮。", "Ikuti beberapa tip mudah semasa memuat naik dan menyemak fail jualan. Anda boleh menggunakan butang sepanjang panduan."],
   "A small shop with a sales sheet and a basket of groceries": ["一家小店、销售表和一篮食品", "Kedai kecil dengan lembaran jualan dan bakul barangan runcit"],
+  "Stocky, the StockLess guide": ["StockLess 向导 Stocky", "Stocky, pemandu StockLess"],
+  "Hi, I’m Stocky!": ["你好，我是 Stocky！", "Hai, saya Stocky!"],
   "Skip for now": ["暂时跳过", "Langkau dahulu"],
   "Follow along": ["跟着指引操作", "Ikuti panduan"],
   "You can start again anytime with Guide.": ["随时点击“使用指引”重新开始。", "Anda boleh mula semula pada bila-bila masa melalui Panduan."],
