@@ -670,6 +670,8 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
       return;
     }
     if (getReadinessBlockers(envelope.session.mapping).length > 0) {
+      // An unfinished reupload leaves the saved plan in place, so open that plan.
+      if (pendingUploadTarget.current) { await openSavedDataset(pendingUploadTarget.current, destination); return; }
       setMappingNotice("Confirm your columns to finish preparing this dataset.");
       goTo(2);
       return;

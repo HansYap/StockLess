@@ -1,0 +1,46 @@
+order,keywords,category,note
+1,3 in 1|2 in 1|3-in-1|2-in-1,,drink mix: mostly sugar and creamer
+2,sambal|sos|sauce|kicap|ketchup|perencah|seasoning|rempah|pes|paste,,sauce or seasoning: mixed ingredients
+3,susu pekat|condensed|susu tepung|milk powder|krimer|creamer,,concentrated milk product
+4,santan|kelapa|coconut,,no coconut factor in the source
+5,ikan bilis|anchovy|anchovies|ikan kering|dried fish,,dried fish: weight is concentrated
+6,nasi|biskut|biscuit|biscuits|kerepek|keropok|kerupuk|chips|crackers|kuih|kek|cake,,prepared or mixed food
+7,mee segera|mi segera|instant noodle|instant noodles|mee telur|egg noodle|egg noodles,Wheat & Rye,approximate: instant or egg noodles (before meat and egg words)
+8,minyak soya|soybean oil,Soybean Oil,
+9,minyak zaitun|olive oil,Olive Oil,
+10,minyak bunga matahari|sunflower oil,Sunflower Oil,
+11,minyak masak|minyak goreng|minyak sawit|cooking oil|palm oil|vegetable oil,Palm Oil,Malaysian cooking oil is palm olein
+12,susu soya|soy milk|soya milk,Soy milk,
+13,tauhu|tofu|tempe|tempeh,Tofu,
+14,udang|prawn|prawns|shrimp|shrimps,Prawns (farmed),
+15,telur|egg|eggs,Eggs,before poultry: telur ayam means chicken eggs
+16,ayam|chicken|itik|duck,Poultry Meat,
+17,kambing|bebiri|mutton|lamb,Lamb & Mutton,
+18,babi|pork,Pig Meat,
+19,daging|beef|lembu|kerbau|buffalo,Beef (beef herd),approximate: daging is usually beef
+20,ikan|fish|sardin|sardine|sardines|tuna|sotong|squid,Fish (farmed),approximate: the source has no wild-caught fish
+21,keju|cheese,Cheese,
+22,mentega kacang|peanut butter|kacang tanah|kacang goreng|peanut|peanuts|groundnut|groundnuts,Groundnuts,
+23,susu|milk|yogurt|yoghurt|dadih,Milk,
+24,beras|rice|bihun|mee hoon|vermicelli|kuetiau|kway teow|pulut,Rice,
+25,jagung|corn|maize|cornflour,Maize,
+26,oat|oats|oatmeal,Oatmeal,
+27,roti|bread|tepung|flour|gandum|wheat|mee|mi|noodle|noodles|pasta|spaghetti|macaroni,Wheat & Rye,
+28,gula|sugar,Cane Sugar,
+29,kopi|coffee,Coffee,per kg of coffee: sweetened mixes are overestimated
+30,coklat|chocolate,Dark Chocolate,approximate for milk chocolate
+31,pisang|banana|bananas,Bananas,
+32,epal|apple|apples,Apples,
+33,oren|orange|oranges|limau|lemon|lemons|lime|limes|mandarin|mandarins,Citrus Fruit,
+34,anggur|grape|grapes|strawberi|strawberry|strawberries|blueberry|blueberries|berry|berries,Berries & Grapes,
+35,tomato|tomatoes,Tomatoes,
+36,kentang|potato|potatoes,Potatoes,
+37,ubi kayu|tapioca|cassava,Cassava,
+38,bawang|onion|onions|leek|leeks|garlic|shallot|shallots,Onions & Leeks,
+39,lobak|carrot|carrots|radish,Root Vegetables,
+40,kubis|cabbage|brokoli|broccoli|sawi|kailan|cauliflower,Brassicas,
+41,kacang pis|pea|peas,Peas,
+42,kacang panjang|long bean|long beans,Other Vegetables,
+43,kacang|bean|beans|dal|dhal|lentil|lentils|chickpea|chickpeas,Other Pulses,
+44,sayur|vegetable|vegetables|bayam|spinach|timun|cucumber|terung|brinjal|eggplant|cili|chilli|chili|kangkung|salad|lettuce|peria|bendi|okra|labu|pumpkin,Other Vegetables,
+45,buah|fruit|fruits|mangga|mango|betik|papaya|nanas|pineapple|tembikai|watermelon|durian|jambu|guava|rambutan,Other Fruit,

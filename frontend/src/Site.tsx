@@ -31,7 +31,9 @@ function SiteContent() {
     let active = true;
     void listSavedDatasets().then((saved) => {
       if (!active) return;
-      const destination = saved[0] ? startRouteFor(saved[0].id) : route === "#entry" ? "#home" : "#workspace";
+      // Reloading Upload history keeps it open; other entry routes resume the latest upload.
+      const destination = saved[0] ? (["#history", "#returning"].includes(window.location.hash) ? "#history" : startRouteFor(saved[0].id))
+        : route === "#entry" ? "#home" : "#workspace";
       window.history.replaceState(null, "", destination);
       setRoute(destination);
     }).catch(() => {

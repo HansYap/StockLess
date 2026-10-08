@@ -3,6 +3,7 @@ import { addCalendarDays, buildImportedOutcomeEvidence, compareOutcomePeriods, c
   type ReadinessSnapshot, type PurchaseDecision, type RecordedStockOutcome, type OutcomeUnit, type RecordedOutcomeSummary, type HistoricalFinancialSummary } from "../engine.ts";
 import { getLocale, useLanguage } from "../i18n/index.ts";
 import { getSavedDataset, savedPurchaseDecisions, savedStockOutcomes } from "../storage/saved-datasets.ts";
+import { malaysiaToday } from "./DecisionOutcomeControls.tsx";
 import "./decision-outcome-controls.css";
 
 interface Props {
@@ -15,10 +16,12 @@ interface Props {
 export function OutcomePeriodComparison({ datasetId, currentSnapshot, onLoaded }: Props) {
   const language = useLanguage();
   const copy = (en: string, zh: string, ms: string) => language === "zh" ? zh : language === "ms" ? ms : en;
-  const [firstStart, setFirstStart] = useState(() => addCalendarDays(currentSnapshot.analysisDate, -55));
-  const [firstEnd, setFirstEnd] = useState(() => addCalendarDays(currentSnapshot.analysisDate, -28));
-  const [secondStart, setSecondStart] = useState(() => addCalendarDays(currentSnapshot.analysisDate, -27));
-  const [secondEnd, setSecondEnd] = useState(currentSnapshot.analysisDate);
+  // Default periods end today, so outcomes recorded after the analysis date are included.
+  const today = malaysiaToday();
+  const [firstStart, setFirstStart] = useState(() => addCalendarDays(today, -55));
+  const [firstEnd, setFirstEnd] = useState(() => addCalendarDays(today, -28));
+  const [secondStart, setSecondStart] = useState(() => addCalendarDays(today, -27));
+  const [secondEnd, setSecondEnd] = useState(today);
   const [unit, setUnit] = useState<OutcomeUnit | "">("");
   const [decisions, setDecisions] = useState<readonly PurchaseDecision[]>([]);
   const [outcomes, setOutcomes] = useState<readonly RecordedStockOutcome[]>([]);

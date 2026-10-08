@@ -72,7 +72,9 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   if (!/^\d{4}-\d{2}-\d{2}T/.test(generatedAt) || !Number.isFinite(Date.parse(generatedAt))) throw new Error("A valid report generation date and time is required.");
   const dates = snapshot.rows.flatMap(row => row.interpretedValues.transactionDate && row.interpretedValues.transactionDate <= snapshot.analysisDate ? [row.interpretedValues.transactionDate] : []).sort();
-  const period = input.period ?? { start: dates[0] ?? snapshot.analysisDate, end: snapshot.analysisDate };
+  // Decisions and outcomes recorded after the analysis date stay inside the default period.
+  const recorded = [...(input.decisions ?? []).map(item => item.decisionDate), ...(input.outcomes ?? []).map(item => item.date)];
+  const period = input.period ?? { start: dates[0] ?? snapshot.analysisDate, end: [snapshot.analysisDate, ...recorded].sort().pop()! };
   validateReportingPeriod(period);
   const metadata = Object.freeze({ shopName: input.shopName?.trim() || "Not supplied", datasetId: input.datasetId,
     datasetName: input.datasetName?.trim() || snapshot.sourceName, sourceName: snapshot.sourceName, sourceSha256: snapshot.sourceSha256,

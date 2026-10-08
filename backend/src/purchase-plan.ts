@@ -207,7 +207,9 @@ function estimateRestock(
   // Planned order accepts whole units. Ceiling prevents an adopted estimate
   // from falling short of the midpoint when stock on hand is fractional.
   const quantity = Math.max(0, Math.ceil(midpointTarget - stock!.currentStock! - incoming));
-  const afterUnavailableReason = range.low === 0 ? "Cannot tell how much will expire: demand could be zero" : undefined;
+  // Zero lowest demand only blocks an expiry or storage adjustment; with neither, After equals Before.
+  const afterUnavailableReason = range.low === 0 && (expiryRisk.state === "cannot_tell" || storageWindow?.state === "estimated")
+    ? "Cannot tell how much will expire: demand could be zero" : undefined;
   const atRisk = expiryRisk.state === "estimated" ? expiryRisk.quantity : 0;
   const shelfLifeCap = storageWindow?.state === "estimated" ? Math.floor(range.low / 28 * storageWindow.days) : undefined;
   const adjusted = Math.max(0, Math.ceil(midpointTarget - Math.max(0, stock!.currentStock! - atRisk) - incoming));
