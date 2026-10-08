@@ -5,6 +5,7 @@ import type { DragEvent } from "react";
 import { inspectExcelWorkbook, importExcelWorksheet, type ExcelWorksheet } from "./excel-import.ts";
 import "./upload.css";
 import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
+import { BrandIcon } from "../components/BrandIcon.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
 import {
   CsvImportError,
@@ -41,10 +42,24 @@ interface ImportFailure {
 
 const PHASE_LABEL: Readonly<Record<CsvProgress["phase"], string>> = {
   decode: "Reading the file",
-  detect_delimiter: "Detecting the delimiter",
-  parse: "Parsing rows",
+  detect_delimiter: "Finding the columns",
+  parse: "Reading rows",
   complete: "Finishing up",
 };
+
+const PHASE_ORDER: readonly CsvProgress["phase"][] = ["decode", "detect_delimiter", "parse", "complete"];
+
+/** One plain sentence for what is happening right now (replaces the "% · still working (Ns)" counter). */
+const PHASE_LINE: Readonly<Record<CsvProgress["phase"], string>> = {
+  decode: "Opening the file…",
+  detect_delimiter: "Working out which columns hold what…",
+  parse: "Reading your sales rows…",
+  complete: "Putting your products together…",
+};
+
+function formatFileSize(bytes: number): string {
+  return bytes >= 1024 * 1024 ? (bytes / 1024 / 1024).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
+}
 
 // The bundled sample marks 2026-09-15 as its analysis day (SMP-TODAY-001).
 const SAMPLE_REFERENCE_DATE = "2026-09-15";
@@ -102,6 +117,7 @@ export function UploadScreen({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<CsvProgress | null>(null);
   const [finishingSeconds, setFinishingSeconds] = useState(0);
+  const [busyFile, setBusyFile] = useState<{ readonly name: string; readonly size: number } | null>(null);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [dragging, setDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -148,6 +164,7 @@ export function UploadScreen({
     abortRef.current = controller;
     setFailure(null);
     setBusy(true);
+    setBusyFile({ name, size: expectedBytes });
     setProgress({ phase: "decode", processed: 0, total: expectedBytes });
     try {
       const bytes = await loadBytes(controller.signal, (processed) => {
@@ -177,7 +194,7 @@ export function UploadScreen({
     if (isExcel) {
       if (!workbook || !chosenSheet || chosenSheet.problem) return;
       const controller = new AbortController(); abortRef.current = controller;
-      setBusy(true); setFailure(null); setProgress({ phase: "decode", processed: 0, total: file.size });
+      setBusy(true); setBusyFile({ name: file.name, size: file.size }); setFailure(null); setProgress({ phase: "decode", processed: 0, total: file.size });
       try {
         const converted = await importExcelWorksheet(workbook.bytes, file.name, worksheetName, controller.signal,
           () => setProgress({ phase: "parse", processed: 0, total: 0 }));
@@ -226,7 +243,7 @@ export function UploadScreen({
     setSelectedFile(file);
     if (!/\.(xlsx|xls)$/i.test(file.name)) return;
     const controller = new AbortController(); abortRef.current = controller;
-    setBusy(true); setProgress({ phase: "decode", processed: 0, total: file.size });
+    setBusy(true); setBusyFile({ name: file.name, size: file.size }); setProgress({ phase: "decode", processed: 0, total: file.size });
     try {
       const bytes = await readFileBytes(file, controller.signal, processed => setProgress({ phase: "decode", processed, total: file.size }));
       const sheets = await inspectExcelWorkbook(bytes, file.name, controller.signal, () => setProgress({ phase: "parse", processed: 0, total: 0 }));
@@ -263,17 +280,32 @@ export function UploadScreen({
               onDragOver={(event) => { event.preventDefault(); if (!busy) setDragging(true); }}
               onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
               onDrop={handleDrop} aria-busy={busy}>
-              <div className="upload-file-badge" aria-hidden="true"><span>CSV /<br />XLS</span></div>
+              {!busy && <div className="upload-file-badge" aria-hidden="true"><span>CSV /<br />XLS</span></div>}
               {busy ? <>
-                <h2>{t(progress ? PHASE_LABEL[progress.phase] : "Reading the file")}</h2>
-                <p role="status">{t(progress && progress.total > 0
-                  ? Math.min(100, Math.round(progress.processed / progress.total * 100)) + "% complete" + (progress.phase === "complete" ? " · still working (" + finishingSeconds + "s)" : "")
-                  : "Working in this browser…")}</p>
+                {busyFile && <div className="upload-busy-file">
+                  <BrandIcon name="file" size={30} />
+                  <span><b>{busyFile.name}</b><small>{formatFileSize(busyFile.size)} · {t("Read in this browser")}</small></span>
+                </div>}
+                <h2>{t(progress?.phase === "complete" ? "Almost there" : "Reading your file")}</h2>
+                <ol className="upload-steps">
+                  {PHASE_ORDER.map((phase, index) => {
+                    const current = PHASE_ORDER.indexOf(progress?.phase ?? "decode");
+                    const state = index < current ? "done" : index === current ? "current" : "todo";
+                    const percent = progress && progress.total > 0 ? Math.min(100, Math.round(progress.processed / progress.total * 100)) : null;
+                    return <li key={phase} className={`upload-step upload-step--${state}`}>
+                      <span className="upload-step__dot" aria-hidden="true">{state === "done" ? "✓" : ""}</span>
+                      <span className="upload-step__label">{t(PHASE_LABEL[phase])}</span>
+                      {state === "current" && phase === "parse" && percent !== null && <span className="upload-step__extra">{percent}%</span>}
+                      {state !== "todo" && <span className="sr-only">{t(state === "done" ? "Done" : "In progress")}</span>}
+                    </li>;
+                  })}
+                </ol>
                 <div className="progress" role="progressbar" aria-label={t("Import progress")}
                   aria-valuemin={0} aria-valuemax={100}
                   aria-valuenow={progress && progress.total > 0 ? Math.min(100, Math.round(progress.processed / progress.total * 100)) : 0}>
                   <span className="progress__fill" style={{ width: progress && progress.total > 0 ? Math.min(100, progress.processed / progress.total * 100) + "%" : "10%" }} />
                 </div>
+                <p role="status">{t(PHASE_LINE[progress?.phase ?? "decode"])}{progress?.phase === "complete" && finishingSeconds >= 5 ? " " + t("Big files can take a little longer.") : ""}</p>
                 <button type="button" className="btn btn--ghost" onClick={cancelImport}>{t("Cancel")}</button>
               </> : <>
                 <h2>{t("Drop your CSV or Excel file here")}</h2>
