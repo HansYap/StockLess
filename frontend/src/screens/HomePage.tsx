@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type C
 import { Logo } from "../components/Logo.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
 import { BrandIcon } from "../components/BrandIcon.tsx";
+import { HeroBasket } from "../components/HeroBasket.tsx";
 import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
 import { localizedWorkspaceHref, setLanguage, t, useLanguage, type Language } from "../i18n/index.ts";
 import { homepageRefreshMessages } from "../i18n/homepage-refresh.ts";
@@ -194,7 +195,7 @@ function HomeHeader() {
 }
 
 function Hero() {
-  const { copy, startHref, asset } = useHomeView();
+  const { copy, startHref } = useHomeView();
   const story = useHeroStory();
   const openDemo = (event: MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest("a, button")) return;
@@ -209,7 +210,7 @@ function Hero() {
         <path d="M24 4C12 12 8 24 12 36c10 2 22-2 28-14C36 12 30 6 24 4Z" fill="#B9DCBE" />
         <path d="M14 38C20 28 26 20 34 12" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" />
       </svg>
-      <img className="hp-hero__basket" src={asset("design-basket.png")} alt="" width="360" height="300" />
+      <HeroBasket className="hp-hero__basket" />
       <div className="wrap hp-hero__in">
         <div className="hp-hero__text">
           <p className="hp-eyebrow">
@@ -1327,7 +1328,7 @@ function StartBanner() {
 function Sustainability() {
   const { copy } = useHomeView();
   return (
-    <section className="wrap hp-sdg">
+    <section className="wrap hp-sdg" id="sdg">
       <div className="hp-sdg__card">
         <div className="hp-sdg__top">
           <b>
@@ -1478,10 +1479,20 @@ function HomeFooter() {
         <a className="brand" href="#home" aria-label="StockLess">
           <Logo height={36} />
         </a>
-        <p>
-          <span>
-            {copy("hp.foot")}
-          </span>
+        <p className="hp-foot__legal">
+          <b>
+            {"© 2026 StockLess"}
+          </b>
+          {" "}
+          {copy("hp.foot.by")}
+          <i aria-hidden="true">·</i>
+          {copy("hp.foot.made")}
+          <i aria-hidden="true">·</i>
+          {copy("hp.foot.tag")}
+          <i aria-hidden="true">·</i>
+          <a className="hp-foot__sdg" href="#sdg" title={copy("hp.foot")} aria-label={copy("hp.foot")}>
+            {"SDG 12.3"}
+          </a>
         </p>
         <a className="hp-link" href="#top">
           <span>

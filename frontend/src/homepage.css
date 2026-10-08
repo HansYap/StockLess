@@ -489,3 +489,37 @@ html[lang^="zh"] .sl-home h1,html[lang^="zh"] .sl-home h2,html[lang^="zh"] .sl-h
 /* drawn icons replace the homepage emoji */
 .sl-home .hp-inline-icon{display:inline-block;vertical-align:-2px}
 .sl-home .hp-faq__ic{display:inline-flex;line-height:0}
+/* footer credit line */
+.sl-home .hp-foot__legal{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.sl-home .hp-foot__legal b{font-weight:700;color:var(--ink-2,#4F6168)}
+.sl-home .hp-foot__legal i{font-style:normal;color:#B8C8C4}
+.sl-home .hp-foot__sdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:var(--teal-tint);color:var(--teal-deep);font-family:var(--display);font-weight:800;font-size:11px;text-decoration:none}
+.sl-home .hp-foot__sdg:hover{background:#D6EBE5}
+.sl-home .hp-foot__sdg:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.sl-home .hp-sdg{scroll-margin-top:96px}
+
+/* ===== SDG icon: give it a fixed shape so iPhone Safari doesn't collapse it ===== */
+.sl-home .hp-sdg__icon{height:auto;aspect-ratio:140/100;flex:none}
+@media(max-width:700px){.sl-home .hp-sdg__card{min-height:240px}}
+
+/* ===== drawn hero basket keeps its shape in every browser ===== */
+.sl-home .hp-hero__basket{aspect-ratio:360/300}
+
+/* ===== interactive demo: same cards, two columns on wide screens =====
+   Forecast on the left; suggested restock, your order, purchase check and
+   verdict on the right. Below 1100px it stays the single column. */
+@media (min-width:1100px){
+  .sl-home .hp-pp{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);grid-template-areas:"head head" "ev two" "ev check" "extras foot";gap:14px 16px;align-items:start}
+  .sl-home .hp-pp>.pp2-head{grid-area:head}
+  .sl-home .hp-pp>.pp2-ev{grid-area:ev;gap:10px;padding:16px}
+  .sl-home .hp-pp>.pp2-two:not(.pp2-extras){grid-area:two}
+  .sl-home .hp-pp>.pp2-check{grid-area:check}
+  .sl-home .hp-pp>.pp2-extras{grid-area:extras}
+  .sl-home .hp-pp>.pp2-foot{grid-area:foot;align-self:end}
+  .sl-home .hp-pp>.pp2-ev .pp-forecast-chart{gap:8px}
+  .sl-home .hp-pp>.pp2-ev .pp-period-chart{padding-top:40px}
+  .sl-home .hp-pp>.pp2-ev .pp-period-plot{height:150px}
+  .sl-home .hp-pp>.pp2-ev .pp-period-axis small{top:-34px}
+  .sl-home .hp-pp>.pp2-ev .pp2-facts>div{padding:9px 12px}
+  .sl-home .hp-pp>.pp2-ev .pp2-facts b{font-size:17px}
+}
