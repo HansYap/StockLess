@@ -69,9 +69,10 @@
 .pp-steps__nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
 .pp-steps__nav-right { display: flex; align-items: center; gap: 10px; }
 .purchase-plan--new .btn.is-locked { background: #e5ece9; border-color: #e5ece9; color: #7d8d91; cursor: not-allowed; }
-.pp-steps__summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pp-steps__summary { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .pp-steps__summary li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid #e1ece7; border-radius: 12px; background: #fff; }
 .pp-steps__summary li > span { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); min-width: 0; }
+.pp-steps__summary li > span:first-child { flex: 1; font-size: 14px; }
 .purchase-plan--new .pp-steps__summary b { font-size: 14px; color: var(--ink); white-space: nowrap; }
 .pp-steps__summary li > span:last-child { flex: none; gap: 10px; }
 .pp-steps__summary .pp-link-button { white-space: nowrap; }
