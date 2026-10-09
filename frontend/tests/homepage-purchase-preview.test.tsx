@@ -20,13 +20,13 @@ describe("redesigned homepage", () => {
     expect(example.getByRole("img", { name: /^Stock after order:/ }).getAttribute("aria-label")).toContain("Stock after order: 18 units");
     expect(forecast.getAttribute("aria-label")).toContain("Next 4 weeks: 15–21 units");
   });
-  it("keeps every start and workflow link on the existing visit-routing entry point", () => {
+  it("keeps start links on visit routing while workflow cards return to the homepage top", () => {
     render(<HomePage startHref="#start" />);
     const starts = screen.getAllByRole("link", { name: "Start with your sales data →" });
     expect(starts).toHaveLength(3);
     for (const link of starts) expect(link.getAttribute("href")).toBe("#start");
     for (const label of ["Upload your sales data", "Map your columns", "Check your data is ready", "Plan your purchases"]) {
-      expect(screen.getByRole("link", { name: new RegExp(label) }).getAttribute("href")).toBe("#start");
+      expect(screen.getByRole("link", { name: new RegExp(label) }).getAttribute("href")).toBe("#top");
     }
     expect(screen.getByRole("link", { name: "Try it with your own data →" }).getAttribute("href")).toBe("#start");
   });
@@ -72,12 +72,17 @@ describe("redesigned homepage", () => {
   it("pauses and resumes the independent hero story without changing the interactive order", () => {
     vi.useFakeTimers();
     const { container } = render(<HomePage />);
+    expect(container.querySelector("#ha-order")!.textContent).toBe("37");
+    act(() => vi.advanceTimersByTime(2400));
+    expect(container.querySelector("#ha-order")!.textContent).toBe("37");
+    act(() => vi.advanceTimersByTime(100));
+    expect(container.querySelector("#ha-order")!.textContent).toBe("24");
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     const initial = container.querySelector("#ha-order")!.textContent;
     act(() => vi.advanceTimersByTime(4000));
     expect(container.querySelector("#ha-order")!.textContent).toBe(initial);
     fireEvent.click(screen.getByRole("button", { name: "Play" }));
-    act(() => vi.advanceTimersByTime(6000));
+    act(() => vi.advanceTimersByTime(2500));
     expect(container.querySelector("#ha-order")!.textContent).toBe("10");
     expect((screen.getByRole("slider", { name: "Your order" }) as HTMLInputElement).value).toBe("37");
     expect(Number(container.querySelector("#ha-saved")!.textContent)).toBe(24);

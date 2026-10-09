@@ -87,16 +87,14 @@ function useReducedMotion() {
 function useHeroStory() {
   const reducedMotion = useReducedMotion();
   const [playing, setPlaying] = useState(true);
-  const [tick, setTick] = useState(0);
+  const [frame, setFrame] = useState(0);
   useEffect(() => {
     if (reducedMotion || !playing) return;
-    const timer = window.setInterval(() => setTick(value => value + 1), 60);
+    const timer = window.setInterval(() => setFrame(value => (value + 1) % 3), 2500);
     return () => window.clearInterval(timer);
   }, [playing, reducedMotion]);
-  const phase = reducedMotion ? 2 : Math.floor(tick / 55) % 3;
-  const progress = Math.min(1, (tick % 55) / 55 * 1.4);
-  const eased = progress < .5 ? 2 * progress ** 2 : 1 - (-2 * progress + 2) ** 2 / 2;
-  const order = phase === 0 ? 37 : phase === 1 ? Math.round(37 - 27 * eased) : 10;
+  const phase = reducedMotion ? 2 : frame;
+  const order = [37, 24, 10][phase];
   return { order, phase, playing, reducedMotion, verdict: order + 8 > 21 ? "hi" : "ok", toggle: () => setPlaying(value => !value) };
 }
 
@@ -476,7 +474,7 @@ function WasteContext() {
 const GUIDE_POSES: readonly StockyPose[] = ["hello", "magnify", "magnify", "great"];
 
 function Workflow() {
-  const { copy, startHref } = useHomeView();
+  const { copy } = useHomeView();
   const reducedMotion = useReducedMotion();
   const [step, setStep] = useState(0);
   const [heldStep, setHeldStep] = useState<number | null>(null);
@@ -515,7 +513,7 @@ function Workflow() {
           <span id="hs-line" style={{ width: `${(activeStep + 1) * 25}%` }} />
         </div>
         <div className="hp-steps">
-          <a className={activeStep === 0 ? "hp-step is-on" : "hp-step"} href={startHref} onMouseEnter={() => setHeldStep(0)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(0)} onBlur={() => setHeldStep(null)}>
+          <a className={activeStep === 0 ? "hp-step is-on" : "hp-step"} href="#top" onMouseEnter={() => setHeldStep(0)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(0)} onBlur={() => setHeldStep(null)}>
             <span className="hp-step__n">
               {"1"}
             </span>
@@ -529,7 +527,7 @@ function Workflow() {
               {copy("hp.s1t")}
             </p>
           </a>
-          <a className={activeStep === 1 ? "hp-step is-on" : "hp-step"} href={startHref} onMouseEnter={() => setHeldStep(1)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(1)} onBlur={() => setHeldStep(null)}>
+          <a className={activeStep === 1 ? "hp-step is-on" : "hp-step"} href="#top" onMouseEnter={() => setHeldStep(1)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(1)} onBlur={() => setHeldStep(null)}>
             <span className="hp-step__n">
               {"2"}
             </span>
@@ -543,7 +541,7 @@ function Workflow() {
               {copy("hp.s2t")}
             </p>
           </a>
-          <a className={activeStep === 2 ? "hp-step is-on" : "hp-step"} href={startHref} onMouseEnter={() => setHeldStep(2)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(2)} onBlur={() => setHeldStep(null)}>
+          <a className={activeStep === 2 ? "hp-step is-on" : "hp-step"} href="#top" onMouseEnter={() => setHeldStep(2)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(2)} onBlur={() => setHeldStep(null)}>
             <span className="hp-step__n">
               {"3"}
             </span>
@@ -557,7 +555,7 @@ function Workflow() {
               {copy("hp.s3t")}
             </p>
           </a>
-          <a className={activeStep === 3 ? "hp-step is-on" : "hp-step"} href={startHref} onMouseEnter={() => setHeldStep(3)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(3)} onBlur={() => setHeldStep(null)}>
+          <a className={activeStep === 3 ? "hp-step is-on" : "hp-step"} href="#top" onMouseEnter={() => setHeldStep(3)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(3)} onBlur={() => setHeldStep(null)}>
             <span className="hp-step__n">
               {"4"}
             </span>

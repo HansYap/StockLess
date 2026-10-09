@@ -462,6 +462,10 @@ html[lang^="zh"] .sl-home h1,html[lang^="zh"] .sl-home h2,html[lang^="zh"] .sl-h
 .sl-home .hp-shared-chart--compact .pp-stock-row-label { font-size: 11px; margin-bottom: 4px; }
 .sl-home .hp-shared-chart--compact .pp-stock-rows { gap: 10px; }
 .sl-home .hp-shared-chart--compact .pp-stock-track { height: 12px; }
+.sl-home .hp-shared-chart--compact .pp-stock-segment,
+.sl-home .hp-shared-chart--compact .pp-stock-estimate,
+.sl-home .hp-shared-chart--compact .pp-stock-estimate-range { transition: width .7s ease; }
+@media(prefers-reduced-motion:reduce){.sl-home .hp-shared-chart--compact .pp-stock-segment,.sl-home .hp-shared-chart--compact .pp-stock-estimate,.sl-home .hp-shared-chart--compact .pp-stock-estimate-range{transition:none}}
 
 /* ===== Stocky in "How it works" =====
    One Stocky on the homepage, walking with the active step card. Decorative. */
