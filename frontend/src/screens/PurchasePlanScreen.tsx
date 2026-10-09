@@ -5,6 +5,8 @@ import { summarizePurchaseExcess, estimatePurchaseCost, type PlanningContexts, t
 import { evaluateProductPurchasePlan, type DemandForecastReview, type ReadinessSnapshot, type ProductPurchaseInputs, type ExpiryCheckInput, type ProductPurchasePlan, type SupplierOrderTerms } from "../engine.ts";
 import { evaluatePurchaseProduct, joinPurchaseEvidence, purchaseGroup, purchaseGroupLabels, type PurchaseDrafts, type PurchaseEvaluator, type PurchaseProduct, type PurchaseGroup } from "../purchase-plan/model.ts";
 import { ProductPurchasePanel } from "../purchase-plan/ProductPurchasePanel.tsx";
+import { prepareSuggestedOrders, type SuggestedOrderReview } from "../purchase-plan/suggested-orders.ts";
+import { SuggestedOrdersReview } from "../purchase-plan/SuggestedOrdersReview.tsx";
 import { purchaseDate } from "../purchase-plan/PurchaseDemandChart.tsx";
 import { numberText } from "../purchase-plan/SourceTag.tsx";
 import { purchasePlanFilename, serializePurchasePlanCsv } from "../purchase-plan/purchase-plan-export.ts";
@@ -17,6 +19,7 @@ interface Props {
   snapshot: ReadinessSnapshot; forecast: DemandForecastReview; drafts: PurchaseDrafts;
   selectedKey: string | null; onSelect: (key: string | null) => void;
   onDraftChange: (key: string, inputs: ProductPurchaseInputs) => void; onBack: () => void; onImpact?: () => void;
+  onDraftsChange?: (updates: PurchaseDrafts) => void;
   onReviewProduct?: (key: string) => void;
   evaluatePurchase?: PurchaseEvaluator; expiryByProduct?: Readonly<Record<string, ExpiryCheckInput | undefined>>;
   supplierDrafts?: SupplierDrafts; onSupplierChange?: (key: string, terms: SupplierOrderTerms) => void;
@@ -33,14 +36,15 @@ const groups: readonly { id: PurchaseGroup; label: string; help: string; icon: s
 ];
 const rank: Record<PurchaseGroup, number> = { check_order: 0, order_needed: 1, balanced: 2, need_data: 3 };
 
-export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, onSelect, onDraftChange, onBack, onImpact, onReviewProduct, evaluatePurchase = evaluateProductPurchasePlan, expiryByProduct, supplierDrafts, onSupplierChange, contexts, datasetId, onContextChange }: Props) {
-  useLanguage();
+export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, onSelect, onDraftChange, onDraftsChange, onBack, onImpact, onReviewProduct, evaluatePurchase = evaluateProductPurchasePlan, expiryByProduct, supplierDrafts, onSupplierChange, contexts, datasetId, onContextChange }: Props) {
+  const language = useLanguage(), copy = (en:string,zh:string,ms:string) => language === "zh" ? zh : language === "ms" ? ms : en;
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<PurchaseGroup | "all">("all");
   const [positiveOnly, setPositiveOnly] = useState(false);
   const [financialSort, setFinancialSort] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const detailColumn = useRef<HTMLElement>(null);
+  const prepareButton = useRef<HTMLButtonElement>(null);
   const [compactHero, setCompactHero] = useState(false);
   useEffect(() => {
     let compact = false;
@@ -69,6 +73,22 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
     planCache.current = nextCache;
     return nextPlans;
   }, [products, snapshot.analysisDate, drafts, evaluatePurchase, expiryByProduct]);
+  const [suggestionReview, setSuggestionReview] = useState<{ data: SuggestedOrderReview; products: typeof products; plans: typeof plans; terms: SupplierDrafts; datasetId: typeof datasetId } | null>(null);
+  const [appliedCount, setAppliedCount] = useState(0);
+  const prepareOrders = () => {
+    setAppliedCount(0);
+    setSuggestionReview({ data: prepareSuggestedOrders(products, plans, drafts, terms, snapshot.analysisDate, evaluatePurchase, expiryByProduct), products, plans, terms, datasetId });
+  };
+  const reviewStale = !!suggestionReview && (suggestionReview.products !== products || suggestionReview.plans !== plans || suggestionReview.terms !== terms || suggestionReview.datasetId !== datasetId);
+  const closeSuggestionReview = () => {
+    setSuggestionReview(null);
+    window.requestAnimationFrame(() => prepareButton.current?.focus());
+  };
+  const applySuggestions = (updates: PurchaseDrafts) => {
+    if (reviewStale || !onDraftsChange) return;
+    onDraftsChange(updates);
+    setAppliedCount(Object.keys(updates).length); closeSuggestionReview();
+  };
   const inputsFor = (product: PurchaseProduct) => drafts[product.key] ?? product.fileInputs;
   const financialRisk = (key:string) => { const p = plans.get(key); const q = p?.audit.state === 'verdict' ? Math.max(0, p.audit.figures.availableAfterOrder.value - p.audit.figures.demandHigh.value) : undefined; const cost = estimatePurchaseCost(snapshot,key,q); return cost.state === 'estimated' ? cost.amount : -1; };
   const sorted = useMemo(() => [...products].sort((a, b) => (financialSort ? financialRisk(b.key) - financialRisk(a.key) : rank[purchaseGroup(plans.get(a.key))] - rank[purchaseGroup(plans.get(b.key))]) || (a.sku ?? a.key).localeCompare(b.sku ?? b.key)), [products, plans, financialSort]);
@@ -84,7 +104,7 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
   useEffect(() => {
     if (firstSelectedSnapshot.current === snapshot.id) return;
     firstSelectedSnapshot.current = snapshot.id;
-    setQuery(""); setGroup("all"); setExpanded(false); setLocalTerms({});
+    setQuery(""); setGroup("all"); setExpanded(false); setLocalTerms({}); setSuggestionReview(null); setAppliedCount(0);
     if (!selectedKey || !products.some(product => product.key === selectedKey)) onSelect(sorted[0]?.key ?? null);
   }, [snapshot.id, products, sorted, selectedKey, onSelect]);
   const changeFilter = (search: string, selectedGroup: PurchaseGroup | "all") => {
@@ -126,6 +146,8 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
     <div className="pp-wrap pp-main">
       {mismatchCount > 0 && <p className="notice notice--error" role="alert">{t(`Evidence mismatch affects ${mismatchCount} products. Return to readiness and refresh the forecast.`)}</p>}
       <div className="pp-kpis" role="group" aria-label={t("Filter by what each product needs")}>{groups.map(item => <button key={item.id} type="button" className={`pp-kpi pp-kpi--${item.id}`} aria-pressed={group === item.id} onClick={() => changeFilter(query, group === item.id ? "all" : item.id)}><span className="pp-icon" aria-hidden="true">{item.icon}</span><span><b className="pp-kpi-number num">{counts[item.id]}</b> <b>{t(item.label)}</b><small>{t(item.help)}</small></span></button>)}</div>
+      {onDraftsChange && <div className="pp-prepare"><button ref={prepareButton} type="button" className="btn btn--primary" onClick={prepareOrders}>{copy("Prepare suggested orders", "准备建议订单", "Sediakan cadangan pesanan")}</button><p>{copy("Fill blank orders together, then review before using them.", "一起准备空白订单，查看后再采用。", "Sediakan pesanan kosong bersama, kemudian semak sebelum menggunakannya.")}</p></div>}
+      {appliedCount > 0 && <p className="pp-bulk-status" role="status">{copy(`${appliedCount} draft ${appliedCount === 1 ? "order" : "orders"} updated. You can still edit each quantity.`, `已更新 ${appliedCount} 个草稿订单。每项数量仍可修改。`, `${appliedCount} pesanan draf dikemas kini. Anda masih boleh mengedit setiap kuantiti.`)}</p>}
       <div className="cp3-actions"><label><input type="checkbox" checked={positiveOnly} onChange={e=>setPositiveOnly(e.target.checked)} /> {t("Only products I am ordering")}</label><label><input type="checkbox" checked={financialSort} onChange={e=>setFinancialSort(e.target.checked)} /> {t("Sort by estimated financial risk")}</label></div>
       <div className="pp-layout"><aside className="pp-detail-column" ref={detailColumn}>{selected ? <ProductPurchasePanel datasetId={datasetId} onPlanningChange={onContextChange ? value => onContextChange(selected.key, value) : undefined} key={selected.key} product={selected} plan={plans.get(selected.key)} inputs={inputsFor(selected)} analysisDate={snapshot.analysisDate} terms={terms[selected.key] ?? {}} onTermsChange={nextTerms => onSupplierChange ? onSupplierChange(selected.key, nextTerms) : setLocalTerms(previous => ({ ...previous, [selected.key]: nextTerms }))} onChange={inputs => onDraftChange(selected.key, inputs)} onReviewData={onReviewProduct ? () => onReviewProduct(selected.key) : onBack} position={selectedIndex >= 0 ? selectedIndex : undefined} total={visible.length} onPrevious={selectedIndex > 0 ? () => select(visible[selectedIndex - 1].key) : undefined} onNext={visible.length > 1 ? next : undefined} onDone={done} /> : <section className="pp-detail pp-empty"><h2>{t("Purchase details")}</h2><p>{t(visible.length ? "Select a product to enter quantities and review its evidence." : "No products match.")}</p></section>}
         <div className="pp-privacy"><span className="pp-icon" aria-hidden="true">✓</span><div><b>{t("Your data stays on your device")}</b><p>{t("Quantities are never sent to a supplier.")}</p><small>{snapshot.sourceName} · {t(snapshot.sourceMode === "sample" ? "Sample data" : "Retailer file")}</small></div></div>
@@ -140,5 +162,6 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts, selectedKey, on
         <p className="pp-list-count" role="status">{t(`Showing ${shown.length} of ${visible.length} matching products.`)} {t("Counts above do not change when filtering.")}</p>
       </section></div>
     </div>
+    {suggestionReview && <SuggestedOrdersReview review={suggestionReview.data} stale={reviewStale} onRefresh={prepareOrders} onClose={closeSuggestionReview} onApply={applySuggestions} onReviewProduct={key => { setSuggestionReview(null); setQuery(""); setGroup("all"); setPositiveOnly(false); setExpanded(true); onSelect(key); window.requestAnimationFrame(() => { detailColumn.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }); detailColumn.current?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true }); }); }} />}
   </main>;
 }

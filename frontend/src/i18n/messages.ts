@@ -3726,4 +3726,7 @@ Object.assign(messages, {
   "Putting your products together…": ["正在整理您的产品…", "Menyusun produk anda…"],
   "Big files can take a little longer.": ["文件较大时会稍慢一些。", "Fail besar mungkin mengambil masa lebih sedikit."],
   "In progress": ["进行中", "Sedang berjalan"],
+  "Delivery falls outside the next 4 weeks. Review this product individually.": ["送货时间在未来四周之外。请单独查看此商品。", "Penghantaran di luar 4 minggu akan datang. Semak produk ini secara individu."],
+  "The supplier quantity exceeds the storage limit. Review this product individually.": ["供应商订购量超过储存限制。请单独查看此商品。", "Kuantiti pembekal melebihi had penyimpanan. Semak produk ini secara individu."],
+  "A reliable purchase check is required first.": ["请先完成可靠的采购检查。", "Semakan belian yang boleh dipercayai diperlukan dahulu."],
 });

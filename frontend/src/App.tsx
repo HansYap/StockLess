@@ -807,7 +807,13 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           forecast={forecast}
           drafts={purchaseDrafts}
           onDraftChange={(key, inputs) => {
-            const next = { ...purchaseDrafts, [key]: inputs };
+            const next = { ...latestDrafts.current, [key]: inputs };
+            latestDrafts.current = next;
+            setPurchaseDrafts(next);
+            if (activeSavedId) void persistWork(activeSavedId, { purchaseDrafts: next });
+          }}
+          onDraftsChange={updates => {
+            const next = { ...latestDrafts.current, ...updates };
             latestDrafts.current = next;
             setPurchaseDrafts(next);
             if (activeSavedId) void persistWork(activeSavedId, { purchaseDrafts: next });

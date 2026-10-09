@@ -41,10 +41,11 @@ vi.mock("../src/screens/ReadinessScreen.tsx", () => ({ ReadinessScreen: (props: 
 vi.mock("../src/screens/PurchasePlanScreen.tsx", () => ({ PurchasePlanScreen: (props: ComponentProps<typeof import("../src/screens/PurchasePlanScreen.tsx").PurchasePlanScreen>) => <>
   <h1>Saved purchase plan</h1><button onClick={props.onBack}>Back to test readiness</button>
   <button onClick={() => props.onDraftChange("A", { plannedOrder: { state: "value", value: 20, source: "input by you" }, incomingStock: { state: "empty" } })}>Edit test order</button>
+  <button onClick={() => props.onDraftsChange?.({ B: { plannedOrder: { state: "value", value: 12, source: "input by you" }, incomingStock: { state: "value", value: 7, source: "from your file" } }, C: { plannedOrder: { state: "value", value: 0, source: "input by you" }, incomingStock: { state: "empty" } } })}>Apply test bulk suggestions</button>
   <button onClick={() => props.onSupplierChange?.("A", { caseSize: 6 })}>Edit test supplier</button>
   <span data-testid="restored-drafts">{JSON.stringify(props.drafts)}</span><span data-testid="restored-suppliers">{JSON.stringify(props.supplierDrafts)}</span>
 </> }));
-vi.mock("../src/screens/ImpactDashboard.tsx", () => ({ ImpactDashboard: () => <h1>Saved impact dashboard</h1> }));
+vi.mock("../src/screens/ImpactDashboard.tsx", () => ({ ImpactDashboard: (props: ComponentProps<typeof import("../src/screens/ImpactDashboard.tsx").ImpactDashboard>) => <><h1>Saved impact dashboard</h1><span data-testid="impact-drafts">{JSON.stringify(props.drafts)}</span></> }));
 
 function importedEnvelope() {
   const empty = createEmptySession();
@@ -427,6 +428,31 @@ it("automatically saves order and supplier edits", async () => {
   fireEvent.click(screen.getByText("Edit test supplier"));
   await waitFor(() => expect(saveDatasetWork).toHaveBeenCalledWith("existing", expect.objectContaining({ supplierOrderDrafts: { A: { caseSize: 6 } } })));
   expect(screen.queryByRole("button", { name: /Save/ })).toBeNull();
+});
+
+it("saves reviewed bulk drafts together, keeps earlier edits and shares them with impact and reopening", async () => {
+  const rendered = render(<App initialDatasetId="existing" />);
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  fireEvent.click(screen.getByText("Edit test order"));
+  await waitFor(() => expect(saved.purchaseDrafts.A?.plannedOrder).toMatchObject({ value: 20 }));
+  vi.mocked(saveDatasetWork).mockClear();
+  fireEvent.click(screen.getByText("Apply test bulk suggestions"));
+  await waitFor(() => expect(saveDatasetWork).toHaveBeenCalledOnce());
+  expect(saveDatasetWork).toHaveBeenCalledWith("existing", { purchaseDrafts: {
+    A: { plannedOrder: { state: "value", value: 20, source: "input by you" }, incomingStock: { state: "empty" } },
+    B: { plannedOrder: { state: "value", value: 12, source: "input by you" }, incomingStock: { state: "value", value: 7, source: "from your file" } },
+    C: { plannedOrder: { state: "value", value: 0, source: "input by you" }, incomingStock: { state: "empty" } },
+  } });
+  fireEvent.click(within(sidebar()).getByRole("button", { name: "Impact dashboard" }));
+  await screen.findByRole("heading", { name: "Saved impact dashboard" });
+  expect(JSON.parse(screen.getByTestId("impact-drafts").textContent!)).toEqual(saved.purchaseDrafts);
+  rendered.unmount();
+  render(<App initialDatasetId="existing" />);
+  await screen.findByRole("heading", { name: "Saved purchase plan" });
+  expect(JSON.parse(screen.getByTestId("restored-drafts").textContent!)).toEqual(saved.purchaseDrafts);
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  expect(saved.decisions).toEqual([]);
+  expect(saved.outcomes).toEqual([]);
 });
 
 it("keeps the automatically saved plan available when a reupload is cancelled", async () => {

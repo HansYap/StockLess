@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t, useLanguage } from "../i18n/index.ts";
 import { ProductLabelList } from "../components/ProductLabelList.tsx";
 import { PlanningInputsPanel } from "../components/PlanningInputsPanel.tsx";
@@ -27,6 +27,16 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
   const [errors, setErrors] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
   const [supplierRaw, setSupplierRaw] = useState<Partial<Record<keyof SupplierOrderTerms, string>>>({});
   const [supplierErrors, setSupplierErrors] = useState<Partial<Record<keyof SupplierOrderTerms, string>>>({});
+  // A reviewed bulk change must also replace any local text for the old order.
+  useEffect(() => {
+    setTyped(previous => {
+      if (previous.plannedOrder === undefined) return previous;
+      const edit = applyPurchaseQuantityEdit(inputs.plannedOrder, previous.plannedOrder);
+      const matches = edit.accepted && edit.field.state === inputs.plannedOrder.state && (edit.field.state !== "value" || (inputs.plannedOrder.state === "value" && edit.field.value === inputs.plannedOrder.value));
+      return matches ? previous : { ...previous, plannedOrder: undefined };
+    });
+    setErrors(previous => previous.plannedOrder ? { ...previous, plannedOrder: undefined } : previous);
+  }, [inputs.plannedOrder]);
   const value = (field: keyof ProductPurchaseInputs) => inputs[field].state === "value" ? inputs[field].value : 0;
   const update = (field: keyof ProductPurchaseInputs, raw: string) => {
     const result = applyPurchaseQuantityEdit(inputs[field], raw);
@@ -64,7 +74,7 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
   const sellingPrice = product.planningContext?.sellingPrice;
   const reason = product.issue || (product.demand?.label === "Cannot assess" ? product.demand.labelReason?.message : restock?.state === "unavailable" ? restock.reason : product.demand?.labelReason?.message) || "Review the available evidence before planning.";
   return <section className="pp-detail" aria-labelledby="purchase-detail-title">
-    <header className="pp-detail-head"><div><span className="pp-kicker">{position === undefined ? t("Selected product outside current filter") : t(`Product ${position + 1} of ${total}`)}</span><h2 id="purchase-detail-title">{product.title}</h2>
+    <header className="pp-detail-head"><div><span className="pp-kicker">{position === undefined ? t("Selected product outside current filter") : t(`Product ${position + 1} of ${total}`)}</span><h2 id="purchase-detail-title" tabIndex={-1}>{product.title}</h2>
       <p className="pp-detail-sub">{product.sku || t("Not available")}{product.pack ? ` · ${product.pack}` : ""} · {t("Counted")} {stock?.stockAsOfDate ? purchaseDate(stock.stockAsOfDate) : "—"}{stock?.freshness.ageDays !== undefined ? ` · ${t(`${stock.freshness.ageDays} days old`)}` : ""}</p>
     </div><div className="pp-detail-nav"><span className={`pp-pill pp-pill--${group}`}>{t(purchaseGroupLabels[group])}</span><button type="button" onClick={onPrevious} disabled={!onPrevious} aria-label={t("Previous product")}>‹</button><button type="button" onClick={onNext} disabled={!onNext} aria-label={t("Next product")}>›</button></div></header>
     <ProductLabelList labels={product.labels} shown={[product.title, product.sku, product.pack]} />
