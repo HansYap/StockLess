@@ -10,7 +10,8 @@ it('generates a real paginated PDF with embedded Chinese font, metadata and long
     {id:'decisions',title:'Saved Decisions',columns:['Original recommendation','Final quantity'],rows:[[40,0]]},
     {id:'carbon',title:'CO2e Estimates',columns:['Product name','Measure','Status','Mass (kg)','CO2e (kg)','Factor label','Source names','Limitation'],rows:[['米','potential_excess','estimated',5,16.084,'estimate','SEL + AGB + Poore + BCD','a'.repeat(1400)]]}
   ],limitations:['Sample data; no measured reduction claimed.']};
-  const font=await readFile(process.cwd()+'/public/fonts/NotoSansSC.ttf');
+  const fontPath='../public/fonts/NotoSansSC.ttf';
+  const font=await readFile(new URL(fontPath, import.meta.url));
   const bytes=await buildAnalysisPdfBytes(report,Uint8Array.from(font));
   expect(new TextDecoder().decode(bytes.slice(0,8))).toMatch(/^%PDF-/);
   const doc=await PDFDocument.load(bytes);

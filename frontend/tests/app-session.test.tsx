@@ -125,7 +125,7 @@ describe("App forecast and draft lifecycle", () => {
     open();
     expect(
       screen.getByLabelText("Planned order").getAttribute("aria-valuetext"),
-    ).toBe("Not entered");
+    ).toBe("12 units");
     expect(
       (screen.getByLabelText("Incoming stock") as HTMLInputElement).value,
     ).toBe("");
@@ -138,7 +138,7 @@ describe("App forecast and draft lifecycle", () => {
     await waitFor(() =>
       expect(
         screen.getByLabelText("Planned order").getAttribute("aria-valuetext"),
-      ).toBe("Not entered"),
+      ).toBe("12 units"),
     );
     expect(store.mock.calls.every(([key]) => key === "stockless.hasUploaded")).toBe(true);
     store.mockRestore();

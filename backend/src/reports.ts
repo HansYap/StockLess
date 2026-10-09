@@ -106,6 +106,7 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
     "Current product and scenario results describe the analysis date and the next four-week demand horizon. The reporting period filters saved decisions and recorded outcomes, not the current forecast.",
     "The finalised order list uses the latest saved decision per product in this dataset, including decisions outside the report history period; newer zero decisions remove an earlier order.",
     "CO2e source agreement is not ground-truth validation or evidence of achieved emissions reductions.",
+    "Automatic draft quantities are labelled worked out by StockLess; they are not saved purchase decisions. AI-assigned categories retain model and source provenance and are not manual confirmations.",
     ...(snapshot.sourceMode === "sample" ? ["Sample data: these results are illustrative and are not this retailer's recorded outcomes."] : []),
   ]);
   const tables: AnalysisReportTable[] = [];

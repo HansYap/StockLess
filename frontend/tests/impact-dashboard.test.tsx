@@ -24,7 +24,7 @@ describe("impact dashboard", () => {
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{ A: entered(100) }} onBack={() => {}} />);
     const overview = within(screen.getByRole("list", { name: "Your plan at a glance" }));
     expect(overview.getAllByRole("button")).toHaveLength(3);
-    expect(overview.getByText("From 1 of 3 products · next 4 weeks")).toBeTruthy();
+    expect(overview.getByText("From 2 of 3 products · next 4 weeks")).toBeTruthy();
     for (const title of ["Detailed estimates", "Download your results", "See the illustrated plan", "How these estimates work"]) {
       expect(screen.getByText(title).closest("details")?.open).toBe(false);
     }
@@ -61,9 +61,9 @@ describe("impact dashboard", () => {
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
     expect(screen.getByRole("heading", { name: "See the impact of your purchase plan" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Understanding your impact" })).toBeTruthy();
-    expect(screen.getByText(`Potential excess: ${lines[0].units} sales units · 1/3 assessed`)).toBeTruthy();
+    expect(screen.getByText(`Potential excess: ${lines[0].units} sales units · 2/3 assessed`)).toBeTruthy();
     const business = businessPanel();
-    expect(business.getAllByText("No planned order entered.")).toHaveLength(2);
+    expect(business.getAllByText("No planned order entered.")).toHaveLength(1);
     expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("Unavailable");
   });
 
@@ -85,7 +85,7 @@ describe("impact dashboard", () => {
     expect(business.getAttribute("aria-selected")).toBe("false");
     expect(document.getElementById("environment-impact")?.hidden).toBe(false);
     expect(screen.getByText("No outcome recorded")).toBeTruthy();
-    const question = screen.getByText("Categories to confirm, largest known kg at risk first");
+    const question = screen.getByText("How CO₂e estimates are calculated");
     fireEvent.click(question);
     expect(question.closest("details")?.open).toBe(true);
     fireEvent.click(business);
@@ -120,16 +120,16 @@ describe("impact dashboard", () => {
     expect(screen.getByText(/It is not achieved savings, profit or selling-price revenue/)).toBeTruthy();
   });
 
-  it("does not turn missing orders into zero spending even when usable costs are present", () => {
+  it("uses sourced automatic drafts for missing orders and preserves an entered zero", () => {
     const { snapshot, forecast } = costEvidence();
     const { rerender } = render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{}} onBack={() => {}} />);
-    expect(within(screen.getByRole("button", { name: /Possible excess stock/ })).getByText("Not yet available")).toBeTruthy();
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("Unavailable");
-    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 0/3");
+    expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
+    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 50.00");
+    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
     rerender(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{ A: entered(0) }} onBack={() => {}} />);
     expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 0.00");
-    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 1/3");
+    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 20.00");
+    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
   });
 
   it("requires confirmed food categories before showing CO2e and exposes actual factor sources", () => {

@@ -16,7 +16,7 @@ function Harness({ data = makeEvidence(), initial = {}, terms = {}, apply = vi.f
     onDraftChange={(key, inputs) => setDrafts(previous => ({ ...previous, [key]: inputs }))}
     onDraftsChange={updates => { apply(updates); setDrafts(previous => ({ ...previous, ...updates })); }} onBack={() => {}} />;
 }
-const prepare = () => fireEvent.click(screen.getByRole("button", { name: "Prepare suggested orders" }));
+const prepare = () => fireEvent.click(screen.getByRole("button", { name: "Review suggested orders" }));
 const dialog = () => within(screen.getByRole("dialog", { name: "Review suggested orders" }));
 const choice = (sku: string) => dialog().getByRole("checkbox", { name: new RegExp(`SKU ${sku}$`) }) as HTMLInputElement;
 function review(data = makeEvidence(), drafts: PurchaseDrafts = {}, terms: SupplierDrafts = {}) {
@@ -116,7 +116,7 @@ describe("reviewed suggested orders", () => {
   it.each(["zh", "ms"] as const)("translates bulk controls in %s while preserving product identity", language => {
     act(() => setLanguage(language));
     render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: language === "zh" ? "准备建议订单" : "Sediakan cadangan pesanan" }));
+    fireEvent.click(screen.getByRole("button", { name: language === "zh" ? "查看建议订单" : "Semak cadangan pesanan" }));
     const modal = screen.getByRole("dialog", { name: language === "zh" ? "查看建议订单" : "Semak cadangan pesanan" });
     expect(within(modal).getByRole("checkbox", { name: /Same product name.*000101/ })).toBeTruthy();
     expect(within(modal).getByRole("button", { name: language === "zh" ? "采用 2 项建议" : "Guna 2 cadangan" })).toBeTruthy();

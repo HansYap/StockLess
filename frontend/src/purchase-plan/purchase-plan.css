@@ -189,6 +189,16 @@
 .purchase-plan--new .pp-product-details > summary { cursor: pointer; color: var(--teal-deep); font: 700 15px/1.5 var(--display); }
 .purchase-plan--new .pp-product-details > summary small { display: block; margin: 4px 0 0 18px; color: var(--muted); }
 .purchase-plan--new .pp-product-details-body { display: flex; flex-direction: column; gap: 16px; padding-top: 16px; }
+.purchase-plan--new .pp-check-working { padding:20px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.purchase-plan--new .pp-check-working>h3 { font:700 16px/1.5 var(--display); color:var(--teal-deep); margin:0 0 12px; }
+.purchase-plan--new .pp-check-working>p { margin:12px 0; color:var(--muted); font-size:14px; line-height:1.6; }
+.purchase-plan--new .pp-check-working>p.num { font:600 16px/1.5 var(--data); color:var(--ink); padding:12px 14px; background:var(--teal-tint); border-radius:10px; }
+.purchase-plan--new .pp-check-inputs { list-style:none; padding:0; display:grid; gap:0; margin:16px 0 0; border-top:1px solid var(--line); }
+.purchase-plan--new .pp-check-inputs>li { padding:12px 0; border-bottom:1px solid var(--line); color:var(--ink); font-size:14px; line-height:1.6; }
+.purchase-plan--new .cp3-controls { border-color:var(--line); border-radius:16px; padding:20px; color:var(--ink); font-family:var(--body); }
+.purchase-plan--new .cp3-controls>summary { font:700 15px/1.5 var(--display); color:var(--teal-deep); }
+.purchase-plan--new .cp3-controls h3 { font:700 17px/1.5 var(--display); margin:18px 0 10px; }
+.purchase-plan--new .cp3-controls p { margin:12px 0; font-size:14px; line-height:1.6; }
 .purchase-plan--new .pp-product-details-body > .cp3-controls, .frame.frame--i3 .purchase-plan--new .pp-product-details-body > .pp-supplier-comparison { margin: 0; }
 .purchase-plan--new .pp-check-explanation > .pp-stock-comparison { margin-top: 12px; }
 .purchase-plan--new .pp-unavailable { padding: 18px; border-radius: 14px; border: 1px solid var(--line); background: #f4f7f6; }

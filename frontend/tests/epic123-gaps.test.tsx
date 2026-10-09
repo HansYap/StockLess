@@ -52,33 +52,26 @@ it("default problem CSV identifies the duplicate's retained and excluded rows in
   expect(csv).not.toContain("See all row evidence");
 });
 
-it("purchase summary shows Not entered before input and an assessed zero after an explicit zero", async () => {
+it("purchase summary uses an automatic draft and retains an explicit zero", async () => {
   const {snapshot,forecast} = await evidence();
   const props = {snapshot,forecast,selectedKey:"ID|A",onSelect:()=>{},onDraftChange:()=>{},onBack:()=>{},onImpact:()=>{}};
   const {rerender} = render(<PurchasePlanScreen {...props} drafts={{}} />);
   const summary = () => within(screen.getByRole("button",{name:/Possible excess stock.*See impact/}));
-  expect(summary().getByText("Not entered")).toBeTruthy();
-  expect(summary().queryByText("0 units")).toBeNull();
+  expect(summary().getByText("0 units")).toBeTruthy();
+  expect(summary().queryByText("Not entered")).toBeNull();
   rerender(<PurchasePlanScreen {...props} drafts={{"ID|A":{...emptyProductPurchaseInputs(),plannedOrder:createPurchaseQuantity(0,"input by you")}}} />);
   expect(summary().getByText("0 units")).toBeTruthy();
   expect(summary().queryByText("Not entered")).toBeNull();
 });
 
-it("sample offers two supplier comparisons and adopts only an explicitly chosen quantity", async () => {
-  const {snapshot,forecast} = await evidence({sample:true});
-  const product = joinPurchaseEvidence(snapshot,forecast)[0], inputs = emptyProductPurchaseInputs();
-  const plan = evaluateProductPurchasePlan(product.demand!,{stock:product.stock,analysisDate:snapshot.analysisDate,inputs});
-  const onChange = vi.fn();
+it("sample keeps a single supplier-terms home and shows the forecast immediately",async()=>{
+  const {snapshot,forecast}=await evidence({sample:true});const product=joinPurchaseEvidence(snapshot,forecast)[0],inputs=emptyProductPurchaseInputs();
+  const plan=evaluateProductPurchasePlan(product.demand!,{stock:product.stock,analysisDate:snapshot.analysisDate,inputs});const onChange=vi.fn();
   render(<ProductPurchasePanel product={product} plan={plan} inputs={inputs} analysisDate={snapshot.analysisDate} terms={{}} onTermsChange={()=>{}} onChange={onChange} onReviewData={()=>{}} total={1} onDone={()=>{}} />);
-  fireEvent.click(screen.getByText("Compare supplier options"));
-  const a = within(screen.getByRole("region",{name:"Supplier option A"})), b = within(screen.getByRole("region",{name:"Supplier option B"}));
-  expect(a.getByText("42")).toBeTruthy(); expect(b.getByText("60")).toBeTruthy();
+  expect(screen.getByRole("img",{name:/Recorded sales/})).toBeTruthy();
+  expect(screen.queryByText("Compare supplier options")).toBeNull();
+  expect(screen.queryByLabelText("Supplier name")).toBeNull();
   expect(onChange).not.toHaveBeenCalled();
-  fireEvent.click(a.getByRole("button",{name:"Use this supplier quantity"}));
-  expect(onChange.mock.calls[0][0].plannedOrder.value).toBe(42);
-  fireEvent.change(a.getByRole("textbox",{name:/Case size/}),{target:{value:"bad"}});
-  expect(a.queryByRole("button",{name:"Use this supplier quantity"})).toBeNull();
-  expect(a.getByRole("alert")).toBeTruthy();
 });
 
 it("storage explanation states retention, purposes and browser loss", () => {

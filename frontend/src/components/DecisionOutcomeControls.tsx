@@ -87,7 +87,7 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, mo
   const resetDecision = () => { setEditingDecision(undefined); setResponse(draftResponse); setFinalQuantity(String(plannedQuantity ?? recommendation ?? '')); setDecisionDate(today); setRestockDate(""); setReason(""); setSupplier(""); };
   const saveDecision = async () => {
     if (!datasetId || (!editingDecision && (recommendation === undefined || expiryBlocked))) return;
-    const edit = { response, finalQuantity, decisionDate, restockDate, reason, supplier, referenceDate: today };
+    const edit = { response, finalQuantity, decisionDate, restockDate, reason: reason.trim() || (response === "Changed" ? "Adjusted in StockLess" : ""), supplier, referenceDate: today };
     const saved = await act(() => editingDecision ? updateSavedPurchaseDecision(datasetId, editingDecision, edit) : (() => {
       const cost = estimatePurchaseCost(snapshot, product.key, recommendation);
       return savePurchaseDecision(datasetId, { ...edit, recommendation: { productKey: product.key, productName: product.title,
@@ -117,9 +117,9 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, mo
           <label>{copy("Response", "回应", "Tindakan")}<select value={response} onChange={event => { const next = event.target.value as DecisionResponse; setResponse(next); if (next === "Followed") { const original = decisions.find(item => item.id === editingDecision)?.recommendation.recommendedQuantity ?? recommendation; setFinalQuantity(original === undefined ? "" : String(original)); } }}>{(["Followed", "Changed", "Ignored"] as const).map(value => <option key={value} value={value}>{responseName(value)}</option>)}</select></label>
           <label>{copy("Final quantity", "最终数量", "Kuantiti akhir")}<input inputMode="numeric" value={finalQuantity} readOnly={response === "Followed"} onChange={event => setFinalQuantity(event.target.value)} /></label>
           <label>{copy("Decision date", "决定日期", "Tarikh keputusan")}<input type="date" value={decisionDate} max={today} onChange={event => setDecisionDate(event.target.value)} /></label>
-          <label className="decision-outcomes__wide">{response === 'Changed' ? copy('Reason for changing the order', '修改订单的原因', 'Sebab mengubah pesanan') : copy("Reason (optional)", "原因（可选）", "Sebab (pilihan)")}<input required={response === 'Changed'} value={reason} onChange={event => setReason(event.target.value)} /></label>
+          <label className="decision-outcomes__wide">{response === 'Changed' ? copy('Reason for changing the order (optional)', '修改订单的原因（可选）', 'Sebab mengubah pesanan (pilihan)') : copy("Reason (optional)", "原因（可选）", "Sebab (pilihan)")}<input value={reason} onChange={event => setReason(event.target.value)} /></label>
         </div>
-        <details className="decision-outcomes__optional"><summary>{copy('Optional supplier and restock details', '可选的供应商与补货详情', 'Butiran pembekal dan tambah stok pilihan')}</summary><div className="decision-outcomes__grid"><label>{copy("Restock date (optional)", "补货日期（可选）", "Tarikh tambah stok (pilihan)")}<input type="date" value={restockDate} onChange={event => setRestockDate(event.target.value)} /></label><label>{copy("Supplier (optional)", "供应商（可选）", "Pembekal (pilihan)")}<input value={supplier} onChange={event => setSupplier(event.target.value)} /></label></div></details>
+
         <div className="decision-outcomes__actions"><button className="btn btn--primary" type="submit" disabled={!editingDecision && (recommendation === undefined || !!expiryBlocked)}>{copy("Save decision", "保存决定", "Simpan keputusan")}</button>{editingDecision && <button className="btn btn--ghost" type="button" onClick={resetDecision}>{copy("Cancel edit", "取消修改", "Batal suntingan")}</button>}</div>
       </fieldset>
     </form>

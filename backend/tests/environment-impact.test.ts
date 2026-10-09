@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { applyPlanningContexts, buildDemandForecastReview, buildEnvironmentalImpact, buildImpactReview, buildPurchasePlanReview,
   confirmIdentityMode, createMappingState, createPurchaseQuantity, createStockOutcome, emptyProductPurchaseInputs, estimatePurchaseCost,
   parseCsvBytes, previousCompleteWeekStarts, resolveCarbonFactor, runReadinessCheck, setMapping,
-  type PlanningContexts } from "../src/index.ts";
+  automaticStorageAdvice, resolveProductPlanningContext, resolveReferencePrice, type PlanningContexts } from "../src/index.ts";
 
 const DATE = "2026-10-06", KEY = "ID|000101";
 async function fixture(options: { pack?: string; stock?: number; cost?: string; planned?: number; name?: string } = {}) {
@@ -25,11 +25,12 @@ const outcome = (quantity: number, unit: "pieces" | "kg" | "litres", context: { 
   quantity, unit, referenceDate: DATE, recordedAt: "2026-10-06T00:00:00Z",
 });
 
-test("environmental integration holds category gate, then uses user-confirmed bounded v2 with same financial plan", async () => {
+test("environmental integration resolves AI category without confirmation, then honours the user's category", async () => {
   const { snapshot, forecast, drafts, contexts, impact } = await fixture();
   const before = buildEnvironmentalImpact(snapshot, impact);
-  assert.equal(before.potentialResults[0].state, "unavailable");
-  assert.equal(before.potentialResults[0].code, "CATEGORY_NOT_CONFIRMED");
+  assert.equal(before.potentialResults[0].state, "estimated");
+  assert.equal(before.potentialResults[0].categorySource, "ai");
+  assert.match(before.potentialResults[0].categoryProvenance!, /CP3-v2-M12-P0/);
   const after = buildEnvironmentalImpact(snapshot, impact, contexts);
   const potential = after.potentialResults[0];
   assert.equal(potential.state, "estimated");
@@ -43,6 +44,39 @@ test("environmental integration holds category gate, then uses user-confirmed bo
   assert.deepEqual(impact.products[0].plan.audit, plan.audit);
   assert.deepEqual(impact.products[0].plannedSpend, estimatePurchaseCost(snapshot, KEY, 100));
   assert.deepEqual(impact.products[0].scenarioSpend, estimatePurchaseCost(snapshot, KEY, plan.estimatedRestock.state === "available" ? plan.estimatedRestock.quantity.value : undefined));
+});
+
+test('automatic resolution preserves manual zero cost, source identity and unknown category refusals', async () => {
+  const data = await fixture();
+  const original = { evidenceKey:data.snapshot.evidenceKey!, unitCost:0 };
+  const resolved = resolveProductPlanningContext(data.snapshot, KEY, original)!;
+  assert.equal(resolved.category,'rice'); assert.equal(resolved.categoryConfirmed,false);
+  assert.equal(resolved.categorySource,'ai'); assert.equal(resolved.unitCost,0);
+  assert.deepEqual(original,{evidenceKey:data.snapshot.evidenceKey!,unitCost:0});
+  const unknown = await fixture({name:'Beras Ayam'});
+  const result = buildEnvironmentalImpact(unknown.snapshot, unknown.impact).potentialResults[0];
+  assert.equal(result.state,'unavailable'); if (result.state === 'unavailable') assert.equal(result.code,'CATEGORY_NOT_CONFIRMED');
+  assert.equal(unknown.impact.products[0].plannedSpend.state,'estimated');
+  assert.ok(unknown.impact.products[0].excessUnits! > 0);
+  const blocked = {...data.snapshot,productLimitations:[{productKey:KEY,code:'IDENTITY_CONFLICT',message:'Conflict'} as never]};
+  assert.equal(resolveProductPlanningContext(blocked,KEY),undefined);
+});
+
+test('PriceCatcher exact-name reference and FoodKeeper advice work automatically without becoming cost or expiry', async () => {
+  const data = await fixture({name:'AYAM BERSIH - STANDARD',pack:'1kg'});
+  const resolved = resolveProductPlanningContext(data.snapshot,KEY)!;
+  assert.equal(resolved.priceCatcherItemCode,'1'); assert.equal(resolved.unitCost,undefined);
+  const price = resolveReferencePrice(data.snapshot,KEY);
+  assert.equal(price.state,'available'); if (price.state === 'available') { assert.equal(price.price,9.69); assert.equal(price.referenceOnly,true); }
+  const advice = automaticStorageAdvice(data.snapshot,KEY,{evidenceKey:data.snapshot.evidenceKey!,category:'chicken',categoryConfirmed:true,isFood:true});
+  assert.ok(advice?.windows.length); assert.match(advice!.source,/SHA-256/);
+  assert.equal(resolved.storageSelection,undefined);
+  const plan = buildPurchasePlanReview(data.snapshot,data.forecast).products[0];
+  if (plan.estimatedRestock.state === 'available') { assert.equal(plan.estimatedRestock.shelfLifeCap,undefined); assert.equal(plan.estimatedRestock.quantity.value,40); }
+  assert.equal(data.impact.products[0].plannedSpend.state,'estimated');
+  if (data.impact.products[0].plannedSpend.state === 'estimated') assert.equal(data.impact.products[0].plannedSpend.unitCost,2.5);
+  const retailerSku = await fixture({name:'Unknown item'});
+  assert.equal(resolveProductPlanningContext(retailerSku.snapshot,KEY)?.priceCatcherItemCode,undefined);
 });
 
 test("missing actual waste differs from recorded zero and never absorbs potential or scenario estimates", async () => {
@@ -113,8 +147,10 @@ test("manual evidence is applied for current source only, and actual records obe
   const staleImpact = buildImpactReview(staleEffective, freshForecast, drafts, undefined, entered);
   assert.equal(staleImpact.products[0].plannedSpend.state, "unavailable");
   const staleEnvironment = buildEnvironmentalImpact(staleEffective, staleImpact, entered);
-  assert.equal(staleEnvironment.potentialResults[0].state, "unavailable");
-  assert.equal(staleEnvironment.potentialResults[0].code, "CATEGORY_NOT_CONFIRMED");
+  assert.equal(staleEnvironment.potentialResults[0].state, "estimated");
+  assert.equal(staleEnvironment.potentialResults[0].categorySource, "ai");
+  assert.match(staleEnvironment.potentialResults[0].categoryProvenance!, /replacement-evidence/);
+  if (staleEnvironment.potentialResults[0].state === 'estimated') assert.equal(staleEnvironment.potentialResults[0].massKg, staleImpact.products[0].excessUnits! * .5);
   assert.throws(() => buildEnvironmentalImpact(snapshot, { ...impact, sourceSha256: "stale" }, entered), /current analysis evidence/);
   const factor = resolveCarbonFactor("chicken"); assert.equal(factor.state, "unavailable");
 });

@@ -26,73 +26,54 @@ const edit = (name:string) => fireEvent.click(screen.getByRole("button", { name:
 const save = () => fireEvent.click(screen.getByRole("button", { name:"Save this detail" }));
 
 describe("focused product details", () => {
-  it("shows usable file and pack values, and opens one small prompt instead of every field", () => {
+  it("resolves category and pack weight without asking for confirmation or bookkeeping", () => {
     render(<Harness />); open();
+    expect(screen.getByText("Rice · AI estimate")).toBeTruthy();
     expect(screen.getByText("MYR 2.50 · From your file")).toBeTruthy();
-    expect(screen.getByText("0.5000 kg · File or pack size")).toBeTruthy();
-    expect(screen.queryByRole("textbox")).toBeNull();
-    expect(screen.getByText("Where these values come from").closest("details")?.open).toBe(false);
-    edit("Purchase cost");
-    expect(screen.getAllByRole("textbox")).toHaveLength(1);
-    expect(screen.queryByLabelText("Food category")).toBeNull();
-    expect(screen.queryByLabelText("Measured kg / sales unit")).toBeNull();
-    edit("Weight per sales unit");
-    expect(screen.getAllByRole("textbox")).toHaveLength(1);
-    expect(screen.queryByLabelText("Your purchase cost / sales unit (MYR)")).toBeNull();
+    expect(screen.getByText("0.5000 kg · Resolved automatically")).toBeTruthy();
+    expect(screen.queryByLabelText("Storage method")).toBeNull();
+    expect(screen.queryByText("Other optional details →")).toBeNull();
+    expect(screen.queryByLabelText("Your selling price / sales unit (MYR)")).toBeNull();
   });
-  it("skips an invalid draft without changing saved values, and saves explicit zero while preserving other details", () => {
-    const saved = vi.fn(); render(<Harness initial={stored} save={saved} />); open(); edit("Purchase cost");
-    fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), { target:{ value:"-3" } }); save();
-    expect(screen.getByRole("alert").textContent).toContain("zero or a positive number");
+  it("rejects invalid cost, saves explicit zero and preserves existing optional evidence", () => {
+    const saved=vi.fn(); render(<Harness initial={stored} save={saved} />); open(); edit("Purchase cost");
+    fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), {target:{value:"-1"}}); save();
+    expect(saved).not.toHaveBeenCalled(); expect(screen.getByRole("alert")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), {target:{value:"0"}}); save();
+    expect(saved).toHaveBeenCalledWith({...stored,unitCost:0});
+  });
+  it("removes only the selected override and falls back to file cost", () => {
+    const saved=vi.fn(); render(<Harness initial={stored} save={saved} />); open(); edit("Purchase cost");
+    fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), {target:{value:""}}); save();
+    expect(saved).toHaveBeenCalledWith({...stored,unitCost:undefined});
+    expect(screen.getByText("MYR 2.50 · From your file")).toBeTruthy();
+  });
+  it("lets the owner remove an old saved storage limit without changing other details", () => {
+    const saved=vi.fn(); render(<Harness initial={stored} save={saved} />); open();
+    fireEvent.click(screen.getByRole('button',{name:'Remove saved storage limit'}));
+    expect(saved).toHaveBeenCalledWith({...stored,storageSelection:undefined});
+  });
+  it("records an optional manual correction separately from an AI category", () => {
+    const saved=vi.fn(); render(<Harness save={saved} />); open(); edit("Food category");
+    expect((screen.getByLabelText("Food category") as HTMLSelectElement).value).toBe("rice");
     expect(saved).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name:"Skip for now" }));
-    expect(saved).not.toHaveBeenCalled(); edit("Purchase cost");
-    expect((screen.getByLabelText("Your purchase cost / sales unit (MYR)") as HTMLInputElement).value).toBe("4");
-    fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), { target:{ value:"0" } }); save();
-    expect(saved).toHaveBeenCalledWith({ ...stored, unitCost:0 });
-    expect(screen.getByText("MYR 0.00 · Your cost")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Food category"), {target:{value:"non_food"}}); save();
+    expect(saved.mock.lastCall?.[0]).toMatchObject({evidenceKey:"current-source",category:"non_food",categoryConfirmed:true,categorySource:"manual",isFood:false});
+    expect(saved.mock.lastCall?.[0].categoryProvenance).toBeUndefined();
   });
-  it("removes only the chosen override when saved blank, retaining validated file cost", () => {
-    const saved = vi.fn(); render(<Harness initial={stored} save={saved} />); open(); edit("Purchase cost");
-    fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), { target:{ value:"" } }); save();
-    expect(saved).toHaveBeenCalledWith({ ...stored, unitCost:undefined });
-    expect(screen.getByText("MYR 2.50 · From your file")).toBeTruthy();
+  it("discards old-source overrides and derives fresh automatic evidence", () => {
+    const saved=vi.fn(); render(<Harness initial={{...stored,evidenceKey:"old-source"}} save={saved} />); open();
+    expect(screen.getByText("Rice · AI estimate")).toBeTruthy();
+    edit("Purchase cost"); expect((screen.getByLabelText("Your purchase cost / sales unit (MYR)") as HTMLInputElement).value).toBe("");
+    fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), {target:{value:"3"}}); save();
+    expect(saved.mock.lastCall?.[0]).toMatchObject({evidenceKey:"current-source",unitCost:3,categorySource:"ai",categoryConfirmed:false});
+    expect(saved.mock.lastCall?.[0].sellingPrice).toBeUndefined();
   });
-  it("does not confirm a category merely by selecting or accepting its suggestion", () => {
-    const saved = vi.fn(); render(<Harness save={saved} />); open(); edit("Food category");
-    fireEvent.click(screen.getByRole("button", { name:"Use suggested category: Rice" }));
-    expect(saved).not.toHaveBeenCalled(); save();
-    expect(saved).toHaveBeenCalledWith({ evidenceKey:"current-source", category:"rice", categoryConfirmed:true, isFood:true });
-    expect(saved.mock.calls[0][0].unitCost).toBeUndefined();
-    expect(saved.mock.calls[0][0].kgPerUnit).toBeUndefined();
-  });
-  it("does not choose a storage method and requires a matching product for pantry guidance", () => {
-    const saved = vi.fn(); render(<Harness save={saved} />); open(); edit("Storage guidance");
-    expect((screen.getByLabelText("Storage method") as HTMLSelectElement).value).toBe("");
-    const product = FOODKEEPER_PRODUCTS.find(row => row.windows.pantry)!;
-    fireEvent.change(screen.getByLabelText("Storage method"), { target:{ value:"pantry" } });
-    fireEvent.change(screen.getByLabelText("Confirm FoodKeeper category"), { target:{ value:String(product.categoryId) } }); save();
-    expect(saved).not.toHaveBeenCalled(); expect(screen.getByRole("alert").textContent).toContain("Pantry needs a specific product");
-    fireEvent.change(screen.getByLabelText("Confirm FoodKeeper product and condition"), { target:{ value:product.id } }); save();
-    expect(saved).toHaveBeenCalledWith({ evidenceKey:"current-source", storageSelection:{ confirmed:true, storage:"pantry", categoryId:product.categoryId, productId:product.id } });
-  });
-  it("discards previous-source overrides and keeps optional price, date and reference controls accessible", () => {
-    const saved = vi.fn(); render(<Harness initial={{ ...stored,evidenceKey:"old-source" }} save={saved} />); open();
-    expect(screen.getByText("Previous inputs belong to different source evidence. Confirm them again.")).toBeTruthy();
-    edit("Purchase cost"); fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), { target:{ value:"3" } }); save();
-    expect(saved).toHaveBeenCalledWith({ evidenceKey:"current-source",unitCost:3 });
-    fireEvent.click(screen.getByRole("button", { name:"Other optional details →" }));
-    fireEvent.change(screen.getByLabelText("Your selling price / sales unit (MYR)"), { target:{ value:"8" } });
-    fireEvent.change(screen.getByLabelText("Last restock date"), { target:{ value:"2026-09-10" } });
-    fireEvent.change(screen.getByLabelText("Confirm reference retail item (optional)"), { target:{ value:"224" } }); save();
-    expect(saved.mock.lastCall?.[0]).toEqual({ evidenceKey:"current-source",unitCost:3,sellingPrice:8,restockDate:"2026-09-10",priceCatcherItemCode:"224" });
-  });
-  it.each(["zh","ms"] as const)("keeps focused controls translated in %s", language => {
-    act(() => setLanguage(language)); render(<Harness />);
+  it.each(["zh","ms"] as const)("keeps optional corrections translated in %s", language => {
+    act(()=>setLanguage(language)); render(<Harness />);
     fireEvent.click(screen.getByText(language === "zh" ? "完善商品估算" : "Perbaiki anggaran produk"));
-    fireEvent.click(screen.getByRole("button", { name:new RegExp(language === "zh" ? "^采购成本 " : "^Kos belian ") }));
-    expect(screen.getByRole("button", { name:language === "zh" ? "暂时跳过" : "Langkau buat masa ini" })).toBeTruthy();
-    expect(screen.getByRole("button", { name:language === "zh" ? "保存此详情" : "Simpan butiran ini" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button",{name:new RegExp(language === "zh" ? "^采购成本 " : "^Kos belian ")}));
+    expect(screen.getByRole("button",{name:language === "zh" ? "暂时跳过" : "Langkau buat masa ini"})).toBeTruthy();
   });
 });
 

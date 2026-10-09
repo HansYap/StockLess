@@ -27,12 +27,11 @@ it("only saves an explicit choice and supplies frozen source, labels and policy 
   const input = props(); render(<DecisionOutcomeControls {...input} />);
   fireEvent.change(screen.getByLabelText("Response"), { target: { value: "Changed" } });
   fireEvent.change(screen.getByLabelText("Final quantity"), { target: { value: "6" } });
-  fireEvent.change(screen.getByLabelText("Reason for changing the order"), { target: { value: "Shelf space" } });
-  fireEvent.click(screen.getByText('Optional supplier and restock details'));
-  fireEvent.change(screen.getByLabelText("Supplier (optional)"), { target: { value: "Local supplier" } });
+  fireEvent.change(screen.getByLabelText("Reason for changing the order (optional)"), { target: { value: "Shelf space" } });
+  expect(screen.queryByLabelText('Supplier (optional)')).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Save decision" }));
   await waitFor(() => expect(savePurchaseDecision).toHaveBeenCalledOnce());
-  expect(vi.mocked(savePurchaseDecision).mock.calls[0]).toEqual(["dataset-1", expect.objectContaining({ response: "Changed", finalQuantity: "6", reason: "Shelf space", supplier: "Local supplier",
+  expect(vi.mocked(savePurchaseDecision).mock.calls[0]).toEqual(["dataset-1", expect.objectContaining({ response: "Changed", finalQuantity: "6", reason: "Shelf space", supplier: "",
     recommendation: expect.objectContaining({ productKey: "A", productName: "Tea", productCode: "0001", packSize: "250 g", sourceSha256: input.snapshot.sourceSha256, policyVersion: input.plan.purchasePolicyVersion }) })]);
 });
 it("keeps invalid input visible after a typed validation failure and translates the correction", async () => {
@@ -68,10 +67,10 @@ it('starts a final choice from the entered draft without automatically recording
   expect((screen.getByLabelText('Response') as HTMLSelectElement).value).toBe('Changed');
   expect((screen.getByLabelText('Final quantity') as HTMLInputElement).value).toBe('0');
   expect(screen.queryByLabelText('Recorded quantity')).toBeNull();
-  expect(screen.getByText('Optional supplier and restock details').closest('details')?.open).toBe(false);
+  expect(screen.queryByLabelText('Supplier (optional)')).toBeNull();
   expect(screen.getByText('Saved purchase decisions (0)').closest('details')?.open).toBe(false);
   expect(savePurchaseDecision).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText('Reason for changing the order'), {target:{value:'Enough stock'}});
+  fireEvent.change(screen.getByLabelText('Reason for changing the order (optional)'), {target:{value:'Enough stock'}});
   fireEvent.click(screen.getByRole('button',{name:'Save decision'}));
   await waitFor(()=>expect(savePurchaseDecision).toHaveBeenCalledWith('dataset-1',expect.objectContaining({response:'Changed',finalQuantity:'0',reason:'Enough stock',recommendation:expect.objectContaining({recommendedQuantity:input.plan.estimatedRestock.state==='available'?input.plan.estimatedRestock.quantity.value:undefined})})));
   expect(saveStockOutcome).not.toHaveBeenCalled();

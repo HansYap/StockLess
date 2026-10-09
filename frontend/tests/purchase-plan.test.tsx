@@ -52,22 +52,18 @@ describe("purchase planning", () => {
     fireEvent.click(screen.getByRole("button", { name: "Decrease planned order" }));
     expect((exact as HTMLInputElement).value).toBe("8");
   });
-  it("shows five planning columns and leaves a blank order unassessed", () => {
+  it("shows automatic drafts and both charts immediately, preserving an explicit zero", () => {
     render(<Harness />); open();
-    expect(screen.getAllByRole("columnheader").map(el => el.textContent)).toEqual(["Product", "Expected, 4 weeks", "In stock", "Your order", "Check"]);
-    expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
-    expect(screen.getByText("No plan entered; stock after ordering and shortage are not assessed.")).toBeTruthy();
-    expect(screen.queryByRole("img", { name: /^Stock after order:/ })).toBeNull();
-    fireEvent.change(screen.getByLabelText("Exact planned order quantity"), { target: { value: "0" } });
-    expect(screen.queryByText("No plan entered; stock after ordering and shortage are not assessed.")).toBeNull();
+    expect(screen.getAllByRole("columnheader").map(el=>el.textContent)).toEqual(["Product","Expected, 4 weeks","In stock","Your order","Check"]);
+    expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("12 units");
+    expect(screen.getByRole("img",{name:/Recorded sales/})).toBeTruthy();
+    expect(screen.getByRole("img",{name:/^Stock after order:/})).toBeTruthy();
+    expect(screen.getByRole("region",{name:"Why this purchase check?"})).toBeTruthy();
+    expect(screen.getByText("More product details").closest("details")?.open).toBe(false);
+    fireEvent.change(screen.getByLabelText("Exact planned order quantity"),{target:{value:"0"}});
     expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("0 units");
-    expect(screen.getByText("Why this purchase check?").closest("details")?.open).toBe(false);
-    fireEvent.click(screen.getByText("Why this purchase check?"));
-    expect(screen.getByText("Why this purchase check?").closest("details")?.open).toBe(true);
-    expect(screen.getByRole("img", { name: /^Stock after order:/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Clear planned order" }));
-    expect(screen.getByText("No plan entered; stock after ordering and shortage are not assessed.")).toBeTruthy();
-    expect(screen.queryByRole("img", { name: /^Stock after order:/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Reset order to suggestion"}));
+    expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("12 units");
   });
   it("selects by key when names are identical and preserves leading zeros", () => {
     render(<Harness />);
@@ -114,7 +110,7 @@ describe("purchase planning", () => {
     expect(screen.getByRole("img", { name: /Recorded sales/ })).toBeTruthy();
     expect(evaluate.mock.calls.length).toBe(count + 2);
     open("000202");
-    expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("Not entered");
+    expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("5 units");
     open(); expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("23");
   });
   it("uses the suggested quantity explicitly and Done advances without discarding drafts", () => {
@@ -156,11 +152,12 @@ describe("purchase planning", () => {
     render(<Harness data={data} evaluate={evaluate} />);
     expect(screen.getAllByRole("row")).toHaveLength(5);
     expect(screen.getByRole("alert").textContent).toContain("Evidence mismatch");
-    expect(evaluate).toHaveBeenCalledTimes(1);
+    expect(evaluate.mock.calls.every(([demand]) => demand.productKey === "A")).toBe(true);
     expect(joinPurchaseEvidence(data.snapshot, { ...data.forecast, snapshotId: "stale" }).every(product => product.issue)).toBe(true);
   });
-  it("keeps supplier terms per product and applies rounded cases only on request", () => {
+  it("keeps supplier terms per product and preserves a manual order while terms change", () => {
     render(<Harness />); open();
+    fireEvent.click(screen.getByRole("button",{name:"Use suggested 12"}));
     const initial = (screen.getByLabelText("Planned order") as HTMLInputElement).value;
     openDetails();
     fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));

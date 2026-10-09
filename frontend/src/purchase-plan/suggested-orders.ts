@@ -17,6 +17,30 @@ export interface SuggestedOrderReview {
   readonly skipped: readonly SkippedSuggestion[];
 }
 
+const previewCache = new WeakMap<PurchaseProduct, { input: ProductPurchaseInputs; terms?: SupplierOrderTerms; date: string; evaluate: PurchaseEvaluator; expiry?: ExpiryCheckInput; result: ProductPurchaseInputs }>();
+/** Automatic preview only: no recorded decision or saved manual quantity is created. */
+export function automaticPurchaseDrafts(products: readonly PurchaseProduct[], drafts: PurchaseDrafts,
+  terms: Readonly<Record<string, SupplierOrderTerms | undefined>>, analysisDate: string, evaluate: PurchaseEvaluator,
+  expiryByProduct?: Readonly<Record<string, ExpiryCheckInput | undefined>>) {
+  const effective: Record<string, ProductPurchaseInputs> = {}; let count = 0;
+  for (const product of products) {
+    const input = drafts[product.key] ?? product.fileInputs, supplier = terms[product.key], expiry = expiryByProduct?.[product.key] ?? product.fileExpiry;
+    if (input.plannedOrder.state === 'value' && input.plannedOrder.source !== 'worked out by StockLess') { effective[product.key] = input; continue; }
+    const cached = previewCache.get(product);
+    if (cached && cached.input === input && cached.terms === supplier && cached.date === analysisDate && cached.evaluate === evaluate && cached.expiry === expiry) {
+      effective[product.key] = cached.result; if (cached.result.plannedOrder.state === 'value') count++; continue;
+    }
+    const base = input.plannedOrder.state === 'value' ? { ...input, plannedOrder: { state: 'empty' as const } } : input;
+    const plan = evaluatePurchaseProduct(product, analysisDate, base, evaluate, expiry);
+    const review = prepareSuggestedOrders([product], new Map([[product.key,plan]]), { [product.key]:base }, terms, analysisDate, evaluate, expiryByProduct);
+    const row = review.suggestions.find(row => row.selectedByDefault);
+    const result = row ? { ...row.inputs, plannedOrder: createPurchaseQuantity(row.quantity, 'worked out by StockLess') } : base;
+    effective[product.key] = result; if (row) count++;
+    previewCache.set(product,{input,terms:supplier,date:analysisDate,evaluate,expiry,result});
+  }
+  return { drafts: effective as PurchaseDrafts, count };
+}
+
 /** Prepares a review only. The shared engines own all quantity and supplier rules. */
 export function prepareSuggestedOrders(
   products: readonly PurchaseProduct[], plans: ReadonlyMap<string, ProductPurchasePlan | undefined>,

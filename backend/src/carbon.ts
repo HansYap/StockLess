@@ -107,6 +107,8 @@ export interface CarbonImpactInput {
   readonly isFood: boolean;
   readonly category?: string;
   readonly categoryConfirmed: boolean;
+  readonly categorySource?: 'ai' | 'manual';
+  readonly categoryProvenance?: string;
   readonly quantity?: number;
   readonly quantityUnit?: string;
   /** A directly recorded kg amount bypasses per-unit mass conversion. */
@@ -124,6 +126,8 @@ interface ImpactBase {
   readonly quantityUnit?: string;
   readonly category?: string;
   readonly baseline?: string;
+  readonly categorySource?: 'ai' | 'manual';
+  readonly categoryProvenance?: string;
 }
 export type CarbonImpactResult = ImpactBase & (
   | { readonly state: "estimated"; readonly massKg: number; readonly massBasis: "measured" | "converted" | "estimated";
@@ -137,14 +141,15 @@ export type CarbonImpactResult = ImpactBase & (
 /** The same conversion applies to three separate measures; actual records are never inferred from a scenario. */
 export function estimateCarbonImpact(input: CarbonImpactInput, policy: CarbonPolicy = DEFAULT_CARBON_POLICY): CarbonImpactResult {
   const base: ImpactBase = Object.freeze({ productKey: input.productKey, productName: input.productName, kind: input.kind,
-    quantity: input.quantity, quantityUnit: input.quantityUnit, category: input.category, baseline: input.baseline });
+    quantity: input.quantity, quantityUnit: input.quantityUnit, category: input.category, baseline: input.baseline,
+    categorySource: input.categorySource, categoryProvenance: input.categoryProvenance });
   const unavailable = (code: string, reason: string, correctiveAction: string, extra: { readonly factor?: CarbonFactorResult; readonly kgAtRisk?: number } = {}): CarbonImpactResult => Object.freeze({ ...base, state: "unavailable", code, reason, correctiveAction, ...extra });
   if (input.measuredMassKg === undefined && input.quantity === undefined) return Object.freeze({ ...base,
     state: input.kind === "recorded_waste" ? "no_record" : "not_entered", code: input.kind === "recorded_waste" ? "NO_WASTE_RECORD" : "QUANTITY_NOT_ENTERED",
     reason: input.kind === "recorded_waste" ? "No waste record." : "No quantity entered.", correctiveAction: input.kind === "recorded_waste" ? "Record actual discarded or expired stock for this period." : "Enter a quantity for this analysis." });
   const signed = input.kind === "scenario_difference";
   for (const value of [input.quantity, input.measuredMassKg]) if (value !== undefined && (!Number.isFinite(value) || (!signed && value < 0))) return unavailable("INVALID_QUANTITY", "Quantity must be finite and non-negative; only a scenario difference may be signed.", "Correct the quantity.");
-  if (!input.isFood) return unavailable("NOT_FOOD", "This product is not confirmed as food.", "Confirm the product's food category if applicable.");
+  if (!input.isFood) return unavailable("NOT_FOOD", "This product is marked as non-food.", "No food CO2e estimate applies to this product.");
   let massKg: number | undefined, massBasis: "measured" | "converted" | "estimated" = "converted", conversionSource = input.conversionSource ?? "";
   if (input.measuredMassKg !== undefined) { massKg = input.measuredMassKg; massBasis = "measured"; conversionSource = "Recorded waste mass in kilograms"; }
   else if (input.quantityUnit?.toLowerCase() === "kg") { massKg = input.quantity; massBasis = input.kind === "recorded_waste" ? "measured" : "converted"; conversionSource ||= "Quantity recorded in kilograms"; }
@@ -153,8 +158,8 @@ export function estimateCarbonImpact(input: CarbonImpactInput, policy: CarbonPol
     if (!conversionSource) return unavailable("MISSING_CONVERSION_SOURCE", "The unit-to-kg conversion has no source.", "Confirm a file weight, parsed pack size or sourced density conversion.");
     massKg = input.quantity! * input.massKgPerUnit; massBasis = input.massEstimated ? "estimated" : "converted";
   }
-  if (!input.category || !input.categoryConfirmed) return unavailable("CATEGORY_NOT_CONFIRMED", "The food category must be confirmed before CO2e is shown.", "Review the category suggestion and confirm the correct food category.", massKg !== undefined ? { kgAtRisk: Math.abs(massKg) } : {});
-  if (massKg === undefined) return unavailable("NO_WEIGHT", "No usable mass conversion is available for the quantity unit.", "Record kilograms or confirm a weight per quantity unit; litres require a sourced density or an explicitly labelled estimate.");
+  if (!input.category || !(input.categoryConfirmed || input.categorySource === 'ai' && input.categoryProvenance)) return unavailable("CATEGORY_NOT_CONFIRMED", "No supported automatic or confirmed food category is available.", "This product is left out of CO2e; other stock and financial results remain available.", massKg !== undefined ? { kgAtRisk: Math.abs(massKg) } : {});
+  if (massKg === undefined) return unavailable("NO_WEIGHT", "No usable mass conversion is available for the quantity unit.", "This product is left out of CO2e. A measured weight can be added as an optional correction.");
   if (!Number.isFinite(massKg) || Math.abs(massKg) > Number.MAX_SAFE_INTEGER) return unavailable("NUMERIC_RANGE", "The converted mass is outside the supported numeric range.", "Check the quantity and unit weight.");
   if (signed && !input.baseline?.trim()) return unavailable("MISSING_BASELINE", "A scenario difference needs a named comparison baseline.", "Choose and name the two compared scenarios.");
   const factor = resolveCarbonFactor(input.category, policy);
@@ -164,9 +169,9 @@ export function estimateCarbonImpact(input: CarbonImpactInput, policy: CarbonPol
   const extremes = [massKg * factor.groupRange.low, massKg * factor.groupRange.high];
   return Object.freeze({ ...base, state: "estimated", massKg, massBasis, conversionSource, kgCO2e, kgCO2eRange: range(extremes), factor,
     calculation: `${massKg} kg × ${factor.factorKgCO2ePerKg} kg CO2e/kg = ${kgCO2e} kg CO2e`,
-    limitation: signed ? "Estimated scenario difference; it does not change recorded waste or establish achieved emissions reductions."
+    limitation: (input.categorySource === 'ai' ? `AI-assigned food category, not manually confirmed. ${input.categoryProvenance}. ` : '') + (signed ? "Estimated scenario difference; it does not change recorded waste or establish achieved emissions reductions."
       : input.kind === "potential_excess" ? "Estimated impact of potential excess; this is not recorded waste or an achieved reduction."
-        : "CO2e is estimated from recorded waste; source agreement does not validate a measured emissions outcome." });
+        : "CO2e is estimated from recorded waste; source agreement does not validate a measured emissions outcome.") });
 }
 
 export interface CarbonImpactSummary {
@@ -209,7 +214,7 @@ export function summarizeCarbonImpact(results: readonly CarbonImpactResult[]): C
     ...(absoluteMass ? { massShareSourcesAgree: massKgSourcesAgree / absoluteMass, massShareEstimate: massKgEstimate / absoluteMass } : {}),
     included: Object.freeze(included), excluded: Object.freeze(excluded),
     confirmationQueue: Object.freeze(excluded.filter(result => result.code === "CATEGORY_NOT_CONFIRMED").sort((a, b) => (b.kgAtRisk ?? -1) - (a.kgAtRisk ?? -1) || a.productKey.localeCompare(b.productKey))),
-    ...(included.length ? {} : { reason: results.length > 0 && results.every(result => result.state === "no_record") ? "No waste records for the selected period." : "No eligible products have a confirmed category, quantity and usable mass/factor conversion." }),
+    ...(included.length ? {} : { reason: results.length > 0 && results.every(result => result.state === "no_record") ? "No waste records for the selected period." : "No products have a supported category, quantity and weight conversion with an available emission factor." }),
   });
 }
 

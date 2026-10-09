@@ -4,14 +4,14 @@ import { PurchasePlanScreen, type PurchasePlanView } from '../src/screens/Purcha
 import { ImpactDashboard } from '../src/screens/ImpactDashboard.tsx';
 import { createPurchaseDecision, type AnalysisReport } from '../src/engine.ts';
 import { getSavedDataset } from '../src/storage/saved-datasets.ts';
-import { downloadFinalisedOrdersWorkbook, printAnalysisReport } from '../src/purchase-plan/analysis-report-export.ts';
+import { downloadAnalysisWorkbook, downloadFinalisedOrdersWorkbook, printAnalysisReport } from '../src/purchase-plan/analysis-report-export.ts';
 import { setLanguage } from '../src/i18n/index.ts';
 import { makeEvidence } from './fixtures.ts';
 
 vi.mock('../src/storage/saved-datasets.ts', async original => ({ ...await original<object>(), getSavedDataset:vi.fn() }));
 vi.mock('../src/purchase-plan/analysis-report-export.ts', async original => {
   const actual=await original<typeof import('../src/purchase-plan/analysis-report-export.ts')>();
-  return { ...actual, printAnalysisReport:vi.fn(), downloadFinalisedOrdersWorkbook:vi.fn(async (report:AnalysisReport)=>{if(!report.tables.find(table=>table.id==='finalorders')?.rows.length)throw new actual.NoFinalisedOrdersError();}) };
+  return { ...actual, downloadAnalysisWorkbook:vi.fn(), printAnalysisReport:vi.fn(), downloadFinalisedOrdersWorkbook:vi.fn(async (report:AnalysisReport)=>{if(!report.tables.find(table=>table.id==='finalorders')?.rows.length)throw new actual.NoFinalisedOrdersError();}) };
 });
 beforeEach(()=>{setLanguage('en');vi.clearAllMocks();vi.mocked(getSavedDataset).mockResolvedValue({decisions:[],outcomes:[]} as never);});
 const entered=(value:number)=>({plannedOrder:{state:'value' as const,value,source:'input by you' as const},incomingStock:{state:'empty' as const}});
@@ -89,4 +89,27 @@ it('returns an empty final-order download to the selected product final-choice p
   fireEvent.click(screen.getByRole('button',{name:'Save a final choice in Purchase plan →'}));
   expect(onPurchaseDecision).toHaveBeenCalledWith('B');
   expect(screen.queryByRole('button',{name:'Save decision'})).toBeNull();
+});
+
+it('shares automatic draft quantities, AI provenance and manual zero between planning, impact and exports',async()=>{
+  const data=makeEvidence();
+  const snapshot={...data.snapshot,evidenceKey:'auto-evidence',rows:data.snapshot.rows.map(row=>({...row,interpretedValues:{...row.interpretedValues,productName:row.productKey==='C'?'Unknown item':'Beras',packVariant:'500g'}})),productCosts:[{productKey:'A',field:'unit_cost' as const,state:'usable' as const,value:2.5,sourceRows:[2]}]};
+  const drafts={B:entered(0)},before=JSON.stringify(drafts),changed=vi.fn();
+  const props={snapshot,forecast:data.forecast,drafts,selectedKey:'A',onSelect:vi.fn(),onDraftChange:changed,onBack:vi.fn()};
+  const purchase=render(<PurchasePlanScreen {...props} />);
+  expect((screen.getByLabelText('Exact planned order quantity') as HTMLInputElement).value).toBe('12');
+  expect(screen.getByRole('img',{name:/Recorded sales/})).toBeTruthy();
+  expect(screen.getByRole('img',{name:/^Stock after order:/})).toBeTruthy();
+  expect(changed).not.toHaveBeenCalled(); purchase.unmount();
+  render(<ImpactDashboard {...props} datasetId="D" focus={{section:'downloads',revision:1}} />);
+  await screen.findByRole('button',{name:'Download analysis Excel'});
+  fireEvent.click(screen.getByRole('button',{name:'Download analysis Excel'}));
+  await waitFor(()=>expect(downloadAnalysisWorkbook).toHaveBeenCalledOnce());
+  const report=vi.mocked(downloadAnalysisWorkbook).mock.calls[0][0],results=report.tables.find(table=>table.id==='results')!;
+  const row=(key:string)=>results.rows.find(row=>row[results.columns.indexOf('Product key')]===key)!;
+  expect(row('A')[results.columns.indexOf('Planned quantity')]).toBe(12);
+  expect(row('B')[results.columns.indexOf('Planned quantity')]).toBe(0);
+  expect(JSON.stringify(report)).toContain('AI-assigned food category, not manually confirmed');
+  expect(report.tables.find(table=>table.id==='finalorders')?.rows).toHaveLength(0);
+  expect(JSON.stringify(drafts)).toBe(before);
 });

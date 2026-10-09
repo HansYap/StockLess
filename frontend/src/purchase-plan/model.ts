@@ -13,7 +13,7 @@ import {
   type ExpiryCheckInput,
   type ProductPurchasePlan,
   type ProductLabels,
-  activePlanningContext, planningStorageWindow, type ProductPlanningContext, type PlanningContexts,
+  resolveProductPlanningContext, planningStorageWindow, type ProductPlanningContext, type PlanningContexts,
 } from "../engine.ts";
 
 export type PurchaseDrafts = Readonly<
@@ -95,7 +95,7 @@ export function joinPurchaseEvidence(
               : undefined;
     return {
       key,
-      planningContext: activePlanningContext(snapshot, contexts[key]),
+      planningContext: resolveProductPlanningContext(snapshot, key, contexts[key]),
       title: row?.productName || row?.productCode || evidence.get(key)?.displayName || key,
       name:
         evidence.get(key)?.displayName ||

@@ -16,6 +16,9 @@
 .planning-prompt p{margin:10px 0}
 .planning-inputs .planning-message{padding:10px 12px;border-radius:8px;background:var(--teal-tint,#eaf4ee);color:var(--teal-deep,#176f69)}
 .planning-sources{margin-top:16px;border-top:1px solid var(--line,#cbd9d0);padding-top:12px}
+.planning-storage{margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--teal-tint,#f7faf9)}
+.planning-storage ul{display:flex;flex-wrap:wrap;gap:12px;list-style:none;padding:0;margin:12px 0}
+.planning-storage li{padding:8px 12px;background:#fff;border-radius:8px;font-size:14px}
 .category-confirmation{margin:14px 0}
 .category-confirmation p{font-size:14px;line-height:1.5}
 .category-review{width:min(760px,calc(100% - 32px));max-height:calc(100dvh - 40px);padding:0;border:1px solid var(--line,#cbd9d0);border-radius:18px;background:white;color:var(--ink,#193b2d);box-shadow:0 24px 80px #16313b44}
