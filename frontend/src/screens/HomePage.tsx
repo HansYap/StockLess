@@ -87,16 +87,14 @@ function useReducedMotion() {
 function useHeroStory() {
   const reducedMotion = useReducedMotion();
   const [playing, setPlaying] = useState(true);
-  const [tick, setTick] = useState(0);
+  const [frame, setFrame] = useState(0);
   useEffect(() => {
     if (reducedMotion || !playing) return;
-    const timer = window.setInterval(() => setTick(value => value + 1), 60);
+    const timer = window.setInterval(() => setFrame(value => (value + 1) % 3), 2500);
     return () => window.clearInterval(timer);
   }, [playing, reducedMotion]);
-  const phase = reducedMotion ? 2 : Math.floor(tick / 55) % 3;
-  const progress = Math.min(1, (tick % 55) / 55 * 1.4);
-  const eased = progress < .5 ? 2 * progress ** 2 : 1 - (-2 * progress + 2) ** 2 / 2;
-  const order = phase === 0 ? 37 : phase === 1 ? Math.round(37 - 27 * eased) : 10;
+  const phase = reducedMotion ? 2 : frame;
+  const order = [37, 24, 10][phase];
   return { order, phase, playing, reducedMotion, verdict: order + 8 > 21 ? "hi" : "ok", toggle: () => setPlaying(value => !value) };
 }
 
@@ -133,6 +131,16 @@ function nonnegativeInteger(value: string | number) {
   return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : 0;
 }
 function clampOrder(value: string | number) { return Math.min(60, nonnegativeInteger(value)); }
+
+function scrollToHomepageSection(id: "top" | "example", reducedMotion: boolean) {
+  document.getElementById(id)?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+}
+
+function followSmoothAnchor(event: MouseEvent<HTMLAnchorElement>, id: "top" | "example", reducedMotion: boolean) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  scrollToHomepageSection(id, reducedMotion);
+}
 
 function HomeHeader() {
   const { copy, startHref, language } = useHomeView();
@@ -199,7 +207,7 @@ function Hero() {
   const story = useHeroStory();
   const openDemo = (event: MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest("a, button")) return;
-    document.getElementById("example")?.scrollIntoView({ behavior: story.reducedMotion ? "auto" : "smooth", block: "start" });
+    scrollToHomepageSection("example", story.reducedMotion);
   };
   return (
     <section className="hp-hero">
@@ -360,7 +368,7 @@ function Hero() {
                 <i className={story.phase === 2 ? "is-on" : ""} />
               </div>
               <span className="hp-anim__actions">
-                <a className="hp-anim__try" href="#example">
+                <a className="hp-anim__try" href="#example" onClick={event => followSmoothAnchor(event, "example", story.reducedMotion)}>
                   {copy("hp.anim.try")}
                 </a>
                 <button type="button" className="hp-anim__play" id="ha-play" onClick={story.toggle} hidden={story.reducedMotion}>
@@ -476,11 +484,12 @@ function WasteContext() {
 const GUIDE_POSES: readonly StockyPose[] = ["hello", "magnify", "magnify", "great"];
 
 function Workflow() {
-  const { copy, startHref } = useHomeView();
+  const { copy } = useHomeView();
   const reducedMotion = useReducedMotion();
   const [step, setStep] = useState(0);
   const [heldStep, setHeldStep] = useState<number | null>(null);
   const activeStep = heldStep ?? step;
+  const returnToTop = (event: MouseEvent<HTMLAnchorElement>) => followSmoothAnchor(event, "top", reducedMotion);
   useEffect(() => {
     if (reducedMotion || heldStep !== null) return;
     const timer = window.setInterval(() => setStep(value => (value + 1) % 4), 2400);
@@ -515,7 +524,7 @@ function Workflow() {
           <span id="hs-line" style={{ width: `${(activeStep + 1) * 25}%` }} />
         </div>
         <div className="hp-steps">
-          <a className={activeStep === 0 ? "hp-step is-on" : "hp-step"} href={startHref} onMouseEnter={() => setHeldStep(0)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(0)} onBlur={() => setHeldStep(null)}>
+          <a className={activeStep === 0 ? "hp-step is-on" : "hp-step"} href="#top" onClick={returnToTop} onMouseEnter={() => setHeldStep(0)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(0)} onBlur={() => setHeldStep(null)}>
             <span className="hp-step__n">
               {"1"}
             </span>
@@ -529,7 +538,7 @@ function Workflow() {
               {copy("hp.s1t")}
             </p>
           </a>
-          <a className={activeStep === 1 ? "hp-step is-on" : "hp-step"} href={startHref} onMouseEnter={() => setHeldStep(1)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(1)} onBlur={() => setHeldStep(null)}>
+          <a className={activeStep === 1 ? "hp-step is-on" : "hp-step"} href="#top" onClick={returnToTop} onMouseEnter={() => setHeldStep(1)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(1)} onBlur={() => setHeldStep(null)}>
             <span className="hp-step__n">
               {"2"}
             </span>
@@ -543,7 +552,7 @@ function Workflow() {
               {copy("hp.s2t")}
             </p>
           </a>
-          <a className={activeStep === 2 ? "hp-step is-on" : "hp-step"} href={startHref} onMouseEnter={() => setHeldStep(2)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(2)} onBlur={() => setHeldStep(null)}>
+          <a className={activeStep === 2 ? "hp-step is-on" : "hp-step"} href="#top" onClick={returnToTop} onMouseEnter={() => setHeldStep(2)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(2)} onBlur={() => setHeldStep(null)}>
             <span className="hp-step__n">
               {"3"}
             </span>
@@ -557,7 +566,7 @@ function Workflow() {
               {copy("hp.s3t")}
             </p>
           </a>
-          <a className={activeStep === 3 ? "hp-step is-on" : "hp-step"} href={startHref} onMouseEnter={() => setHeldStep(3)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(3)} onBlur={() => setHeldStep(null)}>
+          <a className={activeStep === 3 ? "hp-step is-on" : "hp-step"} href="#top" onClick={returnToTop} onMouseEnter={() => setHeldStep(3)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(3)} onBlur={() => setHeldStep(null)}>
             <span className="hp-step__n">
               {"4"}
             </span>
