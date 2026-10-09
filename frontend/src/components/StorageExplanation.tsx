@@ -15,7 +15,7 @@ export function StorageExplanation({ onManage }: { readonly onManage: () => void
       </ul>
       <p>{t("Saved work belongs to this browser on this device. It may be lost when browser data is cleared; it is not synchronised to another browser.")}</p>
       <p>{t("Sample data is kept separate from your saved business decisions and outcomes.")}</p>
-      <button type="button" className="returning-btn returning-btn--primary" onClick={onManage}>{t("Manage saved uploads")}</button>
+      <div className="stockless-dialog__actions"><button type="button" className="stockless-dialog__button stockless-dialog__button--primary" onClick={onManage}>{t("Manage saved uploads")}</button></div>
     </div>
   </section>;
 }

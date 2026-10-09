@@ -1,5 +1,5 @@
 .returning-page { --shell:1180px; min-height:100vh; background:var(--page); color:var(--ink); font:16px/1.5 var(--body); }
-.returning-page > :not(.ws-decor) { position:relative; z-index:1; }
+.returning-page > :not(.ws-decor, dialog) { position:relative; z-index:1; }
 .returning-page :is(h1,h2,h3,p) { margin:0; }
 .returning-page :is(h1,h2,h3,strong) { font-family:var(--display); }
 .returning-page h2 { font-size:22px; line-height:1.35; }
@@ -84,16 +84,10 @@
 .returning-resume__empty p { margin-top:14px; color:var(--muted); }
 .returning-page .returning-error { padding:12px 16px; background:var(--red-tint); color:var(--red); border-radius:10px; margin-bottom:20px; }
 .returning-error button { color:inherit; border:0; background:none; text-decoration:underline; cursor:pointer; }
-.returning-dialog { border:1px solid var(--line); border-radius:18px; max-width:440px; width:calc(100% - 32px); padding:28px; box-shadow:0 30px 90px #16313b30; color:var(--ink); }
-.returning-dialog::backdrop { background:#16313b55; }
-.returning-dialog p { margin:16px 0 24px; color:var(--muted); overflow-wrap:anywhere; }
-.returning-dialog__actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; }
-.returning-about-dialog { max-width:620px; max-height:calc(100dvh - 48px); overflow:auto; }
-.returning-about-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
-.returning-about-dialog .storage-explanation h2 { margin:24px 0 16px; font-size:18px; }
+.returning-about-dialog .storage-explanation h2 { margin:24px 0 16px; font-size:var(--text-section-head); }
 .returning-about-dialog .storage-explanation ul { padding-left:22px; }
 .returning-about-dialog .storage-explanation li { margin-bottom:12px; }
-.returning-about-dialog .storage-explanation p { margin:16px 0; font-size:14px; }
+.returning-about-dialog .storage-explanation p { margin:16px 0; font-size:var(--text-body); }
 .returning-page .returning-btn--danger { background:var(--red); color:#fff; border-color:var(--red); }
 .returning-page .returning-btn--danger:hover { background:#7d2d2d; border-color:#7d2d2d; }
 .returning-page button:disabled { opacity:.5; cursor:default; }

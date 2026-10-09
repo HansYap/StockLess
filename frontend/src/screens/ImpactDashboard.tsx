@@ -172,7 +172,7 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
   ];
   const head:ReactNode=<>
     <p className="eyebrow"><ImpactIcon name="globe" size={16} className="growth-icon--inline" /> {c('Your purchase plan → your impact','您的进货计划 → 带来的改变','Pelan belian anda → impaknya')}{sample&&<span className="pill pill--amber impact__sample">{c('Sample data','示例数据','Data contoh')}</span>}</p>
-    <h1 className="impact__title" id="impact-title">{c('See the impact of your purchase plan','看看这次进货计划带来的改变','Lihat impak pelan belian anda')}</h1>
+    <h1 data-guide="impact-summary" className="impact__title" id="impact-title">{c('See the impact of your purchase plan','看看这次进货计划带来的改变','Lihat impak pelan belian anda')}</h1>
     <p className="impact__lede">{c('Estimates for your current purchase plan over the next four weeks.','以下是当前采购计划未来四周的估算。','Anggaran bagi pelan belian semasa anda untuk empat minggu akan datang.')}</p>
   </>;
 
@@ -191,7 +191,7 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
       {secHead('calc','impact-analysis-title',c('Detailed estimates and how they work','详细估算及计算方法','Anggaran terperinci dan cara ia dikira'),c('The numbers in more detail, and how they are worked out','更详细的数字，以及计算方式','Angka dengan lebih terperinci, dan cara ia dikira'))}
     <h3 className="impact-sec__sub">{c('1 · Your detailed estimates','1 · 详细估算','1 · Anggaran terperinci anda')}</h3>
     <div className="sx-lens">
-      <div className="sx-tabs" role="tablist" aria-label={c('Impact view','影响视图','Paparan impak')}>
+      <div className="sx-tabs" data-guide="impact-views" role="tablist" aria-label={c('Impact view','影响视图','Paparan impak')}>
         <button type="button" role="tab" id="environment-tab" className="sx-tab" aria-controls="environment-impact" aria-selected={lens==='environment'} tabIndex={lens==='environment'?0:-1} onKeyDown={switchTab} onClick={()=>setLens('environment')}><ImpactIcon name="sprout" size={18} /> {c('Environmental','环境','Alam sekitar')}</button>
         <button type="button" role="tab" id="business-tab" className="sx-tab" aria-controls="business-impact" aria-selected={lens==='business'} tabIndex={lens==='business'?0:-1} onKeyDown={switchTab} onClick={()=>setLens('business')}><ImpactIcon name="coins" size={18} /> {c('Business','生意','Perniagaan')}</button>
       </div>
@@ -296,14 +296,14 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
       <p>{c('Some products are not included in the money or carbon estimates yet. Add their missing details to include them where supported. You can keep planning without filling these in.','部分商品尚未计入资金或碳排放估算。补充缺少的信息后，支持的商品即可计入。您也可以不填写并继续规划采购。','Sesetengah produk belum dikira dalam anggaran wang atau karbon. Tambah butiran yang belum lengkap untuk memasukkannya jika disokong. Anda boleh terus merancang tanpa mengisinya.')}</p>
       <ul>{missingImpactDetails.map(({product,missing})=><li key={product.key}><span><b>{product.title}</b><small>{missing.map(detailLabel).join(' · ')}</small></span>{onProductDetails && <button type="button" className="btn btn--ghost btn--small" aria-label={`${c('Add details for','补充信息：','Tambah butiran untuk')} ${product.title} ${product.sku??''}`} onClick={()=>onProductDetails(product.key)}>{c('Add details','补充信息','Tambah butiran')}</button>}</li>)}</ul>
     </details>}
-    <section className="impact-sec impact__lines" id="impact-excess-products" ref={excessProducts} aria-labelledby="impact-excess-title">
+    <section data-guide="impact-products" className="impact-sec impact__lines" id="impact-excess-products" ref={excessProducts} aria-labelledby="impact-excess-title">
       {secHead('box','impact-excess-title',c('Products with possible excess stock','可能有多余库存的商品','Produk dengan stok berlebihan berpotensi'),c(`${withExcess.length} of ${assessed.length} checked products`,`${assessed.length} 件已核对商品中的 ${withExcess.length} 件`,`${withExcess.length} daripada ${assessed.length} produk disemak`),withExcess.length>1?<div className="impact-sort" role="group" aria-label={c('Sort products','排序商品','Susun produk')}><button type="button" aria-pressed={excessSort==='units'} onClick={()=>setExcessSort('units')}>{c('By units','按数量','Ikut unit')}</button><button type="button" aria-pressed={excessSort==='money'} onClick={()=>setExcessSort('money')}>{c('By money','按金额','Ikut wang')}</button></div>:undefined,true)}
       {withExcess.length?<><div className="impact-bars__head" aria-hidden="true"><span>{c('Product','商品','Produk')}</span><span>{c('Units above expected demand','高于预期需求的数量','Unit melebihi permintaan dijangka')}</span><span style={{textAlign:'right'}}>{c('Money tied up','占用资金','Wang terikat')}</span></div>
         <ul className="impact-bars">{excessRows.map(p=><li key={p.productKey}><span className="impact-bars__name"><b>{p.name}</b><span>{p.code}</span></span><span className="impact-bars__bar"><span className="impact-bars__track"><i style={{width:`${Math.max(3,Math.round(p.excessUnits!/maxExcess*100))}%`}} /></span><b>{units(p.excessUnits!)}</b></span><span className="impact-bars__money">{p.excessCost.state==='estimated'?money(p.excessCost.amount):'—'}</span></li>)}</ul></>
         :<p className="impact__empty">{assessed.length?c('No potential excess is indicated by the checked plans.','已核对的计划未显示潜在多余库存。','Tiada lebihan berpotensi ditunjukkan oleh pelan yang disemak.'):c('No reliable purchase check is available for these products yet.','这些商品暂没有可靠的采购检查结果。','Belum ada semakan belian yang boleh dipercayai bagi produk ini.')}</p>}
     </section>
 
-    <section className="impact-download impact__downloads" ref={downloads} aria-labelledby="impact-download-title">
+    <section data-guide="impact-downloads" className="impact-download impact__downloads" ref={downloads} aria-labelledby="impact-download-title">
     <div><h2 id="impact-download-title"><span className="impact-sec__icon" aria-hidden="true"><ImpactIcon name="download" size={22} /></span>{c('Download your results','下载结果','Muat turun hasil anda')}</h2><p>{c('Your current plan, plus any recorded outcomes.','当前计划，以及已记录的实际结果。','Pelan semasa anda, serta hasil yang direkodkan.')}</p>
     <div className="impact__toolbar" role="group" aria-label={c('Download your results','下载结果','Muat turun hasil anda')}>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download()}>{c('Download analysis Excel','下载分析 Excel','Muat turun Excel analisis')}</button>

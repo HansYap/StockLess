@@ -32,7 +32,7 @@ export function SupplierOrderPanel({ estimate, terms, analysisDate, invalidQuant
     if (accepted) onTermsChange({ ...terms, [field]: text.trim() === "" ? undefined : Number(text) });
   };
 
-  return <section className="pp-supplier-order" aria-labelledby={`${id}-title`}>
+  return <section className="pp-supplier-order" data-guide="purchase-supplier" aria-labelledby={`${id}-title`}>
     <div className="pp-supplier-order-head"><h3 id={`${id}-title`}>{c("Supplier ordering rules", "供应商订货规则", "Peraturan pesanan pembekal")}</h3><span className="pp-pill pp-pill--balanced">{c("Optional · this product", "可选 · 此商品", "Pilihan · produk ini")}</span></div>
     <p className="pp-small-note">{c("These rules adjust the suggested order above. Apply the result to your purchase plan.", "这些规则会调整上方的建议订购量。将结果应用到您的采购计划。", "Peraturan ini melaraskan cadangan pesanan di atas. Gunakan hasilnya dalam pelan belian anda.")}</p>
     <fieldset className="pp-supplier-fields">

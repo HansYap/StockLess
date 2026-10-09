@@ -186,7 +186,7 @@ export const ProductDetailsSteps = forwardRef<ProductStepsHandle, Props>(functio
 
   if (!open && scope === "expiry") {
     const expiry = steps.find(item => item.key === "expiry");
-    return <section className="pp-expiry-details" ref={root} aria-label={sectionTitle}>
+    return <section className="pp-expiry-details" data-guide="purchase-expiry" ref={root} aria-label={sectionTitle}>
       <div className="pp-expiry-details-head"><div><h3>{sectionTitle}</h3><p>{expiry?.value ?? c("Expiry date not confirmed", "尚未确认到期日", "Tarikh luput belum disahkan")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={() => go("expiry")}>{c("Review expiry", "查看到期信息", "Semak luput")}</button></div>
       <p className="pp-small-note">{c("Used for expiry warnings in your purchase plan. Checked dates from your file are included automatically.", "用于采购计划中的到期提醒。文件中已核对的日期会自动计入。", "Digunakan untuk amaran luput dalam pelan belian anda. Tarikh disemak daripada fail dikira secara automatik.")}</p>
     </section>;
@@ -207,7 +207,7 @@ export const ProductDetailsSteps = forwardRef<ProductStepsHandle, Props>(functio
     </section>;
   }
 
-  return <section className="pp-steps" ref={root} aria-label={sectionTitle}>
+  return <section className="pp-steps" data-guide={scope === "expiry" ? "purchase-expiry" : undefined} ref={root} aria-label={sectionTitle}>
     {progress}
     <ol className="pp-steps__dots" aria-hidden="true">{steps.map((item, i) => <li key={item.key} className={`${item.done ? "is-done" : ""}${item.key === current ? " is-current" : ""}${item.required ? "" : " is-optional"}`}>{item.done ? "✓" : i + 1}</li>)}</ol>
     <div className="pp-steps__layout">

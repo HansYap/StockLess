@@ -116,7 +116,7 @@ export function ImpactStory({ head, aside, beforeStory, lines, totalProducts, bu
       <li><button type="button" className="sx-kpi-button" onClick={onEmissions} aria-controls="environment-breakdown"><span className="sx-kpi__ic sx-kpi__ic--blue" aria-hidden="true"><ImpactIcon name="globe" size={24} /></span><span><strong className="sx-kpi-label">{copy("Estimated CO₂e of excess", "多余库存的 CO₂e 估算", "Anggaran CO₂e lebihan")}</strong><b>{emissions.value ?? copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b><em>{emissions.note}</em><span className="sx-kpi-link">{copy("See estimate →", "查看估算 →", "Lihat anggaran →")}</span></span></button></li>
     </ul>
     {beforeStory}
-    <section className="sx-card impact-sec sx-story-details" aria-labelledby="sx-story-title">
+    <section className="sx-card impact-sec sx-story-details" data-guide="impact-story" data-guide-state={lines.length ? "ready" : "empty"} aria-labelledby="sx-story-title">
     <div className="impact-sec__head">
       <span className="impact-sec__icon" aria-hidden="true"><ImpactIcon name="story" size={24} /></span>
       <div className="impact-sec__titles"><h2 id="sx-story-title">{copy("Your plan, illustrated", "计划演示", "Pelan anda, bergambar")}</h2><p>{copy("Where stock may exceed expected sales in the next four weeks.", "哪些库存可能超过未来四周的预计销量。", "Stok yang mungkin melebihi jangkaan jualan dalam empat minggu akan datang.")}</p></div>

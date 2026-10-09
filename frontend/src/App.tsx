@@ -138,7 +138,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const forecastAbort = useRef<AbortController | null>(null);
 
   const dataset = envelope.session.dataset;
-  useGuidePage(workspaceActive ? "sidebar" : step === 1 ? "upload" : step === 2 ? "mapping" : null,
+  useGuidePage(openingDataset ? null : step === 1 ? "upload" : step === 2 ? "mapping" : step === 3 && readiness ? "readiness" : step === 4 && readiness && forecast ? showImpact ? "impact" : "purchase" : null,
     historyLoaded && !guidedImport && !workspaceActive && step === 1 && savedDatasets.length === 0);
   const workspaceDataset = (activeSavedId && savedDatasets.find(item => item.id === activeSavedId)) || workspaceInfo || uploadTarget || {
     datasetName: dataset?.sourceName ?? t("New file"), shopName: "", rowCount: dataset?.rows.length ?? 0,
@@ -699,10 +699,10 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
 
   return (
     <AppShell
-      onGuide={async () => {
+      onBeforeSetupGuide={async () => {
         for (const [id, work] of pendingWork.current) await persistWork(id, work);
-        if (pendingWork.current.size > 0) return;
-        await onboarding.startReplay(activeSavedId ?? returnPlanId ?? uploadTarget?.id);
+        if (pendingWork.current.size > 0) throw new Error("Pending changes could not be saved.");
+        return activeSavedId ?? returnPlanId ?? uploadTarget?.id;
       }}
       onReturnToPlan={guidedImport && returnPlanId && !activeSavedId && step >= 3 ? () => { onboarding.stop(); window.location.hash = `#dataset/${encodeURIComponent(returnPlanId)}`; } : undefined}
       i3Typography={!showImpact}

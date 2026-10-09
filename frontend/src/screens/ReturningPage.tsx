@@ -8,6 +8,7 @@ import { clearEverything, listSavedDatasets, removeSavedDataset, type SavedDatas
 import "../components/workflow-shell.css";
 import "../components/phone-header.css";
 import "./returning.css";
+import "../components/dialog.css";
 import { StorageExplanation } from "../components/StorageExplanation.tsx";
 import { t } from "../i18n/index.ts";
 import { GuideButton, useGuidePage } from "../onboarding/Onboarding.tsx";
@@ -131,14 +132,14 @@ export function ReturningPage() {
         <footer className="returning-bottom-note"><span><ReturningIcon name="leaf" />{copy("tagline")}</span><button ref={aboutButtonRef} type="button" className="returning-about-link" onClick={() => { aboutRef.current?.showModal(); aboutCloseRef.current?.focus(); }}>{t("About saved uploads")}</button></footer>
       </div>
     </main>
-    <dialog ref={aboutRef} className="returning-dialog returning-about-dialog" aria-labelledby="saved-uploads-title" onClose={() => { if (managingUploads.current) uploadsHeadingRef.current?.focus(); else aboutButtonRef.current?.focus(); managingUploads.current = false; }}>
-      <div className="returning-about-header"><h2 id="saved-uploads-title">{t("About saved uploads")}</h2><button ref={aboutCloseRef} type="button" className="returning-btn" onClick={() => aboutRef.current?.close()}>{t("Close")}</button></div>
+    <dialog ref={aboutRef} className="stockless-dialog stockless-dialog--wide returning-about-dialog" aria-labelledby="saved-uploads-title" onClose={() => { if (managingUploads.current) uploadsHeadingRef.current?.focus(); else aboutButtonRef.current?.focus(); managingUploads.current = false; }}>
+      <div className="stockless-dialog__header"><h2 className="stockless-dialog__title" id="saved-uploads-title">{t("About saved uploads")}</h2><button ref={aboutCloseRef} type="button" className="stockless-dialog__button" onClick={() => aboutRef.current?.close()}>{t("Close")}</button></div>
       <StorageExplanation onManage={() => { managingUploads.current = true; aboutRef.current?.close(); uploadsHeadingRef.current?.focus(); }} />
     </dialog>
-    <dialog ref={dialogRef} className="returning-dialog" aria-labelledby="returning-confirm-title" aria-describedby="returning-confirm-copy" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}>
-      <h2 id="returning-confirm-title">{copy(pending === "all" ? "clearTitle" : "removeTitle")}</h2>
-      <p id="returning-confirm-copy">{pending === "all" ? copy("clearCopy") : pending && copy("removeCopy").replace("{name}", `${pending.shopName} / ${pending.datasetName}`)}</p>
-      <div className="returning-dialog__actions"><button ref={cancelRef} className="returning-btn" type="button" disabled={busy} onClick={closeDialog}>{copy("cancel")}</button><button className="returning-btn returning-btn--danger" type="button" disabled={busy} onClick={() => void remove()}>{copy(busy ? "removing" : pending === "all" ? "clearAll" : "remove")}</button></div>
+    <dialog ref={dialogRef} className="stockless-dialog" aria-labelledby="returning-confirm-title" aria-describedby="returning-confirm-copy" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}>
+      <h2 className="stockless-dialog__title" id="returning-confirm-title">{copy(pending === "all" ? "clearTitle" : "removeTitle")}</h2>
+      <p className="stockless-dialog__description" id="returning-confirm-copy">{pending === "all" ? copy("clearCopy") : pending && copy("removeCopy").replace("{name}", `${pending.shopName} / ${pending.datasetName}`)}</p>
+      <div className="stockless-dialog__actions"><button ref={cancelRef} className="stockless-dialog__button" type="button" disabled={busy} onClick={closeDialog}>{copy("cancel")}</button><button className="stockless-dialog__button stockless-dialog__button--danger" type="button" disabled={busy} onClick={() => void remove()}>{copy(busy ? "removing" : pending === "all" ? "clearAll" : "remove")}</button></div>
     </dialog>
   </div>;
 }
