@@ -60,3 +60,7 @@
 .sx-globe-note{margin:4px 0 0;max-width:34ch;text-align:center;font:400 16px/1.5 var(--body);color:var(--muted)}
 .sx-globe-note b{color:var(--ink)}
 .sx-globe-go{margin-top:6px}
+/* Centre the Impact page in the workspace the same way as the Purchase plan (1100px column, 40px gutters). */
+.saved-workspace__content > .page:has(> main.impact .sx-band){max-width:none;width:100%;margin:0}
+main.impact:has(.sx-band){width:min(1100px,calc(100% - 80px));max-width:none;margin-left:auto;margin-right:auto}
+@media (max-width:640px){main.impact:has(.sx-band){width:calc(100% - 32px)}}
