@@ -813,6 +813,10 @@ export const messages: Record<string, readonly [string, string]> = {
     "使用示例文件",
     "Gunakan fail contoh"
   ],
+  "Sample dates adjust to today. Milo 3in1 has eight complete weeks; other products intentionally include missing or unusual records.": [
+    "示例日期会随今天调整。Milo 3in1 有完整的近八周记录；其他商品特意包含缺失或异常记录。",
+    "Tarikh contoh diselaraskan kepada hari ini. Milo 3in1 mempunyai rekod lengkap lapan minggu; produk lain sengaja mengandungi rekod yang tiada atau luar biasa."
+  ],
   "up to": [
     "最大",
     "sehingga"

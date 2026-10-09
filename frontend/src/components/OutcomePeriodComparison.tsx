@@ -3,7 +3,7 @@ import { addCalendarDays, buildImportedOutcomeEvidence, compareOutcomePeriods, c
   type ReadinessSnapshot, type PurchaseDecision, type RecordedStockOutcome, type OutcomeUnit, type RecordedOutcomeSummary, type HistoricalFinancialSummary } from "../engine.ts";
 import { getLocale, useLanguage } from "../i18n/index.ts";
 import { getSavedDataset, savedPurchaseDecisions, savedStockOutcomes } from "../storage/saved-datasets.ts";
-import { malaysiaToday } from "./StockOutcomeControls.tsx";
+import { malaysiaToday } from "../malaysia-date.ts";
 import "./decision-outcome-controls.css";
 
 interface Props {

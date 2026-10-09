@@ -1,4 +1,5 @@
 import { t, useLanguage } from "./i18n/index.ts";
+import { malaysiaToday } from "./malaysia-date.ts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OpeningScreen } from "./components/OpeningScreen.tsx";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
@@ -64,11 +65,6 @@ function seedFromProposals(base: MappingState, proposals: MappingProposalResult)
   return next;
 }
 
-/** Returns the retailer-facing calendar date in the specification's fixed zone. */
-function malaysiaDate(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
-}
-
 interface AppProps {
   readonly initialDatasetId?: string;
   readonly updateDatasetId?: string;
@@ -108,7 +104,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [dateConfirmations, setDateConfirmations] = useState<readonly DateFormatConfirmation[]>([]);
-  const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
+  const [analysisDate, setAnalysisDate] = useState(malaysiaToday);
   const [savedDatasets, setSavedDatasets] = useState<readonly SavedDatasetSummary[]>([]);
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
   const [updateTargetId, setUpdateTargetId] = useState<string | null>(updateDatasetId ?? null);
@@ -518,6 +514,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     onProgress: (progress: CsvProgress) => void,
     signal: AbortSignal,
     sourceMetadata?: ImportSourceMetadata,
+    sampleAnalysisDate?: string,
   ) => {
     const previousMode = envelope.session.sourceMode;
     const next = await replaceSessionSourceInWorker(envelope, bytes, {
@@ -551,8 +548,8 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     lastSavedEnvelope.current = null;
     setMappingError(null);
     setMappingNotice(null);
-    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
-    setAnalysisDate(malaysiaDate());
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined); setImpactFocus(undefined);
+    setAnalysisDate(sourceMode === "sample" && sampleAnalysisDate ? sampleAnalysisDate : malaysiaToday());
     setActiveSavedId(null);
     setWorkspaceInfo({ datasetName: parsed.sourceName.replace(/\.[^.]+$/, ""), shopName: target?.shopName ?? "", rowCount: parsed.rows.length });
     setUpdateTargetId(null);

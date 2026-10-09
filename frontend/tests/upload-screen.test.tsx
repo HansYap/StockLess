@@ -84,9 +84,13 @@ it.each([false, true])("continues directly with sample data even with a saved pl
   vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, text: async () => "date,sku,qty\n2026-09-15,A1,2" } as Response);
   const onSource = vi.fn<ImportSource>(async () => {});
   render(<UploadScreen onSource={onSource} onCancel={() => {}} hasSavedPlan={hasSavedPlan} />);
+  expect(screen.getByText(/Sample dates adjust to today/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Use sample file" }));
   await waitFor(() => expect(onSource).toHaveBeenCalledOnce());
-  expect(onSource.mock.calls[0]?.[2]).toBe("sample");
+  const call = onSource.mock.calls[0]!;
+  expect(call[2]).toBe("sample");
+  expect(call[7]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(new TextDecoder().decode(call[0])).toContain(`${call[7]},A1,2`);
 });
 
 it("requires an explicit replacement choice and imports only the new file", async () => {
