@@ -7,6 +7,7 @@ import "./upload.css";
 import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
 import { BrandIcon } from "../components/BrandIcon.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { malaysiaToday } from "../malaysia-date.ts";
 import {
   CsvImportError,
   PRIVACY_NOTICE,
@@ -30,6 +31,7 @@ interface UploadScreenProps {
     onProgress: (progress: CsvProgress) => void,
     signal: AbortSignal,
     sourceMetadata?: ImportSourceMetadata,
+    sampleAnalysisDate?: string,
   ) => Promise<void>;
   readonly onCancel: () => void;
   readonly updating?: boolean;
@@ -158,6 +160,7 @@ export function UploadScreen({
     expectedBytes: number,
     loadBytes: (signal: AbortSignal, onReadProgress: (processed: number) => void) => Promise<Uint8Array>,
     sourceMetadata?: ImportSourceMetadata,
+    sampleAnalysisDate?: string,
   ) {
     const controller = new AbortController();
     abortRef.current?.abort();
@@ -170,7 +173,7 @@ export function UploadScreen({
       const bytes = await loadBytes(controller.signal, (processed) => {
         setProgress({ phase: "decode", processed, total: expectedBytes });
       });
-      await onSource(bytes, name, mode, mimeType, setProgress, controller.signal, sourceMetadata);
+      await onSource(bytes, name, mode, mimeType, setProgress, controller.signal, sourceMetadata, sampleAnalysisDate);
     } catch (error) {
       if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) {
         setFailure(null);
@@ -210,13 +213,13 @@ export function UploadScreen({
   }
 
   async function handleSample() {
+    const sampleAnalysisDate = malaysiaToday();
     await run("sample_with_issues.csv", "sample", "text/csv", 0, async (signal) => {
       const response = await fetch("/samples/sample_with_issues.csv", { signal, cache: "no-store" });
       if (!response.ok) throw new Error("Sample unavailable");
       const csv = await response.text();
-      const analysisDate = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
-      return new TextEncoder().encode(rebaseSampleCsvDates(csv, analysisDate));
-    });
+      return new TextEncoder().encode(rebaseSampleCsvDates(csv, sampleAnalysisDate));
+    }, undefined, sampleAnalysisDate);
   }
 
   function cancelImport() {
@@ -314,6 +317,7 @@ export function UploadScreen({
                   <button type="button" className="btn btn--primary" onClick={() => inputRef.current?.click()}>{t("Choose CSV or Excel file")}</button>
                   {!updating && <button type="button" className="btn btn--ghost" onClick={() => void handleSample()}>{t("Use sample file")}</button>}
                 </div>
+                {!updating && <p className="upload-sample-note">{t("Sample dates adjust to today. Milo 3in1 has eight complete weeks; other products intentionally include missing or unusual records.")}</p>}
                 <p className="upload-limits">{t(".csv, .xlsx or .xls")} {t("up to ")}{megabyteLimit} {t("MiB ·")} {UPLOAD_REQUIREMENTS.maxRows.toLocaleString("en")} {t("rows ·")} {t("Choose which Excel worksheet to analyse")}</p>
                 <ol className="upload-flow" aria-label={t("What happens to your file")}>
                   {FLOW.map(([icon, label]) => <li key={label}><WorkflowIcon name={icon} /><span>{t(label)}</span></li>)}
