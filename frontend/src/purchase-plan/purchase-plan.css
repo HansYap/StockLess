@@ -143,7 +143,9 @@
 .purchase-plan--new .pp-incoming input { width: 72px; height: 36px; border: 1px solid var(--border-strong); border-radius: 10px; padding: 0 8px; font: 400 15px var(--data); color: var(--ink); }
 .purchase-plan--new .pp-input-error { font-size: 12px; line-height: 1.4; color: var(--red); }
 .purchase-plan--new .pp-input-sources { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
-.purchase-plan--new .pp-input-sources > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.purchase-plan--new .pp-input-sources > span,
+.purchase-plan--new .pp-order-source > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.purchase-plan--new .pp-order-source { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
 .purchase-plan--new .source-tag { display: inline-flex; align-self: flex-start; padding: 2px 6px; border-radius: 5px; font-size: 11px; font-weight: 600; color: var(--muted); background: #f4f7f6; }
 .purchase-plan--new .source--input { color: var(--amber); background: var(--amber-tint); }
 .purchase-plan--new .source--worked { color: var(--teal-deep); background: #e8f3f0; }

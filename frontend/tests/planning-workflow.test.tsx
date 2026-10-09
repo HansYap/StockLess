@@ -29,14 +29,18 @@ it('opens optional details for the selected product outside its saved filter',as
   expect(screen.getByText('Selected product outside current filter')).toBeTruthy();
   expect(screen.queryByLabelText('Final quantity')).toBeNull();
 });
-it('keeps actual records separate without a related-decision input',async()=>{
-  const props=basePlan(),onSelect=vi.fn();render(<ImpactDashboard {...props} selectedKey="B" onSelect={onSelect} focus={{section:'outcomes',revision:1}} />);
-  await waitFor(()=>expect(screen.getByText('Record what happened').closest('details')?.open).toBe(true));
-  expect((screen.getByLabelText('Product for actual records') as HTMLSelectElement).value).toBe('B');
-  expect(screen.getByLabelText('Recorded quantity')).toBeTruthy();
-  expect(screen.queryByLabelText('Related decision (optional)')).toBeNull();
-  expect(screen.queryByRole('button',{name:'Save decision'})).toBeNull();
-  fireEvent.change(screen.getByLabelText('Product for actual records'),{target:{value:'A'}});expect(onSelect).toHaveBeenCalledWith('A');
+it('shows snapshot estimates without recording, correction or history forms',()=>{
+  render(<ImpactDashboard {...basePlan()} />);
+  for(const title of ['Record what happened','Improve the data behind these estimates','Compare recorded history across two periods','Recorded waste: estimated CO₂e']) expect(screen.queryByText(title)).toBeNull();
+  expect(screen.queryByLabelText('Recorded quantity')).toBeNull();
+  expect(screen.queryByRole('button',{name:'Save actual outcome'})).toBeNull();
+  const environment=screen.getByRole('tabpanel',{name:'Environmental'});
+  expect(environment.querySelectorAll('.ix-card')).toHaveLength(2);
+  expect(within(environment).getByText('Potential excess: estimated CO₂e')).toBeTruthy();
+  expect(within(environment).getByText('Named scenario difference')).toBeTruthy();
+  expect(within(screen.getByRole('list',{name:'Your plan at a glance'})).getAllByRole('button')).toHaveLength(3);
+  fireEvent.click(screen.getByRole('tab',{name:'Business'}));
+  expect(screen.getByRole('tabpanel',{name:'Business'}).querySelectorAll('.ix-card')).toHaveLength(4);
 });
 it('exports the current order, ignores older saved decisions and updates after a plan edit',async()=>{
   const decision=createPurchaseDecision({id:'old',datasetId:'D',response:'Changed',finalQuantity:6,reason:'Old choice',referenceDate:'2026-10-08',recordedAt:'2026-10-08T10:00:00Z',recommendation:{productKey:'A',productName:'Same product name',sourceName:'old.csv',sourceSha256:'old',sourceMode:'user',analysisDate:'2026-09-14',policyVersion:'cp3-v2',recommendedQuantity:12,quantityUnit:'pieces'}});

@@ -110,7 +110,13 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
         <div className="pp-incoming"><label htmlFor="purchase-incoming">{t("Incoming stock")}</label><input id="purchase-incoming" type="text" inputMode="numeric" placeholder="0" value={typed.incomingStock ?? (inputs.incomingStock.state === "value" ? String(inputs.incomingStock.value) : "")} aria-invalid={Boolean(errors.incomingStock)} aria-describedby={errors.incomingStock ? "incoming-stock-error" : undefined} onChange={event => update("incomingStock", event.currentTarget.value)} /><span>{t("units")}</span></div>
         {errors.incomingStock && <p id="incoming-stock-error" className="pp-input-error" role="alert">{t(errors.incomingStock)}. {t("The check still uses the last valid quantity. Correct this field to update it.")}</p>}
         {inputs.incomingStock.state === "empty" && <p className="pp-small-note">{copy("Incoming stock not entered — counted as 0 units in this check.", "未填写在途库存——本次检查按 0 件计算。", "Stok akan tiba belum dimasukkan — dikira sebagai 0 unit dalam semakan ini.")}</p>}
-        <div className="pp-input-sources">{inputs.plannedOrder.state === "value" && <span>{t("Your order")}: <SourceTag source={inputs.plannedOrder.source} /><button type="button" className="pp-link-button" aria-label={t("Reset order to suggestion")} onClick={() => update("plannedOrder", "")}>{t("Reset to suggestion")}</button></span>}{inputs.incomingStock.state === "value" && <span>{t("Incoming")}: <SourceTag source={inputs.incomingStock.source} /><button type="button" className="pp-link-button" aria-label={t("Clear incoming stock")} onClick={() => update("incomingStock", "")}>{t("Clear")}</button></span>}</div>
+        <div className="pp-input-sources">
+          {inputs.plannedOrder.state === "value" && <div className="pp-order-source">
+            <span>{t("Your order")}: <SourceTag source={inputs.plannedOrder.source} /></span>
+            {inputs.plannedOrder.source !== "worked out by StockLess" && <button type="button" className="pp-link-button" aria-label={t("Reset order to suggestion")} onClick={() => update("plannedOrder", "")}>{t("Reset to suggestion")}</button>}
+          </div>}
+          {inputs.incomingStock.state === "value" && <span>{t("Incoming")}: <SourceTag source={inputs.incomingStock.source} /><button type="button" className="pp-link-button" aria-label={t("Clear incoming stock")} onClick={() => update("incomingStock", "")}>{t("Clear")}</button></span>}
+        </div>
         <p id="purchase-empty-order" className="pp-small-note">{t("Suggested drafts are calculated automatically. Adjust the quantity if needed; zero is a valid order.")}</p>
       </section></div>
       <SupplierOrderPanel estimate={restock} terms={terms} analysisDate={analysisDate} invalidQuantity={invalidQuantity} onTermsChange={onTermsChange} onApply={adopt} />

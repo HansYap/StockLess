@@ -15,24 +15,21 @@ function costEvidence() {
 }
 function summary(title: string): HTMLElement { return screen.getByText(title).parentElement!; }
 // The restored design opens the Environmental lens first; business checks open their tab.
-function openAnalysis() { const summary = screen.getByText("Detailed estimates"); if (!summary.closest("details")?.open) fireEvent.click(summary); }
+function openAnalysis() { expect(screen.getByRole("heading", { name: "Detailed estimates and how they work" })).toBeTruthy(); }
 function businessPanel() { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: /Business/ })); return within(screen.getByRole("tabpanel", { name: "Business" })); }
 
 describe("impact dashboard", () => {
-  it("opens the relevant product breakdown from each overview card while keeping optional tools closed", () => {
+  it("opens the relevant product breakdown from each overview card", () => {
     const { snapshot, forecast } = costEvidence();
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{ A: entered(100) }} onBack={() => {}} />);
     const overview = within(screen.getByRole("list", { name: "Your plan at a glance" }));
     expect(overview.getAllByRole("button")).toHaveLength(3);
     expect(overview.getByText("From 2 of 3 products · next 4 weeks")).toBeTruthy();
-    for (const title of ["Detailed estimates", "Download your results", "See the illustrated plan", "How these estimates work"]) {
-      expect(screen.getByText(title).closest("details")?.open).toBe(false);
-    }
+    expect((document.getElementById("business-breakdown") as HTMLDetailsElement).open).toBe(false);
+    expect((document.getElementById("environment-breakdown") as HTMLDetailsElement).open).toBe(false);
     fireEvent.click(overview.getByRole("button", { name: /Possible excess stock/ }));
-    expect((document.getElementById("impact-excess-products") as HTMLDetailsElement).open).toBe(true);
-    expect(screen.getByText("Detailed estimates").closest("details")?.open).toBe(false);
+    expect(document.getElementById("impact-excess-products")).toBeTruthy();
     fireEvent.click(overview.getByRole("button", { name: /Money tied up in excess/ }));
-    expect(screen.getByText("Detailed estimates").closest("details")?.open).toBe(true);
     expect(screen.getByRole("tab", { name: "Business" }).getAttribute("aria-selected")).toBe("true");
     expect((document.getElementById("business-breakdown") as HTMLDetailsElement).open).toBe(true);
     expect(screen.getByText("Excess-stock cost by product")).toBeTruthy();
@@ -40,7 +37,7 @@ describe("impact dashboard", () => {
     expect(screen.getByRole("tab", { name: "Environmental" }).getAttribute("aria-selected")).toBe("true");
     expect((document.getElementById("environment-breakdown") as HTMLDetailsElement).open).toBe(true);
     expect(screen.getByText("Why these estimates? Potential excess by product")).toBeTruthy();
-    expect(screen.getByText("Download your results").closest("details")?.open).toBe(false);
+    expect(screen.getByRole("heading", { name: "Download your results" })).toBeTruthy();
   });
   it("uses checked purchase quantities and excludes products without a usable check", () => {
     const { snapshot, forecast } = makeEvidence();
@@ -60,10 +57,10 @@ describe("impact dashboard", () => {
 
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
     expect(screen.getByRole("heading", { name: "See the impact of your purchase plan" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Understanding your impact" })).toBeTruthy();
-    expect(screen.getByText(`Potential excess: ${lines[0].units} sales units · 2/3 assessed`)).toBeTruthy();
+    openAnalysis();
+    expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe(`${lines[0].units} units`);
     const business = businessPanel();
-    expect(business.getAllByText("No planned order entered.")).toHaveLength(1);
+    expect(business.getByText("Planned purchase spend")).toBeTruthy();
     expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("Unavailable");
   });
 
@@ -84,7 +81,7 @@ describe("impact dashboard", () => {
     expect(environment.getAttribute("aria-selected")).toBe("true");
     expect(business.getAttribute("aria-selected")).toBe("false");
     expect(document.getElementById("environment-impact")?.hidden).toBe(false);
-    expect(screen.getByText("No outcome recorded")).toBeTruthy();
+    expect(screen.queryByText("No outcome recorded")).toBeNull();
     const question = screen.getByText("How CO₂e estimates are calculated");
     fireEvent.click(question);
     expect(question.closest("details")?.open).toBe(true);
@@ -103,8 +100,8 @@ describe("impact dashboard", () => {
     expect(lines.some(line => line.units === 0)).toBe(true);
     const excess = lines.reduce((total, line) => total + line.units, 0);
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
-    expect(screen.getByText(`Potential excess: ${excess} sales units · 2/3 assessed`)).toBeTruthy();
-    expect(businessPanel().getAllByText("No planned order entered.")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe(`${excess} units`);
+    expect(businessPanel().getByText("Planned purchase spend")).toBeTruthy();
   });
 
   it("uses validated seller costs, shows real zero and updates current totals after a quantity edit", () => {
@@ -117,7 +114,7 @@ describe("impact dashboard", () => {
     expect(within(row).getAllByText("MYR 0.00").length).toBeGreaterThan(0);
     rerender(<ImpactDashboard {...props} drafts={{ A: entered(50), B: entered(0) }} />);
     expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 125.00");
-    expect(screen.getByText(/It is not achieved savings, profit or selling-price revenue/)).toBeTruthy();
+    expect(screen.getByText(/These are estimates, not achieved savings or profit/)).toBeTruthy();
   });
 
   it("uses sourced automatic drafts for missing orders and preserves an entered zero", () => {
@@ -144,6 +141,6 @@ describe("impact dashboard", () => {
     expect(screen.getAllByText("Sources agree").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/SU-EATABLE LIFE \(used in factor\):/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/AGRIBALYSE \(used in factor\):/).length).toBeGreaterThan(0);
-    expect(screen.getByText("No outcome recorded")).toBeTruthy();
+    expect(screen.queryByText("Recorded waste: estimated CO₂e")).toBeNull();
   });
 });
