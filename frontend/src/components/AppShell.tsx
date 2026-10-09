@@ -8,6 +8,7 @@ import { Logo } from "./Logo.tsx";
 import { GrowthIcon, STEP_GROWTH } from "./GrowthIcon.tsx";
 import { SavedWorkspaceSidebar, type SavedWorkspaceSidebarProps } from "./SavedWorkspaceSidebar.tsx";
 import "./workflow-shell.css";
+import "./phone-header.css";
 import "./i3-typography.css";
 import { GuideButton } from "../onboarding/Onboarding.tsx";
 
@@ -89,7 +90,7 @@ export function AppShell({
       <StepGround step={current} done={current === 4 || current < reached || Boolean(stepDone)} />
     </>;
   return (
-    <div className={`frame${i3Typography ? " frame--i3" : ""}${workflow ? " frame--workflow" : ""}${impactShell ? " frame--impact" : ""}${workspaceSidebar ? " frame--saved-workspace" : ""}`}>
+    <div className={`frame header-compact${i3Typography ? " frame--i3" : ""}${workflow ? " frame--workflow" : ""}${impactShell ? " frame--impact" : ""}${workspaceSidebar ? " frame--saved-workspace" : ""}`}>
       {!workspaceSidebar && <WorkspaceDecor />}
       <header className="topbar">
         {workflow || impactShell ? (
