@@ -36,10 +36,11 @@ function Harness({ snapshot, forecast, drafts, initialContexts = {} }: { snapsho
   return <ImpactDashboard snapshot={effective} forecast={forecast} drafts={drafts} contexts={contexts} datasetId="D" shopName="Test shop" datasetName="October"
     onContextChange={(key, value) => setContexts(current => ({ ...current, [key]: value }))} onBack={() => {}} />;
 }
-function financialCard(label: string) { return screen.getByText(label).parentElement!; }
-function environmentPanel() { return screen.getByRole("tabpanel", { name: "Environmental" }); }
+function openAnalysis() { const summary = screen.getByText("Detailed estimates"); if (!summary.closest("details")?.open) fireEvent.click(summary); }
+function financialCard(label: string) { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: "Business" })); return screen.getByText(label).parentElement!; }
+function environmentPanel() { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: "Environmental" })); return screen.getByRole("tabpanel", { name: "Environmental" }); }
 function environmentalValue(label: string) { return within(environmentPanel()).getByText(label).parentElement!.querySelector("b")!.textContent; }
-function openInputs() { fireEvent.click(screen.getByText("Confirm category, cost, weight and storage")); }
+function openInputs() { const review = screen.getByText("Review a product: confirm its data or record what happened"); if (!review.closest("details")?.open) fireEvent.click(review); fireEvent.click(screen.getByText("Confirm category, cost, weight and storage")); }
 
 it("Step 5 shows the exact same current planned and scenario quantities/costs as Step 4", async () => {
   const input = await evidence();

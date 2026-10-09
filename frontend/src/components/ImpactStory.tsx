@@ -44,7 +44,7 @@ function useCountUp(target: number, running: boolean, ms = 900) {
 }
 
 /** The Step 5 story from the supplied design: planned shelf → expected demand → potential excess. */
-export function ImpactStory({ head, lines, business, emissions, onBack }: { head: ReactNode; lines: readonly ImpactLine[]; business: ImpactTile; emissions: ImpactTile; onBack?: () => void }) {
+export function ImpactStory({ head, lines, totalProducts, business, emissions, onBack, onExcess, onBusiness, onEmissions }: { head: ReactNode; lines: readonly ImpactLine[]; totalProducts: number; business: ImpactTile; emissions: ImpactTile; onBack?: () => void; onExcess: () => void; onBusiness: () => void; onEmissions: () => void }) {
   const language = useLanguage();
   const copy: Translate = (en, zh, ms) => language === "zh" ? zh : language === "ms" ? ms : en;
   const number = (value: number) => Math.round(value).toLocaleString(getLocale());
@@ -54,8 +54,8 @@ export function ImpactStory({ head, lines, business, emissions, onBack }: { head
   const planned = lines.reduce((sum, item) => sum + Math.max(0, item.available), 0);
   const excess = lines.reduce((sum, item) => sum + Math.max(0, item.units), 0);
   const expected = planned - excess;
+  const coverage = copy(`From ${lines.length} of ${totalProducts} products · next 4 weeks`, `来自 ${totalProducts} 件商品中的 ${lines.length} 件 · 未来 4 周`, `Daripada ${lines.length} daripada ${totalProducts} produk · 4 minggu akan datang`);
   const ratio = storyPlanned ? Math.round(storyExpected / storyPlanned * 100) : 0;
-  const planRatio = planned ? Math.round(expected / planned * 100) : 0;
   const moreCount = Math.max(0, lines.length - story.length);
   const moreExtra = Math.max(0, excess - story.reduce((sum, item) => sum + Math.max(0, item.units), 0));
   const motion = typeof window !== "undefined" && typeof IntersectionObserver === "function"
@@ -116,15 +116,16 @@ export function ImpactStory({ head, lines, business, emissions, onBack }: { head
       <div className="sx-band__actions">
         {onBack && <button type="button" className="sx-back" onClick={onBack}>{copy("← Back to purchase plan", "← 返回进货计划", "← Kembali ke pelan belian")}</button>}
         <span className="sx-band__spacer" />
-        {lines.length > 0 && <button className="btn btn--primary sx-play" type="button" onClick={play}><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z" /></svg> {copy("Play story", "播放演示", "Main animasi")}</button>}
       </div>
     </div>
-    {lines.length > 0 && <ul className="sx-kpis">
-      <li><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true"><ImpactIcon name="sprout" size={24} /></span><span><b>{number(excess)} <small>{copy("items", "件", "item")}</small></b><em>{copy("you may not sell in 4 weeks", "4 周内可能卖不完", "mungkin tidak terjual dalam 4 minggu")}</em></span></li>
-      <li><span className="sx-kpi__ic sx-kpi__ic--amber" aria-hidden="true"><ImpactIcon name="coins" size={24} /></span><span><b>{business.value ?? copy("Not yet", "暂无", "Belum ada")}</b><em>{business.value ? copy("cash you keep by ordering less", "少订就能留住的现金", "tunai yang kekal jika memesan kurang") : copy("Add unit cost to see it", "填写单位成本后显示", "Tambah kos seunit untuk melihatnya")}</em></span></li>
-      <li><span className="sx-kpi__ic sx-kpi__ic--blue" aria-hidden="true"><ImpactIcon name="globe" size={24} /></span><span><b>{emissions.value ?? "CO₂e"}</b><em>{emissions.value ? copy("from the extra stock", "来自多余库存", "daripada stok lebihan") : copy("Confirm product types to see it", "确认商品类别后显示", "Sahkan jenis produk untuk melihatnya")}</em></span></li>
-      <li><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true"><ImpactIcon name="check" size={24} /></span><span><b>{planRatio}% → 100%</b><em>{copy("of your stock fits your sales", "的库存符合销量", "stok anda sepadan dengan jualan")}</em></span></li>
-    </ul>}
+    <ul className="sx-kpis sx-kpis--summary" aria-label={copy("Your plan at a glance", "计划概览", "Ringkasan pelan anda")}>
+      <li><button type="button" className="sx-kpi-button" onClick={onExcess} aria-controls="impact-excess-products"><span className="sx-kpi__ic sx-kpi__ic--teal" aria-hidden="true"><ImpactIcon name="sprout" size={24} /></span><span><strong className="sx-kpi-label">{copy("Possible excess stock", "可能多余的库存", "Stok berlebihan berpotensi")}</strong><b>{lines.length ? <>{number(excess)} <small>{copy("units", "件", "unit")}</small></> : copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b><em>{lines.length ? coverage : copy("Enter planned orders to check for excess stock.", "填写计划订单后即可检查多余库存。", "Masukkan pesanan dirancang untuk menyemak stok berlebihan.")}</em><span className="sx-kpi-link">{copy("See products →", "查看商品 →", "Lihat produk →")}</span></span></button></li>
+      <li><button type="button" className="sx-kpi-button" onClick={onBusiness} aria-controls="business-breakdown"><span className="sx-kpi__ic sx-kpi__ic--amber" aria-hidden="true"><ImpactIcon name="coins" size={24} /></span><span><strong className="sx-kpi-label">{copy("Money tied up in excess", "压在多余库存上的资金", "Wang terikat pada lebihan")}</strong><b>{business.value ?? copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b><em>{business.note}</em><span className="sx-kpi-link">{copy("See costs →", "查看成本 →", "Lihat kos →")}</span></span></button></li>
+      <li><button type="button" className="sx-kpi-button" onClick={onEmissions} aria-controls="environment-breakdown"><span className="sx-kpi__ic sx-kpi__ic--blue" aria-hidden="true"><ImpactIcon name="globe" size={24} /></span><span><strong className="sx-kpi-label">{copy("Estimated CO₂e of excess", "多余库存的 CO₂e 估算", "Anggaran CO₂e lebihan")}</strong><b>{emissions.value ?? copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b><em>{emissions.note}</em><span className="sx-kpi-link">{copy("See estimate →", "查看估算 →", "Lihat anggaran →")}</span></span></button></li>
+    </ul>
+    <details className="sx-card impact__disclosure sx-story-details"><summary><span>{copy("See the illustrated plan", "查看计划演示", "Lihat ilustrasi pelan")}</span><small>{copy("A visual explanation of possible excess stock", "直观了解可能多余的库存", "Penjelasan visual tentang stok berlebihan berpotensi")}</small></summary>
+    <p className="sx-story-note">{copy("This is an illustration of stock above expected demand. Review the quantities in your purchase plan before ordering.", "此演示说明高于预期需求的库存。下单前请核对采购计划中的数量。", "Ini ilustrasi stok melebihi permintaan dijangka. Semak kuantiti dalam pelan belian sebelum memesan.")}</p>
+    {lines.length > 0 && <button className="btn btn--primary sx-play" type="button" onClick={play}><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z" /></svg> {copy("Play story", "播放演示", "Main animasi")}</button>}
     <div className={classes} id="sx-story" ref={storyRef}>
       <div className="sx-card sx-shelfcard">
         <div className="sx-cap">
@@ -148,7 +149,7 @@ export function ImpactStory({ head, lines, business, emissions, onBack }: { head
           <div className="sx-badge" aria-live="polite"><span className="sx-badge__num" ref={badgeRef}>{lines.length ? number(phase === "play" || phase === "scanned" ? 0 : badge) : "—"}</span><span>{copy("ITEMS", "件", "ITEM")}</span></div>
         </div>
         <h2 className="sx-impact__title">{copy("What your plan could avoid", "这个计划可以避免的", "Apa yang pelan anda boleh elakkan")}</h2>
-        {lines.length > 0 ? <p className="sx-globe-note">{copy("If you follow the suggested orders,", "按建议数量下单，", "Jika anda ikut pesanan dicadangkan,")} <b>{number(excess)} {copy("items", "件商品", "item")}</b> {copy("won't sit on your shelf waiting to expire.", "就不会堆在货架上等到过期。", "tidak akan terbiar di rak sehingga luput.")}</p>
+        {lines.length > 0 ? <p className="sx-globe-note"><b>{number(excess)} {copy("items", "件商品", "item")}</b> {copy("are above the expected demand range. Review these orders to reduce the risk of excess stock.", "高于预期需求区间。请核对这些订单，以降低多余库存的风险。", "melebihi julat permintaan dijangka. Semak pesanan ini untuk mengurangkan risiko stok berlebihan.")}</p>
           : <p className="sx-globe-note">{copy("Enter planned orders in Step 4.", "请在第 4 步填写计划订购量。", "Masukkan pesanan dirancang dalam Langkah 4.")}</p>}
         {lines.length > 0 && onBack && <button type="button" className="btn btn--ghost sx-globe-go" onClick={onBack}>{copy("Lower these orders in the plan →", "在计划中减少这些订单 →", "Kurangkan pesanan ini dalam pelan →")}</button>}
       </div>
@@ -158,5 +159,6 @@ export function ImpactStory({ head, lines, business, emissions, onBack }: { head
       <div className="sx-sum__bar" role="img" aria-label={copy(`${number(expected)} likely to sell, ${number(excess)} extra`, `可能卖出 ${number(expected)}，多余 ${number(excess)}`, `${number(expected)} mungkin terjual, ${number(excess)} lebihan`)}><span style={{ flexGrow: Math.max(0, expected) }} /><span style={{ flexGrow: Math.max(0, excess) }} /></div>
       <small>{copy("Next 4 weeks · lower the orange part before you order.", "未来 4 周 · 下单前减少橙色部分。", "4 minggu akan datang · kurangkan bahagian oren sebelum memesan.")}</small>
     </div>}
+    </details>
   </>;
 }

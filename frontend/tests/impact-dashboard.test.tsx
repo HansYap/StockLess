@@ -15,9 +15,33 @@ function costEvidence() {
 }
 function summary(title: string): HTMLElement { return screen.getByText(title).parentElement!; }
 // The restored design opens the Environmental lens first; business checks open their tab.
-function businessPanel() { fireEvent.click(screen.getByRole("tab", { name: /Business/ })); return within(screen.getByRole("tabpanel", { name: "Business" })); }
+function openAnalysis() { const summary = screen.getByText("Detailed estimates"); if (!summary.closest("details")?.open) fireEvent.click(summary); }
+function businessPanel() { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: /Business/ })); return within(screen.getByRole("tabpanel", { name: "Business" })); }
 
 describe("impact dashboard", () => {
+  it("opens the relevant product breakdown from each overview card while keeping optional tools closed", () => {
+    const { snapshot, forecast } = costEvidence();
+    render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{ A: entered(100) }} onBack={() => {}} />);
+    const overview = within(screen.getByRole("list", { name: "Your plan at a glance" }));
+    expect(overview.getAllByRole("button")).toHaveLength(3);
+    expect(overview.getByText("From 1 of 3 products · next 4 weeks")).toBeTruthy();
+    for (const title of ["Detailed estimates", "Download your results", "See the illustrated plan", "How these estimates work"]) {
+      expect(screen.getByText(title).closest("details")?.open).toBe(false);
+    }
+    fireEvent.click(overview.getByRole("button", { name: /Possible excess stock/ }));
+    expect((document.getElementById("impact-excess-products") as HTMLDetailsElement).open).toBe(true);
+    expect(screen.getByText("Detailed estimates").closest("details")?.open).toBe(false);
+    fireEvent.click(overview.getByRole("button", { name: /Money tied up in excess/ }));
+    expect(screen.getByText("Detailed estimates").closest("details")?.open).toBe(true);
+    expect(screen.getByRole("tab", { name: "Business" }).getAttribute("aria-selected")).toBe("true");
+    expect((document.getElementById("business-breakdown") as HTMLDetailsElement).open).toBe(true);
+    expect(screen.getByText("Excess-stock cost by product")).toBeTruthy();
+    fireEvent.click(overview.getByRole("button", { name: /Estimated CO₂e of excess/ }));
+    expect(screen.getByRole("tab", { name: "Environmental" }).getAttribute("aria-selected")).toBe("true");
+    expect((document.getElementById("environment-breakdown") as HTMLDetailsElement).open).toBe(true);
+    expect(screen.getByText("Why these estimates? Potential excess by product")).toBeTruthy();
+    expect(screen.getByText("Download your results").closest("details")?.open).toBe(false);
+  });
   it("uses checked purchase quantities and excludes products without a usable check", () => {
     const { snapshot, forecast } = makeEvidence();
     const empty = calculatePotentialExcess(snapshot, forecast, {});
@@ -46,6 +70,7 @@ describe("impact dashboard", () => {
   it("switches impact tabs and expands an explanation", () => {
     const { snapshot, forecast } = makeEvidence();
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{}} onBack={() => {}} />);
+    openAnalysis();
 
     const environment = screen.getByRole("tab", { name: /Environmental/ });
     const business = screen.getByRole("tab", { name: /Business/ });
@@ -98,9 +123,11 @@ describe("impact dashboard", () => {
   it("does not turn missing orders into zero spending even when usable costs are present", () => {
     const { snapshot, forecast } = costEvidence();
     const { rerender } = render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{}} onBack={() => {}} />);
+    expect(within(screen.getByRole("button", { name: /Possible excess stock/ })).getByText("Not yet available")).toBeTruthy();
     expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("Unavailable");
     expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 0/3");
     rerender(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{ A: entered(0) }} onBack={() => {}} />);
+    expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
     expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 0.00");
     expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 1/3");
   });

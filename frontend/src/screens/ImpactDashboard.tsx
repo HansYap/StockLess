@@ -50,6 +50,9 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
   const [selected,setSelected]=useState(products[0]?.key??'');
   const [reviewOpen,setReviewOpen]=useState(false);
   const review=useRef<HTMLDetailsElement>(null);
+  const [analysisOpen,setAnalysisOpen]=useState(false), [excessOpen,setExcessOpen]=useState(false);
+  const [businessOpen,setBusinessOpen]=useState(false), [environmentOpen,setEnvironmentOpen]=useState(false);
+  const excessProducts=useRef<HTMLDetailsElement>(null), businessBreakdown=useRef<HTMLDetailsElement>(null), environmentBreakdown=useRef<HTMLDetailsElement>(null);
   useEffect(()=>{if(!products.some(p=>p.key===selected))setSelected(products[0]?.key??'');},[products,selected]);
   useEffect(()=>{let cancelled=false;setSaved(undefined); if(datasetId)void getSavedDataset(datasetId).then(value=>{if(!cancelled)setSaved(value);}).catch(()=>{if(!cancelled)setError(c('Saved history could not be read.','无法读取已保存记录。','Sejarah tersimpan tidak dapat dibaca.'));});return()=>{cancelled=true;};},[datasetId,revision]);
   const outcomes=useMemo(()=>saved?savedStockOutcomes(saved):[],[saved]);
@@ -73,12 +76,16 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
     :!anyCost?c('Map Unit cost in Step 2, or enter your purchase cost in Step 4, to price this in ringgit.','到第 2 步对应进货单价，或在第 4 步填写采购成本，就能换算成令吉。','Padankan Kos seunit di Langkah 2, atau masukkan kos belian di Langkah 4, untuk kira dalam ringgit.')
     :c('No checked product has a validated unit cost yet. Add costs in Step 4 or correct them in your file.','已核对的商品还没有经过验证的单位成本。请在第 4 步补录或修正文件。','Tiada produk disemak dengan kos seunit disahkan. Tambah kos dalam Langkah 4 atau betulkan fail anda.');
   const emissionsHint=!assessed.length?c('Enter planned orders in Step 4 first.','请先在第 4 步填写计划订购量。','Masukkan pesanan dirancang dalam Langkah 4 dahulu.')
-    :queue.length?c(`Confirm the food category of ${queue.length} product(s) below to estimate CO₂e.`,`在下方确认 ${queue.length} 件商品的食品类别后即可估算 CO₂e。`,`Sahkan kategori makanan bagi ${queue.length} produk di bawah untuk menganggar CO₂e.`)
+    :queue.length?c(`Confirm ${queue.length} product ${queue.length===1?'category':'categories'} to estimate CO₂e.`,`确认 ${queue.length} 件商品的食品类别后即可估算 CO₂e。`,`Sahkan kategori makanan bagi ${queue.length} produk untuk menganggar CO₂e.`)
     :c('Needs a confirmed food category and a weight per unit (from your file, the pack size or Step 4).','需要已确认的食品类别和每件重量（来自文件、包装规格或第 4 步）。','Perlukan kategori makanan disahkan dan berat seunit (daripada fail, saiz pek atau Langkah 4).');
   const businessTile:ImpactTile=excessCost.state==='estimated'?{value:money(excessCost.amount),note:c(`excess-stock cost, estimated from ${excessCost.includedCount} of ${assessed.length} checked products`,`过量库存成本估算，来自 ${assessed.length} 件已核对商品中的 ${excessCost.includedCount} 件`,`kos stok berlebihan, anggaran daripada ${excessCost.includedCount} daripada ${assessed.length} produk disemak`)}:{note:costHint};
   const emissionsTile:ImpactTile=potential.state==='estimated'?{value:`≈ ${co2(potential.kgCO2e!)}`,note:c(`estimated for the potential excess of ${potential.includedProductCount} of ${potential.totalProductCount} products`,`按 ${potential.totalProductCount} 件商品中 ${potential.includedProductCount} 件的潜在多余库存估算`,`anggaran bagi lebihan berpotensi ${potential.includedProductCount} daripada ${potential.totalProductCount} produk`)}:{note:emissionsHint};
 
   const refresh=()=>setRevision(value=>value+1);
+  const reveal=(detail:HTMLDetailsElement|null)=>{detail?.scrollIntoView?.({behavior:'smooth',block:'start'});detail?.querySelector('summary')?.focus({preventScroll:true});};
+  const openBusinessProducts=(measure:BusinessMeasure)=>{setBusinessMeasure(measure);setBusinessOpen(true);setLens('business');setAnalysisOpen(true);requestAnimationFrame(()=>reveal(businessBreakdown.current));};
+  const openEnvironmentProducts=(measure:EnvironmentMeasure)=>{setEnvironmentMeasure(measure);setEnvironmentOpen(true);setLens('environment');setAnalysisOpen(true);requestAnimationFrame(()=>reveal(environmentBreakdown.current));};
+  const openExcessProducts=()=>{setExcessOpen(true);requestAnimationFrame(()=>reveal(excessProducts.current));};
   const switchTab=(event:KeyboardEvent<HTMLButtonElement>)=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?'environment':event.key==='End'?'business':lens==='business'?'environment':'business';setLens(next);document.getElementById(`${next}-tab`)?.focus();};
   const reviewProduct=(key:string)=>{setSelected(key);setReviewOpen(true);requestAnimationFrame(()=>review.current?.scrollIntoView?.({behavior:'smooth',block:'start'}));};
   const makeReport=()=>buildAnalysisReport({snapshot,forecast,plans,impact,datasetId:datasetId??'sample-preview',shopName,datasetName,
@@ -99,18 +106,18 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
       {groups.size>0&&<div className="ix-excluded"><h4>{c('Left out of this estimate','未计入此估算','Dikecualikan daripada anggaran ini')} ({results.filter(result=>result.state!=='estimated').length})</h4><ul>{[...groups.values()].map(group=><li key={group.reason}><b>{t(group.reason)}</b> <span>{t(group.action)}</span><small>{group.names.slice(0,8).join(' · ')}{group.names.length>8?` · +${group.names.length-8}`:''}</small></li>)}</ul></div>}</>;
   };
   const whyUnavailable=(reason:string|undefined,action:string)=><span className="ix-card__why">{reason?`${t(reason)} `:''}{action}</span>;
-  const businessCard=(id:BusinessMeasure,title:string,total:MonetaryTotal)=><div className={`ix-card${businessMeasure===id?' ix-card--on':''}`} key={id}>
+  const businessCard=(id:BusinessMeasure,title:string,total:MonetaryTotal)=><div className={`ix-card${businessOpen&&businessMeasure===id?' ix-card--on':''}`} key={id}>
     <span className="ix-card__k">{title}</span><b>{monetary(total)}</b><small>{c('Included / total','计入／总商品','Termasuk / jumlah')}: {total.includedCount}/{impact.products.length}</small>
     {total.state!=='estimated'&&whyUnavailable(total.reason,c('Enter planned orders and validated unit costs in Step 4, or map Unit cost in Step 2.','请在第 4 步填写计划订购量和经验证的单位成本，或在第 2 步对应进货单价。','Masukkan pesanan dirancang dan kos seunit disahkan dalam Langkah 4, atau padankan Kos seunit di Langkah 2.'))}
-    <button type="button" className="ix-card__open" aria-pressed={businessMeasure===id} aria-controls="business-breakdown" onClick={()=>setBusinessMeasure(id)}>{businessMeasure===id?c('Showing products ↓','正在显示商品 ↓','Memaparkan produk ↓'):c('See products','查看商品','Lihat produk')}</button>
+    <button type="button" className="ix-card__open" aria-pressed={businessMeasure===id} aria-expanded={businessOpen&&businessMeasure===id} aria-controls="business-breakdown" onClick={()=>openBusinessProducts(id)}>{businessOpen&&businessMeasure===id?c('Showing products ↓','正在显示商品 ↓','Memaparkan produk ↓'):c('See products','查看商品','Lihat produk')}</button>
   </div>;
-  const environmentCard=(id:EnvironmentMeasure,title:string,summary:CarbonImpactSummary,quantity:string)=><div className={`ix-card${environmentMeasure===id?' ix-card--on':''}`} key={id}>
+  const environmentCard=(id:EnvironmentMeasure,title:string,summary:CarbonImpactSummary,quantity:string)=><div className={`ix-card${environmentOpen&&environmentMeasure===id?' ix-card--on':''}`} key={id}>
     <span className="ix-card__k">{title}</span><b>{carbon(summary)}</b><small>{c('Contributing products','计入商品','Produk menyumbang')}: {summary.includedProductCount}/{summary.totalProductCount}</small>
     {summary.massKg!==undefined&&<span className="ix-card__mass">{n(summary.massKg)} kg · {c('Source-agreement mass / estimated-factor mass','来源一致重量／估算因子重量','Jisim sumber bersetuju / faktor anggaran')}: {n(summary.massKgSourcesAgree)} / {n(summary.massKgEstimate)} kg</span>}
     <span className="ix-card__qty">{quantity}</span>
     {summary.state==='unavailable'&&whyUnavailable(summary.reason,c('Confirm categories and weights below or in Step 4.','请在下方或第 4 步确认类别与重量。','Sahkan kategori dan berat di bawah atau dalam Langkah 4.'))}
     {summary.state==='no_records'&&whyUnavailable(undefined,c('Record discarded or expired stock to see it here.','记录已丢弃或过期的库存后会显示在这里。','Rekod stok dibuang atau luput untuk melihatnya di sini.'))}
-    <button type="button" className="ix-card__open" aria-pressed={environmentMeasure===id} aria-controls="environment-breakdown" onClick={()=>setEnvironmentMeasure(id)}>{environmentMeasure===id?c('Showing products ↓','正在显示商品 ↓','Memaparkan produk ↓'):c('See products','查看商品','Lihat produk')}</button>
+    <button type="button" className="ix-card__open" aria-pressed={environmentMeasure===id} aria-expanded={environmentOpen&&environmentMeasure===id} aria-controls="environment-breakdown" onClick={()=>openEnvironmentProducts(id)}>{environmentOpen&&environmentMeasure===id?c('Showing products ↓','正在显示商品 ↓','Memaparkan produk ↓'):c('See products','查看商品','Lihat produk')}</button>
   </div>;
   const sentence=(text:string)=>text.charAt(0).toLocaleUpperCase()+text.slice(1);
   const measureOf=(p:ImpactProduct)=>{
@@ -143,7 +150,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
   const head:ReactNode=<>
     <p className="eyebrow"><ImpactIcon name="globe" size={16} className="growth-icon--inline" /> {c('Your purchase plan → your impact','您的进货计划 → 带来的改变','Pelan belian anda → impaknya')}{sample&&<span className="pill pill--amber impact__sample">{c('Sample data','示例数据','Data contoh')}</span>}</p>
     <h1 className="impact__title" id="impact-title">{c('See the impact of your purchase plan','看看这次进货计划带来的改变','Lihat impak pelan belian anda')}</h1>
-    <p className="impact__lede">{c('StockLess turns smarter purchasing decisions into impact you can see. These are estimates from your own file, not measured outcomes.','StockLess 把更聪明的进货决定变成看得见的成果。以下数字是根据您的文件估算的，并非实际测量结果。','StockLess tunjukkan hasil daripada keputusan belian yang lebih bijak. Angka ini anggaran daripada fail anda sendiri, bukan hasil yang diukur.')}</p>
+    <p className="impact__lede">{c('Estimates for your current plan over the next four weeks. Recorded waste is shown separately from possible excess stock.','以下是当前计划未来四周的估算。实际报损与可能多余的库存分开显示。','Anggaran bagi pelan semasa anda untuk empat minggu akan datang. Sisa direkod ditunjukkan berasingan daripada stok berlebihan berpotensi.')}</p>
     <dl className="impact__meta">
       <div><dt>{c('Shop','店铺','Kedai')}</dt><dd>{shopName&&shopName!=='My store'?shopName:shopName?c('Your store','您的店铺','Kedai anda'):c('Shop not named','未命名店铺','Kedai belum dinamakan')}</dd></div>
       <div><dt>{c('Dataset','数据集','Set data')}</dt><dd>{datasetName||snapshot.sourceName}</dd></div>
@@ -154,30 +161,24 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
   </>;
 
   return <main className="impact" aria-labelledby="impact-title">
-    <ImpactStory head={head} lines={lines} business={businessTile} emissions={emissionsTile} onBack={onBack} />
+    <ImpactStory head={head} lines={lines} totalProducts={impact.products.length} business={businessTile} emissions={emissionsTile} onBack={onBack} onExcess={openExcessProducts} onBusiness={()=>openBusinessProducts('excess')} onEmissions={()=>openEnvironmentProducts('potential')} />
+    <details className="sx-card impact__disclosure impact__downloads"><summary><span>{c('Download your results','下载结果','Muat turun hasil anda')}</span><small>{c('Analysis or final orders · Excel, PDF or print','分析或最终订单 · Excel、PDF 或打印','Analisis atau pesanan akhir · Excel, PDF atau cetak')}</small></summary>
     <div className="impact__toolbar" role="group" aria-label={c('Download your results','下载结果','Muat turun hasil anda')}>
-      <span className="impact__toolbar-label">{c('Download your results','下载结果','Muat turun hasil anda')}</span>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download()}>{c('Download analysis Excel','下载分析 Excel','Muat turun Excel analisis')}</button>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void pdf()}>{c('Download analysis PDF','下载分析 PDF','Muat turun PDF analisis')}</button>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download(true)}>{c('Download final orders Excel','下载最终订单 Excel','Muat turun Excel pesanan akhir')}</button>
       <button type="button" className="btn btn--ghost btn--small" onClick={()=>{setError('');setNoOrders(false);try{printAnalysisReport(makeReport());}catch(e){fail(e);}}}>{c('Print / Save PDF','打印／保存 PDF','Cetak / Simpan PDF')}</button>
     </div>
+    </details>
     {error&&<div className="notice notice--error impact__error" role="alert"><span>{error}</span>{noOrders&&<button type="button" className="btn btn--ghost btn--small" onClick={onBack}>{c('Return to purchase planning','返回采购计划','Kembali ke perancangan belian')}</button>}</div>}
 
-    <div className="sx-card sx-lens">
+    <details className="sx-card impact__disclosure impact__analysis" open={analysisOpen} onToggle={event=>setAnalysisOpen(event.currentTarget.open)}><summary><span>{c('Detailed estimates','详细估算','Anggaran terperinci')}</span><small>{c('Purchase spending, recorded waste and alternative orders','采购支出、实际报损与其他订购方案','Belanja belian, sisa direkod dan pesanan alternatif')}</small></summary>
+    <div className="sx-lens">
       <div className="sx-tabs" role="tablist" aria-label={c('Impact view','影响视图','Paparan impak')}>
         <button type="button" role="tab" id="environment-tab" className="sx-tab" aria-controls="environment-impact" aria-selected={lens==='environment'} tabIndex={lens==='environment'?0:-1} onKeyDown={switchTab} onClick={()=>setLens('environment')}><ImpactIcon name="sprout" size={18} /> {c('Environmental','环境','Alam sekitar')}</button>
         <button type="button" role="tab" id="business-tab" className="sx-tab" aria-controls="business-impact" aria-selected={lens==='business'} tabIndex={lens==='business'?0:-1} onKeyDown={switchTab} onClick={()=>setLens('business')}><ImpactIcon name="coins" size={18} /> {c('Business','生意','Perniagaan')}</button>
       </div>
       <section id="environment-impact" role="tabpanel" aria-labelledby="environment-tab" hidden={lens!=='environment'}>
-        <div className="sx-panel">
-          <div>
-            <p className="sx-big">{assessed.length?units(excess):'—'} <small>{c('units of potential excess stock','件潜在多余库存','unit lebihan stok berpotensi')}</small></p>
-            <p className="sx-sub">{c(`Across ${assessed.length} of ${impact.products.length} products with a usable purchase check`,`基于 ${impact.products.length} 件商品中 ${assessed.length} 件可核对的采购计划`,`Merentasi ${assessed.length} daripada ${impact.products.length} produk dengan semakan belian yang sah`)}</p>
-            {withExcess.length>0&&<ul className="sx-chips">{withExcess.map(p=><li key={p.productKey}><b>{units(p.excessUnits!)}</b> {p.name} <span className="num">{p.code}</span></li>)}</ul>}
-          </div>
-          <div className="sx-co2"><span className="sx-co2__k">{c('CO₂e of potential excess','潜在多余库存的 CO₂e','CO₂e lebihan berpotensi')}</span><b>{potential.state==='estimated'?`≈ ${co2(potential.kgCO2e!)}`:c('Not yet available','暂时无法计算','Belum tersedia')}</b><p>{potential.state==='estimated'?c(`Range ${co2(potential.kgCO2eRange!.low)} – ${co2(potential.kgCO2eRange!.high)} from the agreeing sources. An estimate, not a measured or achieved reduction.`,`来源一致范围 ${co2(potential.kgCO2eRange!.low)} – ${co2(potential.kgCO2eRange!.high)}。这是估算，不是实测或已实现的减排。`,`Julat ${co2(potential.kgCO2eRange!.low)} – ${co2(potential.kgCO2eRange!.high)} daripada sumber bersetuju. Anggaran, bukan pengurangan diukur atau tercapai.`):emissionsHint}</p></div>
-        </div>
         <div className="ix-body">
           <h2 className="ix-title">{c('Environmental impact','环境影响','Impak alam sekitar')}</h2>
           <p className="ix-sub">{c('Three separate measures; they are never added together. Values are kg CO₂e.','三个独立指标，从不相加。单位为公斤 CO₂e。','Tiga ukuran berasingan yang tidak pernah dijumlahkan. Nilai dalam kg CO₂e.')}</p>
@@ -186,20 +187,25 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
             {environmentCard('potential',c('Potential excess: estimated CO₂e','潜在过量：CO₂e 估算','Lebihan berpotensi: anggaran CO₂e'),potential,`${assessed.length?units(excess):'—'} ${c('sales units above expected demand','销售单位超出预期需求','unit jualan melebihi permintaan dijangka')}`)}
             {environmentCard('scenario',c('Named scenario difference','当前计划与补货情景差异','Perbezaan senario dinamakan'),environmental.scenario,c('Your planned order minus the restock recommendation','您的计划订单减去补货建议','Pesanan dirancang tolak cadangan stok semula'))}
           </div>
+          <details className="cp3-controls ix-more"><summary>{c('How CO₂e estimates are calculated','CO₂e 估算的计算方法','Cara anggaran CO₂e dikira')}</summary>
+          {potential.state==='estimated'&&<p>{c('Potential excess estimate range','潜在过量估算区间','Julat anggaran lebihan berpotensi')}: {co2(potential.kgCO2eRange!.low)} – {co2(potential.kgCO2eRange!.high)}</p>}
           <p>{c('CP3 v2: agreeing-group mean; otherwise median only within ×2 of every source, labelled estimate. Single-source factors are excluded. No consumer stage. Confirm every category.','CP3 v2：一致来源组取均值；否则，仅当中位数与每个来源均在 ×2 内时显示估算。单一来源不显示。排除消费者阶段，每个类别均需人工确认。','CP3 v2: min kumpulan sumber bersetuju; jika tidak, median hanya apabila dalam ×2 setiap sumber, berlabel anggaran. Faktor satu sumber dan peringkat pengguna dikecualikan. Sahkan setiap kategori.')}</p>
           <p>{c('The scenario compares potential excess under your current order with the restock recommendation. Positive means potentially less excess; negative means more. It is not a measured reduction.','情景比较当前采购与补货建议下的潜在过量。正值表示可能减少，负值表示可能增加，不代表实测减排。','Senario membandingkan lebihan berpotensi pesanan semasa dengan cadangan stok semula. Positif mungkin kurang; negatif lebih. Ia bukan pengurangan diukur.')}</p>
+          </details>
           <details className="cp3-controls ix-more"><summary>{c('Categories to confirm, largest known kg at risk first','待确认类别，按已知风险公斤数排序','Kategori untuk disahkan, kg risiko diketahui terbesar dahulu')}</summary>{queue.length?<ul className="ix-queue">{queue.map(r=><li key={r.productKey}><span>{r.productName??r.productKey} · {r.kgAtRisk===undefined?unavailable:`${n(r.kgAtRisk)} kg`}</span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey)}>{c('Confirm category','确认类别','Sahkan kategori')}</button></li>)}</ul>:<p>{c('No pending category confirmations.','没有待确认类别。','Tiada kategori menunggu pengesahan.')}</p>}</details>
           <p className="ix-note">{c('Recorded-waste period: all saved outcome dates for this dataset. Forecast period: the next 28 days from the analysis date. Select equal-length history periods below for a before/after comparison.','实际报损期间：本数据集所有已保存的发生日期。预测期间：分析日起未来 28 天。前后期间比较请使用下方等长日期筛选。','Tempoh sisa direkod: semua tarikh hasil tersimpan set data ini. Tempoh ramalan: 28 hari selepas tarikh analisis. Pilih tempoh sejarah sama panjang di bawah untuk perbandingan sebelum/selepas.')}</p>
-          <section className="ix-breakdown" id="environment-breakdown" aria-live="polite"><h3>{environmentMeasure==='recorded'?c('Recorded waste by product','各商品实际报损','Sisa direkod mengikut produk'):environmentMeasure==='potential'?c('Why these estimates? Potential excess by product','这些估算如何得出？各商品潜在过量','Mengapa anggaran ini? Lebihan berpotensi mengikut produk'):c('Scenario difference by product','各商品情景差异','Perbezaan senario mengikut produk')}</h3>
+          <details className="ix-breakdown" id="environment-breakdown" ref={environmentBreakdown} aria-live="polite" open={environmentOpen} onToggle={event=>setEnvironmentOpen(event.currentTarget.open)}><summary>{environmentMeasure==='recorded'?c('Recorded waste by product','各商品实际报损','Sisa direkod mengikut produk'):environmentMeasure==='potential'?c('Why these estimates? Potential excess by product','这些估算如何得出？各商品潜在过量','Mengapa anggaran ini? Lebihan berpotensi mengikut produk'):c('Scenario difference by product','各商品情景差异','Perbezaan senario mengikut produk')}</summary>
             {environmentMeasure==='recorded'&&wasteRecords.length>0&&<ul className="ix-records">{wasteRecords.map(o=><li key={o.id}>{day(o.date)} · {impact.products.find(p=>p.productKey===o.productKey)?.name??o.productKey} · {n(o.quantity)} {o.unit} · {o.kind==='expired'?c('Expired','已过期','Luput'):c('Discarded','已丢弃','Dibuang')}{o.quantity===0&&` · ${c('Recorded zero','已记录为零','Sifar direkodkan')}`}</li>)}</ul>}
             {breakdown(environmentResults)}
-          </section>
+          </details>
+          <details className="cp3-controls ix-more"><summary>{c('Comparison and sustainability notes','比较与可持续发展说明','Nota perbandingan dan kemampanan')}</summary>
           <p className="ix-note">{c('Illustrative comparison only','仅作直观比较','Perbandingan ilustrasi sahaja')}: {potential.kgCO2e===undefined?unavailable:`${n(potential.kgCO2e/CARBON_MALAYSIA_ILLUSTRATION.kgCO2ePerPersonPerDay)} ${c('Malaysia person-days','马来西亚人均排放天数','hari-orang Malaysia')}`} · 29.95 kg CO₂e/{c('person/day','人／天','orang/hari')} · {CARBON_MALAYSIA_ILLUSTRATION.source}. {c('All sectors; not a food-waste reduction baseline.','包括所有行业，不是食品浪费减排基线。','Semua sektor; bukan garis dasar pengurangan pembaziran makanan.')}</p>
           <p className="ix-note">{c('SDG 12.3 aims to halve food waste at the retail and consumer level by 2030. These CO₂e figures describe the possible effect of potential excess and of the waste you recorded; they do not prove an achieved emissions reduction.','SDG 12.3 目标是在 2030 年前将零售和消费环节的食物浪费减半。这些 CO₂e 数字说明潜在多余库存和已记录报损可能带来的影响，并不证明已实现减排。','SDG 12.3 menyasarkan pembaziran makanan di peringkat runcit dan pengguna dikurangkan separuh menjelang 2030. Angka CO₂e ini menerangkan kesan yang mungkin daripada lebihan berpotensi dan sisa yang anda rekod; ia tidak membuktikan pengurangan pelepasan yang tercapai.')}</p>
+          </details>
         </div>
       </section>
       <section id="business-impact" role="tabpanel" aria-labelledby="business-tab" hidden={lens!=='business'}>
-        <div className="sx-panel sx-panel--biz">
+        <details className="cp3-controls ix-more"><summary>{c('How excess-stock cost is calculated','多余库存成本的计算方法','Cara kos stok berlebihan dikira')}</summary><div className="sx-panel sx-panel--biz">
           <div>
             {excessCost.state==='estimated'?<><p className="sx-eq__head">{c('Excess units × validated unit cost','多余数量 × 已验证单位成本','Unit berlebihan × kos seunit disahkan')}</p>
               <ul className="sx-eq">{withExcess.filter(p=>p.excessCost.state==='estimated').map(p=><li key={p.productKey}><span>{p.name} <span className="num">{p.code}</span></span><span className="sx-eq__m"><b>{units(p.excessUnits!)}</b> × {p.excessCost.state==='estimated'?money(p.excessCost.unitCost):''}</span><span className="sx-eq__r">{monetary(p.excessCost)}</span></li>)}</ul>
@@ -207,7 +213,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
               :<><p className="sx-big sx-big--locked">{c('Not yet available','暂时无法计算','Belum tersedia')}</p><p className="sx-sub">{costHint}</p></>}
           </div>
           <p className="sx-note">{c('Money is shown only from a unit cost Step 3 could confirm, or a purchase cost you entered. StockLess never guesses a price.','只有第 3 步确认过的单价或您填写的采购成本才会用来算钱，StockLess 绝不乱猜价格。','Nilai wang hanya ditunjukkan daripada kos seunit yang disahkan di Langkah 3, atau kos belian yang anda masukkan. StockLess tak pernah teka harga.')}</p>
-        </div>
+        </div></details>
         <div className="ix-body">
           <h2 className="ix-title">{c('Business impact','经营影响','Impak perniagaan')}</h2>
           <p className="ix-sub">{c(`Currency: MYR · Compared with: your current planned order vs the restock recommendation · Period: ${day(snapshot.analysisDate)} – ${day(addCalendarDays(snapshot.analysisDate,27))}`,`币种：MYR · 比较基线：当前计划订单与补货建议 · 期间：${day(snapshot.analysisDate)} – ${day(addCalendarDays(snapshot.analysisDate,27))}`,`Mata wang: MYR · Dibandingkan: pesanan dirancang semasa dengan cadangan stok semula · Tempoh: ${day(snapshot.analysisDate)} – ${day(addCalendarDays(snapshot.analysisDate,27))}`)}</p>
@@ -217,13 +223,15 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
             {businessCard('scenario',c('Restock scenario spend','补货情景支出','Belanja senario stok semula'),impact.totals.scenarioSpend)}
             {businessCard('difference',c('Estimated purchase-spend difference','预计采购支出差异','Perbezaan belanja belian dianggarkan'),impact.totals.spendDifference)}
           </div>
+          <details className="cp3-controls ix-more"><summary>{c('How the money figures compare','金额之间如何比较','Cara angka wang dibandingkan')}</summary>
           <p>{c('Difference = current planned spend − restock-scenario spend, for the same eligible products. It is not achieved savings, profit or selling-price revenue.','差异＝当前计划支出－补货情景支出，两者使用相同的可计入商品；它不是已实现节省、利润或销售额。','Perbezaan = belanja dirancang semasa − belanja senario stok semula bagi produk layak sama. Ia bukan penjimatan, keuntungan atau hasil jualan sebenar.')}</p>
           <p className="ix-note">{c('Current planned spend for comparable products','参与情景比较的当前采购支出','Belanja dirancang semasa bagi produk boleh dibandingkan')}: {monetary(impact.totals.comparisonPlannedSpend)} · {impact.totals.comparisonPlannedSpend.includedCount}/{impact.products.length}. {c('Compare this subtotal with the restock scenario above. Other costed orders remain in total planned spend.','此小计与上方补货情景比较；其他已有成本的订单仍计入总计划支出。','Bandingkan jumlah kecil ini dengan senario stok semula di atas. Pesanan lain dengan kos kekal dalam jumlah belanja dirancang.')}</p>
           <p className="ix-note">{c('Potential excess','潜在过量库存','Lebihan berpotensi')}: {impact.assessedCount?n(excess):unavailable} {c('sales units','销售单位','unit jualan')} · {impact.assessedCount}/{impact.products.length} {c('assessed','已评估','dinilai')}</p>
-          <section className="ix-breakdown" id="business-breakdown" aria-live="polite"><h3>{measureTitle}</h3>
+          </details>
+          <details className="ix-breakdown" id="business-breakdown" ref={businessBreakdown} aria-live="polite" open={businessOpen} onToggle={event=>setBusinessOpen(event.currentTarget.open)}><summary>{measureTitle}</summary>
             {includedRows.length?<div className="ix-table"><table>{measureHead}<tbody>{includedRows.map(measureRow)}</tbody></table></div>:<p className="impact__empty">{c('No product is included yet: this total is Unavailable, not zero.','尚无商品计入：此合计为不可用，而不是零。','Belum ada produk dikira: jumlah ini Tidak tersedia, bukan sifar.')}</p>}
             {leftOutRows.length>0&&<details className="ix-left-out" open={!includedRows.length||undefined}><summary>{c(`${leftOutRows.length} products left out of this total, with reasons`,`${leftOutRows.length} 件商品未计入此合计（含原因）`,`${leftOutRows.length} produk dikecualikan daripada jumlah ini, dengan sebab`)}</summary><div className="ix-table"><table>{measureHead}<tbody>{leftOutRows.map(measureRow)}</tbody></table></div></details>}
-          </section>
+          </details>
           <details className="cp3-controls ix-more"><summary>{c('Missing purchase costs: first 10 priorities','缺失采购成本：优先补录前 10 项','Kos belian tiada: 10 keutamaan pertama')}</summary><p>{c('Ranked by potential excess × explicitly matched reference retail price. This reference amount is not an estimated purchase cost. Unmatched items remain listed for manual input.','按潜在过量 × 人工确认对应的参考零售价排序。此参考金额不是采购成本估算。未匹配的商品仍列出供人工补录。','Disusun mengikut lebihan berpotensi × harga runcit rujukan dipadankan secara nyata. Amaun rujukan ini bukan kos belian. Item tanpa padanan kekal untuk input manual.')}</p>
             <ul className="ix-queue">{costQueue.top10.map((r,i)=><li key={r.productKey}><span>{i+1}. {impact.products.find(p=>p.productKey===r.productKey)?.name} · {money(r.referenceRisk)} <small>{r.source}</small></span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey)}>{c('Add cost','补录成本','Tambah kos')}</button></li>)}
               {costQueue.unranked.map(r=><li key={r.productKey}><span>{impact.products.find(p=>p.productKey===r.productKey)?.name} · {c('Unranked: confirm reference or enter purchase cost','未排序：确认参考商品或补录采购成本','Tidak disusun: sahkan rujukan atau masukkan kos belian')}</span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey)}>{c('Add cost','补录成本','Tambah kos')}</button></li>)}</ul>
@@ -232,12 +240,13 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
         </div>
       </section>
     </div>
+    </details>
 
-    <section className="impact__lines" aria-labelledby="impact-lines-title">
-      <h2 id="impact-lines-title">{c('Where the estimate comes from','这个估算从何而来','Dari mana anggaran ini datang')}</h2>
+    <details className="sx-card impact__disclosure impact__lines" id="impact-excess-products" ref={excessProducts} open={excessOpen} onToggle={event=>setExcessOpen(event.currentTarget.open)}>
+      <summary><span>{c('Products with possible excess stock','可能有多余库存的商品','Produk dengan stok berlebihan berpotensi')}</span><small>{c(`Based on ${assessed.length} of ${impact.products.length} checked products`,`基于 ${impact.products.length} 件商品中 ${assessed.length} 件可核对的商品`,`Berdasarkan ${assessed.length} daripada ${impact.products.length} produk disemak`)}</small></summary>
       {withExcess.length?<ul>{withExcess.map(p=><li key={p.productKey}><span className="impact__lname"><b>{p.name}</b><span className="num">{p.code}</span></span><span className="impact__lunits">{units(p.excessUnits!)} <span>{c('units above expected demand','件高于预期需求','unit melebihi permintaan yang dijangka')}</span>{p.excessCost.state==='estimated'&&<span className="impact__lcost">{money(p.excessCost.amount)}</span>}</span></li>)}</ul>
         :<p className="impact__empty">{assessed.length?c('No potential excess is indicated by the checked plans.','已核对的计划未显示潜在多余库存。','Tiada lebihan berpotensi ditunjukkan oleh pelan yang disemak.'):c('No purchase plan has enough checked evidence yet. Enter planned orders in Step 4.','目前没有足够证据的采购计划。请在第 4 步填写计划订购量。','Belum ada pelan belian dengan bukti yang mencukupi. Masukkan pesanan dirancang dalam Langkah 4.')}</p>}
-    </section>
+    </details>
 
     <details className="sx-card impact__review" ref={review} open={reviewOpen} onToggle={event=>setReviewOpen(event.currentTarget.open)}>
       <summary><span className="impact__review-title">{c('Review a product: confirm its data or record what happened','核对商品：确认数据或记录实际情况','Semak produk: sahkan data atau rekod apa yang berlaku')}</span><small>{c('Category, cost and weight for CO₂e and money · your purchase decision · discarded or expired stock','用于 CO₂e 和金额的类别、成本与重量 · 采购决定 · 已丢弃或过期的库存','Kategori, kos dan berat untuk CO₂e dan wang · keputusan belian anda · stok dibuang atau luput')}</small></summary>
@@ -251,6 +260,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
       <OutcomePeriodComparison key={`${datasetId}-${revision}`} datasetId={datasetId} currentSnapshot={snapshot} />
     </details>
 
+    <details className="sx-card impact__disclosure impact__learn"><summary><span>{c('How these estimates work','这些估算如何得出','Cara anggaran ini dikira')}</span><small>{c('Calculations, the illustrated workflow and sustainability background','计算方法、流程演示与可持续发展背景','Pengiraan, ilustrasi aliran kerja dan latar kemampanan')}</small></summary>
     <section className="sx-sec" aria-labelledby="sx-flow-title">
       <h2 className="sx-h2" id="sx-flow-title">{c('From data to less waste','从数据到少浪费','Dari data ke kurang pembaziran')}</h2>
       <p className="learn__lede">{c('Retail food waste mostly starts with an order that was too big for what sells. This is how StockLess turns your file into a smaller, safer order.','零售店的食物浪费，大多是因为进货比卖得多。StockLess 就是这样把您的文件变成更精准、更稳妥的订单。','Pembaziran makanan di kedai selalunya bermula dengan pesanan yang lebih besar daripada jualan. Beginilah StockLess jadikan fail anda pesanan yang lebih kecil dan selamat.')}</p>
@@ -288,6 +298,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
       <div className="learn__list">{faq.map(([icon,question,answer])=><details className="learn__item" key={icon}><summary className="learn__q"><span className="learn__icon" aria-hidden="true"><ImpactIcon name={icon} size={22} /></span><span className="learn__qtext">{question}</span><span className="learn__chevron" aria-hidden="true" /></summary><p className="learn__a">{answer}</p></details>)}</div>
     </section>
     <p className="impact__method">{c('Method: estimates use the demand range StockLess worked out from your sales rows, the stock figures in your file, and the order quantities you entered. Figures change when your file or your planned orders change.','方法：估算使用 StockLess 根据您的销售记录得出的需求区间、您文件中的库存数字，以及您输入的订购数量。文件或计划订单变动时，数字也会随之变化。','Kaedah: anggaran menggunakan julat permintaan yang StockLess kira daripada baris jualan anda, angka stok dalam fail anda, dan kuantiti pesanan yang anda masukkan. Angka berubah apabila fail atau pesanan yang anda rancang berubah.')}</p>
+    </details>
     <div className="impact__actions sx-actions"><button type="button" className="btn btn--ghost" onClick={onBack}>{c('← Back to the purchase plan','← 返回采购计划','← Kembali ke pelan pembelian')}</button>{onNew&&<button type="button" className="btn btn--ghost" onClick={onNew}>{c('Start a new plan','重新规划','Buat pelan baru')}</button>}</div>
   </main>;
 }
