@@ -15,7 +15,8 @@ function Harness({ data, evaluate = evaluateProductPurchasePlan }: { data?: Retu
 }
 const open = (sku = "000101") => fireEvent.click(screen.getByRole("button", { name: new RegExp(`Open purchase plan.*${sku}`) }));
 const detail = () => within(screen.getByRole("region", { name: "Same product name" }));
-const openDetails = () => fireEvent.click(screen.getByText("More product details"));
+const openDetails = () => fireEvent.click(screen.getByRole("button", { name: "Open" }));
+const checksOpen = () => screen.queryByRole("navigation", { name: "Product checks" }) !== null;
 
 describe("purchase planning", () => {
   it("routes both impact actions to the existing dashboard callback", () => {
@@ -59,7 +60,7 @@ describe("purchase planning", () => {
     expect(screen.getByRole("img",{name:/Recorded sales/})).toBeTruthy();
     expect(screen.getByRole("img",{name:/^Stock after order:/})).toBeTruthy();
     expect(screen.getByRole("region",{name:"Why this purchase check?"})).toBeTruthy();
-    expect(screen.getByText("More product details").closest("details")?.open).toBe(false);
+    expect(checksOpen()).toBe(false);
     fireEvent.change(screen.getByLabelText("Exact planned order quantity"),{target:{value:"0"}});
     expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("0 units");
     fireEvent.click(screen.getByRole("button",{name:"Reset order to suggestion"}));
@@ -96,11 +97,11 @@ describe("purchase planning", () => {
     expect(evaluate.mock.calls.length).toBe(count + 1);
     fireEvent.change(screen.getByLabelText("Incoming stock"), { target: { value: "40" } });
     expect(evaluate.mock.calls.length).toBe(count + 2);
-    expect(screen.getByText("More product details").closest("details")?.open).toBe(false);
+    expect(checksOpen()).toBe(false);
     expect(screen.getByRole("region", { name: "Estimated purchase spending" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Done, next product →" })).toBeTruthy();
     openDetails();
-    expect(screen.getByText("More product details").closest("details")?.open).toBe(true);
+    expect(checksOpen()).toBe(true);
     expect(screen.getByRole("img", { name: /Recorded sales/ })).toBeTruthy();
     expect((screen.getByLabelText("Exact planned order quantity") as HTMLInputElement).value).toBe("23");
     expect((screen.getByLabelText("Incoming stock") as HTMLInputElement).value).toBe("40");
@@ -131,7 +132,7 @@ describe("purchase planning", () => {
     expect((screen.getByLabelText("Incoming stock") as HTMLInputElement).value).toBe("3");
     expect(detail().getAllByText("from your file").length).toBeGreaterThan(1);
     openDetails();
-    fireEvent.click(screen.getByRole("button", { name: /Expiry information/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Expiry date/ }));
     expect(detail().getByText(/Expires in 6 days/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "21" } });
     expect(detail().getByText("input by you")).toBeTruthy();
