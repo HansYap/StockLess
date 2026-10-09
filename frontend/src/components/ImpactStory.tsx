@@ -9,6 +9,8 @@ export interface ImpactTile { readonly value?: string; readonly note: string; }
 type Translate = (en: string, zh: string, ms: string) => string;
 /** idle → play (stock drops in) → scanned (excess marked) → fly (excess leaves the shelf) → after. */
 type Phase = "idle" | "play" | "scanned" | "fly" | "after";
+/** Story timing, slowed down so each step can be followed. */
+const SCAN_AT_MS = 4200, FLY_AT_MS = 6200, FLIGHT_MS = 1300, STAGGER_MS = 90;
 
 function ShelfRow({ line, copy }: { line: ImpactLine; copy: Translate }) {
   const available = Math.max(0, Math.round(line.available));
@@ -44,7 +46,7 @@ function useCountUp(target: number, running: boolean, ms = 900) {
 }
 
 /** The Step 5 story from the supplied design: planned shelf → expected demand → potential excess. */
-export function ImpactStory({ head, lines, totalProducts, business, emissions, onBack, onExcess, onBusiness, onEmissions }: { head: ReactNode; lines: readonly ImpactLine[]; totalProducts: number; business: ImpactTile; emissions: ImpactTile; onBack?: () => void; onExcess: () => void; onBusiness: () => void; onEmissions: () => void }) {
+export function ImpactStory({ head, aside, lines, totalProducts, business, emissions, onBack, onExcess, onBusiness, onEmissions }: { head: ReactNode; aside?: ReactNode; lines: readonly ImpactLine[]; totalProducts: number; business: ImpactTile; emissions: ImpactTile; onBack?: () => void; onExcess: () => void; onBusiness: () => void; onEmissions: () => void }) {
   const language = useLanguage();
   const copy: Translate = (en, zh, ms) => language === "zh" ? zh : language === "ms" ? ms : en;
   const number = (value: number) => Math.round(value).toLocaleString(getLocale());
@@ -63,42 +65,44 @@ export function ImpactStory({ head, lines, totalProducts, business, emissions, o
   const [phase, setPhase] = useState<Phase>(motion && lines.length ? "idle" : "after");
   const storyRef = useRef<HTMLDivElement>(null), badgeRef = useRef<HTMLSpanElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]), flights = useRef<Animation[]>([]);
-  const badge = useCountUp(excess, phase === "fly");
+  const badge = useCountUp(excess, phase === "fly", 1600);
 
   const reset = () => {
     timers.current.forEach(clearTimeout); timers.current = [];
     flights.current.forEach(flight => flight.cancel()); flights.current = [];
-    document.querySelectorAll(".sx-flyer").forEach(flyer => flyer.remove());
+    storyRef.current?.querySelectorAll(".sx-flyer").forEach(flyer => flyer.remove());
     storyRef.current?.querySelectorAll(".sx-pk--x.is-gone").forEach(block => block.classList.remove("is-gone"));
   };
+  // Flyers live inside the story box (not fixed to the screen), so they stay on course when the page scrolls.
   const fly = () => {
-    const target = badgeRef.current?.getBoundingClientRect();
-    const blocks = [...(storyRef.current?.querySelectorAll<HTMLElement>(".sx-pk--x") ?? [])];
-    if (!target || typeof document.body.animate !== "function") return 0;
+    const box = storyRef.current, badgeEl = badgeRef.current;
+    const blocks = [...(box?.querySelectorAll<HTMLElement>(".sx-pk--x") ?? [])];
+    if (!box || !badgeEl || typeof document.body.animate !== "function") return 0;
+    const origin = box.getBoundingClientRect(), target = badgeEl.getBoundingClientRect();
     blocks.forEach((block, index) => {
       const from = block.getBoundingClientRect(), flyer = document.createElement("i");
       flyer.className = "sx-flyer";
-      Object.assign(flyer.style, { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px` });
-      document.body.appendChild(flyer);
+      Object.assign(flyer.style, { left: `${from.left - origin.left}px`, top: `${from.top - origin.top}px`, width: `${from.width}px`, height: `${from.height}px` });
+      box.appendChild(flyer);
       const dx = target.left + target.width / 2 - from.left - from.width / 2, dy = target.top + target.height / 2 - from.top - from.height / 2;
       const flight = flyer.animate([{ transform: "translate(0,0) scale(1)", opacity: 1 },
-        { transform: `translate(${dx * .5}px,${dy * .5 - 50}px) scale(1.1)`, opacity: 1, offset: .5 },
-        { transform: `translate(${dx}px,${dy}px) scale(.3)`, opacity: 0 }], { duration: 850, delay: index * 65, easing: "cubic-bezier(.5,0,.4,1)", fill: "both" });
+        { transform: `translate(${dx * .5}px,${dy * .5 - 60}px) scale(1.15)`, opacity: 1, offset: .5 },
+        { transform: `translate(${dx}px,${dy}px) scale(.3)`, opacity: 0 }], { duration: FLIGHT_MS, delay: index * STAGGER_MS, easing: "cubic-bezier(.5,0,.4,1)", fill: "both" });
       flights.current.push(flight);
       flight.onfinish = () => flyer.remove();
-      timers.current.push(setTimeout(() => block.classList.add("is-gone"), index * 65 + 60));
+      timers.current.push(setTimeout(() => block.classList.add("is-gone"), index * STAGGER_MS + 80));
     });
     return blocks.length;
   };
   const play = () => {
     if (!motion || !lines.length) { setPhase("after"); return; }
     reset(); setPhase("play");
-    timers.current.push(setTimeout(() => setPhase("scanned"), 2400));
+    timers.current.push(setTimeout(() => setPhase("scanned"), SCAN_AT_MS));
     timers.current.push(setTimeout(() => {
       setPhase("fly");
       const count = fly();
-      timers.current.push(setTimeout(() => setPhase("after"), Math.min(1600, 850 + count * 65)));
-    }, 3500));
+      timers.current.push(setTimeout(() => setPhase("after"), Math.min(3200, FLIGHT_MS + count * STAGGER_MS)));
+    }, FLY_AT_MS));
   };
   // The design plays the story once, the first time it scrolls into view.
   useEffect(() => {
@@ -112,7 +116,7 @@ export function ImpactStory({ head, lines, totalProducts, business, emissions, o
   const classes = ["sx-hero", phase === "after" ? "is-after is-scanned" : "is-armed", phase === "play" || phase === "scanned" || phase === "fly" ? "is-play" : "", phase === "scanned" || phase === "fly" ? "is-scanned" : ""].filter(Boolean).join(" ");
   return <>
     <div className="sx-band">
-      <div className="sx-band__main">{head}</div>
+      <div className="sx-band__top"><div className="sx-band__main">{head}</div>{aside}</div>
       <div className="sx-band__actions">
         {onBack && <button type="button" className="sx-back" onClick={onBack}>{copy("← Back to purchase plan", "← 返回进货计划", "← Kembali ke pelan belian")}</button>}
         <span className="sx-band__spacer" />
@@ -123,9 +127,12 @@ export function ImpactStory({ head, lines, totalProducts, business, emissions, o
       <li><button type="button" className="sx-kpi-button" onClick={onBusiness} aria-controls="business-breakdown"><span className="sx-kpi__ic sx-kpi__ic--amber" aria-hidden="true"><ImpactIcon name="coins" size={24} /></span><span><strong className="sx-kpi-label">{copy("Money tied up in excess", "压在多余库存上的资金", "Wang terikat pada lebihan")}</strong><b>{business.value ?? copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b><em>{business.note}</em><span className="sx-kpi-link">{copy("See costs →", "查看成本 →", "Lihat kos →")}</span></span></button></li>
       <li><button type="button" className="sx-kpi-button" onClick={onEmissions} aria-controls="environment-breakdown"><span className="sx-kpi__ic sx-kpi__ic--blue" aria-hidden="true"><ImpactIcon name="globe" size={24} /></span><span><strong className="sx-kpi-label">{copy("Estimated CO₂e of excess", "多余库存的 CO₂e 估算", "Anggaran CO₂e lebihan")}</strong><b>{emissions.value ?? copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b><em>{emissions.note}</em><span className="sx-kpi-link">{copy("See estimate →", "查看估算 →", "Lihat anggaran →")}</span></span></button></li>
     </ul>
-    <details className="sx-card impact__disclosure sx-story-details"><summary><span>{copy("See the illustrated plan", "查看计划演示", "Lihat ilustrasi pelan")}</span><small>{copy("A visual explanation of possible excess stock", "直观了解可能多余的库存", "Penjelasan visual tentang stok berlebihan berpotensi")}</small></summary>
-    <p className="sx-story-note">{copy("This is an illustration of stock above expected demand. Review the quantities in your purchase plan before ordering.", "此演示说明高于预期需求的库存。下单前请核对采购计划中的数量。", "Ini ilustrasi stok melebihi permintaan dijangka. Semak kuantiti dalam pelan belian sebelum memesan.")}</p>
-    {lines.length > 0 && <button className="btn btn--primary sx-play" type="button" onClick={play}><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z" /></svg> {copy("Play story", "播放演示", "Main animasi")}</button>}
+    <section className="sx-card impact-sec sx-story-details" aria-labelledby="sx-story-title">
+    <div className="impact-sec__head">
+      <span className="impact-sec__icon" aria-hidden="true"><ImpactIcon name="story" size={24} /></span>
+      <div className="impact-sec__titles"><h2 id="sx-story-title">{copy("Your plan, illustrated", "计划演示", "Pelan anda, bergambar")}</h2><p>{copy("Which orders are more than you are likely to sell.", "哪些订单多于可能卖出的数量。", "Pesanan mana yang lebih daripada yang mungkin terjual.")}</p></div>
+      {lines.length > 0 && <button className="btn btn--primary sx-play" type="button" onClick={play}><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13-8z" /></svg> {copy("Play story", "播放演示", "Main animasi")}</button>}
+    </div>
     <div className={classes} id="sx-story" ref={storyRef}>
       <div className="sx-card sx-shelfcard">
         <div className="sx-cap">
@@ -136,6 +143,7 @@ export function ImpactStory({ head, lines, totalProducts, business, emissions, o
           {story.length ? story.map(line => <ShelfRow key={line.key} line={line} copy={copy} />) : <p className="impact__empty">{copy("Enter a planned order in Step 4 to see this comparison.", "在第 4 步填写计划订购量后即可查看对比。", "Masukkan pesanan dirancang dalam Langkah 4 untuk melihat perbandingan ini.")}</p>}
           <div className="sx-scan" aria-hidden="true"><span>StockLess</span></div>
         </div>
+        {story.length > 0 && <p className="sx-legend"><span><i className="sx-legend__sell" />{copy("Likely to sell", "可能卖出", "Mungkin terjual")}</span><span><i className="sx-legend__extra" />{copy("Extra, above demand", "多余，超出需求", "Lebihan, melebihi permintaan")}</span></p>}
         {moreCount > 0 && <p className="sx-story-more"><span>{copy(`+ ${moreCount} more products · ${moreExtra} extra`, `另外 ${moreCount} 件商品 · 多余 ${moreExtra} 件`, `+ ${moreCount} produk lagi · ${moreExtra} lebihan`)}</span>{onBack && <button type="button" className="sx-more-link" onClick={onBack}>{copy("See all in plan →", "在计划中查看全部 →", "Lihat semua dalam pelan →")}</button>}</p>}
         <div className="sx-bar"><span>{copy("Matched to demand", "符合预计销量", "Ikut jangkaan jualan")}</span><span className="sx-bar__track"><i style={{ "--ratio": `${ratio}%` } as CSSProperties} /></span><b>{story.length ? <><span className="t-before">{number(storyExpected)} / {number(storyPlanned)}</span><span className="t-after">{number(storyExpected)} / {number(storyExpected)}</span></> : "— / —"}</b></div>
         {lines.length > 0 && <div className="sx-chg">
@@ -159,6 +167,6 @@ export function ImpactStory({ head, lines, totalProducts, business, emissions, o
       <div className="sx-sum__bar" role="img" aria-label={copy(`${number(expected)} likely to sell, ${number(excess)} extra`, `可能卖出 ${number(expected)}，多余 ${number(excess)}`, `${number(expected)} mungkin terjual, ${number(excess)} lebihan`)}><span style={{ flexGrow: Math.max(0, expected) }} /><span style={{ flexGrow: Math.max(0, excess) }} /></div>
       <small>{copy("Next 4 weeks · lower the orange part before you order.", "未来 4 周 · 下单前减少橙色部分。", "4 minggu akan datang · kurangkan bahagian oren sebelum memesan.")}</small>
     </div>}
-    </details>
+    </section>
   </>;
 }
