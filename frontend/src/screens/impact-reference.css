@@ -1,4 +1,11 @@
 /* StockLess Impact Dashboard reference layout, adapted for live data. */
+.impact__missing-details > summary{cursor:pointer;font:700 18px/1.4 var(--display);color:var(--teal-deep);overflow-wrap:anywhere}
+.impact__missing-details > p{margin:14px 0;line-height:1.5;color:var(--muted)}
+.impact__missing-details > ul{display:grid;gap:12px;list-style:none;padding:0;margin:14px 0 0}
+.impact__missing-details li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px}
+.impact__missing-details li > span{display:flex;flex:1 1 200px;flex-direction:column;gap:4px;min-width:0;overflow-wrap:anywhere}
+.impact__missing-details li small{color:var(--muted)}
+.impact__missing-details li .btn{max-width:100%;white-space:normal}
 /* ===== Impact story (I3 redesign): Before → StockLess → Impact ===== */
 .workspace-home-link + .workspace-home-link{margin-left:8px}
 .sx-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;width:100%}

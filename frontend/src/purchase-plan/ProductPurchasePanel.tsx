@@ -4,11 +4,12 @@ import { ProductLabelList } from "../components/ProductLabelList.tsx";
 import { ProductDetailsSteps, productStepStates, stepTitle, type ProductStepsHandle } from "./ProductDetailsSteps.tsx";
 import { Stocky } from "../onboarding/Stocky.tsx";
 
-import { addCalendarDays, applyPurchaseQuantityEdit, createPurchaseQuantity, estimatePurchaseCost, evaluateProductPurchasePlan, EPIC5_POLICY, suggestSupplierOrder, type ProductPurchaseInputs, type ProductPurchasePlan, type SupplierOrderTerms, type ProductPlanningContext } from "../engine.ts";
+import { addCalendarDays, applyPurchaseQuantityEdit, createPurchaseQuantity, estimatePurchaseCost, evaluateProductPurchasePlan, EPIC5_POLICY, type ProductPurchaseInputs, type ProductPurchasePlan, type SupplierOrderTerms, type ProductPlanningContext } from "../engine.ts";
 import { purchaseGroup, purchaseGroupLabels, type PurchaseProduct } from "./model.ts";
 import { SourceTag, numberText, oneDecimalText } from "./SourceTag.tsx";
 import { PurchaseDemandChart, purchaseDate, demandRangeText } from "./PurchaseDemandChart.tsx";
 import { PurchaseCheckCard } from "./PurchaseCheckCard.tsx";
+import { SupplierOrderPanel } from "./SupplierOrderPanel.tsx";
 
 interface Props {
   product: PurchaseProduct; plan?: ProductPurchasePlan; inputs: ProductPurchaseInputs;
@@ -16,20 +17,19 @@ interface Props {
   onChange: (inputs: ProductPurchaseInputs) => void; onReviewData: () => void;
   datasetId?: string; onPlanningChange?: (context: ProductPlanningContext) => void;
   detailsFocus?: { productKey: string; revision: number };
+  onImpact?: () => void;
   position?: number; total: number; onPrevious?: () => void; onNext?: () => void; onDone: () => void;
 }
 
-export function ProductPurchasePanel({ product, plan, inputs, analysisDate, terms, onTermsChange, onChange, onReviewData, datasetId, onPlanningChange, detailsFocus, position, total, onPrevious, onNext, onDone }: Props) {
+export function ProductPurchasePanel({ product, plan, inputs, analysisDate, terms, onTermsChange, onChange, onReviewData, datasetId, onPlanningChange, detailsFocus, onImpact, position, total, onPrevious, onNext, onDone }: Props) {
   const language = useLanguage();
   const copy = (en:string,zh:string,ms:string) => language === "zh" ? zh : language === "ms" ? ms : en;
   const [showEvidence, setShowEvidence] = useState(true);
   const [typed, setTyped] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
   const [errors, setErrors] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
-  const [supplierRaw, setSupplierRaw] = useState<Partial<Record<keyof SupplierOrderTerms, string>>>({});
-  const [supplierErrors, setSupplierErrors] = useState<Partial<Record<keyof SupplierOrderTerms, string>>>({});
   const [blocked, setBlocked] = useState(false);
   const productSteps = useRef<ProductStepsHandle>(null);
-  useEffect(()=>{if(detailsFocus?.productKey === product.key) productSteps.current?.openAt();},[detailsFocus,product.key]);
+  const expirySteps = useRef<ProductStepsHandle>(null);
   // A reviewed bulk change must also replace any local text for the old order.
   useEffect(() => {
     setTyped(previous => {
@@ -59,21 +59,18 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
   const plannable = range && restock?.state === "available" && !product.issue;
   const invalidQuantity = Object.values(errors).some(Boolean);
   const spending = product.readinessSnapshot ? estimatePurchaseCost(product.readinessSnapshot, product.key, inputs.plannedOrder.state === "value" ? inputs.plannedOrder.value : undefined) : undefined;
-  const supplier = suggestSupplierOrder(restock, terms, analysisDate);
-  const supplierInvalid = Object.values(supplierErrors).some(Boolean);
   const hasSupplierQuantity = terms.caseSize !== undefined || terms.minimumOrder !== undefined;
-  const changeTerm = (field: keyof SupplierOrderTerms, raw: string) => {
-    const minimum = field === "caseSize" ? 1 : 0, maximum = field === "leadTimeDays" ? 3650 : EPIC5_POLICY.maximumQuantity;
-    const accepted = raw.trim() === "" || (/^\d+$/.test(raw.trim()) && Number(raw) >= minimum && Number(raw) <= maximum);
-    setSupplierRaw(previous => ({ ...previous, [field]: raw }));
-    setSupplierErrors(previous => ({ ...previous, [field]: accepted ? undefined : field === "leadTimeDays" ? "Enter whole days from 0 to 3650." : field === "caseSize" ? "Enter a whole case size from 1 to 999999." : "Enter a whole minimum order from 0 to 999999." }));
-    if (accepted) onTermsChange({ ...terms, [field]: raw.trim() === "" ? undefined : Number(raw) });
-  };
   const canSave = Boolean(onPlanningChange && product.readinessSnapshot?.evidenceKey);
-  const steps = productStepStates(product, plan, canSave, hasSupplierQuantity || terms.leadTimeDays !== undefined, copy);
+  const steps = productStepStates(product, plan, canSave, copy);
+  const impactChecks = steps.filter(step => step.key !== "expiry");
+  const expiryChecks = steps.filter(step => step.key === "expiry");
+  useEffect(() => {
+    if (detailsFocus?.productKey === product.key) (impactChecks.length ? productSteps : expirySteps).current?.openAt();
+  }, [detailsFocus, product.key, impactChecks.length]);
   const stepsLeft = steps.filter(step => step.required && !step.done);
+  const openCheck = (key: typeof steps[number]["key"]) => (key === "expiry" ? expirySteps : productSteps).current?.openAt(key);
   useEffect(() => { if (!stepsLeft.length) setBlocked(false); }, [stepsLeft.length]);
-  const finish = () => { if (stepsLeft.length) { setBlocked(true); productSteps.current?.openAt(stepsLeft[0].key); } else onDone(); };
+  const finish = () => { if (stepsLeft.length) { setBlocked(true); openCheck(stepsLeft[0].key); } else onDone(); };
   const historyToImprove = product.demand?.historyEvidence && <details className="pp-check-explanation pp-history"><summary>{t("History to improve")}</summary><p>{t("Usable complete weeks")}: {product.demand.historyEvidence.usableWeekStarts.length} / 8</p><p>{t("Missing weeks")}: {product.demand.historyEvidence.missingWeekStarts.join(", ") || t("None")}</p>{product.demand.historyEvidence.excludedPeriods.map(period => <p key={period.weekStart}>{period.weekStart} · {t("Excluded records")}: {period.sourceRows.join(", ")} · {period.reasons.map(t).join(" ")}</p>)}<p>{t(product.demand.historyEvidence.correctiveAction)}</p><p>{t("Forecast uses positive sales; returns are retained separately.")}</p></details>;
   const metric = (label: string, amount: string, note: string) => <div><small>{t(label)}</small><b className="num">{amount}</b><small>{t(note)}</small></div>;
   const preview = plannable && audit?.state === 'not_planned' ? evaluateProductPurchasePlan(product.demand!, { analysisDate, stock:product.stock, inputs, expiry:product.fileExpiry, previewEmptyOrder:true }) : undefined;
@@ -102,6 +99,7 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
 
     {!plannable ? <div className="pp-unavailable"><h3>{t("Unavailable")}</h3><p>{t(reason)}</p><p>{t(restock?.state === "unavailable" ? restock.correctiveAction : product.demand?.historyEvidence?.correctiveAction)}</p><button type="button" className="btn btn--ghost" onClick={onReviewData}>{t("Fix it in Step 3")}</button>{historyToImprove}</div> : <>
       <div className="pp-two"><section className="pp-suggestion"><h3 className="pp-kicker">{t("Suggested order")}</h3><b className="pp-suggestion-number">{numberText(restock.quantity.value)} <small>{t("units")}</small></b><p>{t("Expected sales in the next 4 weeks")}: <b>{demandRangeText(range.low, range.high)} {t("units")}</b></p><p>{t("In stock")}: {numberText(stock?.currentStock ?? 0)} · {t("Incoming")}: {numberText(value("incomingStock"))}</p><SourceTag source="worked out by StockLess" />
+        {hasSupplierQuantity && <p className="pp-small-note">{copy("Before supplier rules. See the adjusted quantity below.", "应用供应商规则前的数量。请查看下方调整后的数量。", "Sebelum peraturan pembekal. Lihat kuantiti dilaraskan di bawah.")}</p>}
         {restock.beforeQuantity && (restock.beforeQuantity.value !== restock.afterQuantity?.value || restock.afterUnavailableReason) && <p>{copy("Before expiry/storage adjustment", "到期／储存调整前", "Sebelum pelarasan luput/penyimpanan")}: {restock.beforeQuantity.value} · {copy("After", "调整后", "Selepas")}: {restock.afterQuantity?.value ?? copy("Unavailable", "不可用", "Tidak tersedia")}{restock.afterUnavailableReason && ` · ${t(restock.afterUnavailableReason)}`}</p>}
         <button type="button" className="btn btn--primary" disabled={invalidQuantity || Boolean(restock.afterUnavailableReason) || restock.quantity.value > EPIC5_POLICY.maximumQuantity} onClick={() => adopt(restock.quantity.value)}>{t(`Use suggested ${numberText(restock.quantity.value)}`)}</button>
       </section><section className="pp-order"><h3 className="pp-kicker">{t("Your planned order")}</h3><div className="pp-order-step"><button type="button" aria-label={t("Decrease planned order")} disabled={value("plannedOrder") === 0} onClick={() => update("plannedOrder", String(Math.max(0, value("plannedOrder") - 1)))}>−</button>
@@ -115,6 +113,7 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
         <div className="pp-input-sources">{inputs.plannedOrder.state === "value" && <span>{t("Your order")}: <SourceTag source={inputs.plannedOrder.source} /><button type="button" className="pp-link-button" aria-label={t("Reset order to suggestion")} onClick={() => update("plannedOrder", "")}>{t("Reset to suggestion")}</button></span>}{inputs.incomingStock.state === "value" && <span>{t("Incoming")}: <SourceTag source={inputs.incomingStock.source} /><button type="button" className="pp-link-button" aria-label={t("Clear incoming stock")} onClick={() => update("incomingStock", "")}>{t("Clear")}</button></span>}</div>
         <p id="purchase-empty-order" className="pp-small-note">{t("Suggested drafts are calculated automatically. Adjust the quantity if needed; zero is a valid order.")}</p>
       </section></div>
+      <SupplierOrderPanel estimate={restock} terms={terms} analysisDate={analysisDate} invalidQuantity={invalidQuantity} onTermsChange={onTermsChange} onApply={adopt} />
       <section className="pp-purchase-check" aria-label={t("Purchase check")} aria-live="polite"><div className="pp-check-head"><h3>{t("Purchase check")}</h3></div>
         <div className={`pp-check-message pp-check-message--${group}`}><b>{t(inputs.plannedOrder.state === "empty" ? "Not entered" : group === "check_order" ? "This plan looks too high." : group === "order_needed" ? "This plan looks too low." : "This plan is within range.")}</b><p>{t(audit?.state === "verdict" ? audit.reasonSentence : "Enter a planned order when you are ready.")}</p>{inputs.plannedOrder.state === "empty" && <small>{t("No plan entered; stock after ordering and shortage are not assessed.")}</small>}{audit?.state === "verdict" && audit.gettingOld && <small>{t("The stock count is getting old. A fresher count would be better.")}</small>}{audit?.state === "verdict" && !expiryUsed && <small>{copy("Based on stock and demand only — expiry not checked.", "仅基于库存和需求——未检查过期。", "Berdasarkan stok dan permintaan sahaja — luput tidak disemak.")}</small>}</div>
         {figures ? <PurchaseCheckCard stock={figures.stockOnHand.value} atRisk={figures.expiryAtRisk?.value ?? 0} incoming={figures.incomingStock.value} order={figures.plannedOrder.value} low={range.low} high={range.high} target={restock.midpointTarget.value} suggested={restock.quantity.value} expiryUsed={expiryUsed} stockDate={stock?.stockAsOfDate ? purchaseDate(stock.stockAsOfDate) : undefined} incomingEntered={inputs.incomingStock.state === "value"} orderEntered={inputs.plannedOrder.state === "value"} adjustment={restock.beforeQuantity && (restock.beforeQuantity.value !== restock.afterQuantity?.value || restock.afterUnavailableReason) ? { before: restock.beforeQuantity.value, after: restock.afterQuantity?.value } : undefined} />
@@ -123,13 +122,11 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
     </>}
     <section className="pp-spending" aria-label={t("Estimated purchase spending")}><div className="pp-spending-total"><h3>{t("Estimated purchase spending")}</h3><b className="num">{spending?.state === "estimated" && !invalidQuantity ? `MYR ${spending.amount.toFixed(2)}` : t(spending?.state === "not_entered" && !invalidQuantity ? "Not entered" : "Unavailable")}</b></div>{spending?.state === "estimated" && !invalidQuantity ? <small>{spending.quantity} × MYR {spending.unitCost} · {t("Estimated")}</small> : <p className="pp-small-note">{t(invalidQuantity ? "Correct the quantity." : spending?.state !== "estimated" ? spending?.reason : "No validated unit cost.")} {spending?.state !== "estimated" && !invalidQuantity && t(spending?.correctiveAction)}</p>}</section>
     {plan?.expiryRisk?.state === "estimated" && plan.expiryRisk.quantity > 0 && <p className="pp-expiry-warning" role="status">{copy(`${numberText(plan.expiryRisk.quantity)} units may reach expiry before selling. Review the expiry date check below.`, `${numberText(plan.expiryRisk.quantity)} 件库存可能在售出前到期。请查看下方到期信息。`, `${numberText(plan.expiryRisk.quantity)} unit mungkin luput sebelum dijual. Semak maklumat luput di bawah.`)}</p>}
-    <ProductDetailsSteps ref={productSteps} product={product} plan={plan} analysisDate={analysisDate} steps={steps} onPlanningChange={canSave ? onPlanningChange : undefined} supplierSet={hasSupplierQuantity || terms.leadTimeDays !== undefined} supplierInvalid={supplierInvalid}
+    <ProductDetailsSteps ref={expirySteps} scope="expiry" product={product} plan={plan} analysisDate={analysisDate} steps={expiryChecks} onPlanningChange={canSave ? onPlanningChange : undefined}
       expiryNote={<>{plan?.expiry && <p><b>{t(plan.expiry.message)}</b></p>}<p>{copy('Checked expiry information from your file is included automatically.','文件中已核对的到期信息会自动计入。','Maklumat luput disemak daripada fail dikira secara automatik.')}</p>{plan?.expiryRisk?.state === 'estimated' && <p><b>{numberText(plan.expiryRisk.quantity)} {t('units')}</b> {copy('may expire before selling.','可能在售出前到期。','mungkin luput sebelum dijual.')}</p>}{plan?.expiry && "earliestDate" in plan.expiry && <p>{t("Earliest expiry:")} {purchaseDate(plan.expiry.earliestDate, true)} <SourceTag source="from your file" /></p>}{plan?.expiryRisk && plan.expiryRisk.state !== "estimated" && <p>{t(plan.expiryRisk.reason)} {copy("To check expiry, map Expiry date and Expiry quantity (units in each batch at the stock count date) in Step 2. Until then, the check is based on stock and demand only.", "如需检查过期，请在第 2 步对应“到期日”和“到期数量”（盘点日每批数量）。在此之前，检查仅基于库存和需求。", "Untuk menyemak luput, padankan Tarikh luput dan Kuantiti luput (unit setiap kelompok pada tarikh kiraan stok) dalam Langkah 2. Sebelum itu, semakan berdasarkan stok dan permintaan sahaja.")}</p>}</>}
-      supplierFields={<div className="pp-steps__supplier"><div className="pp-supplier-fields">{([ ["caseSize", "Case size"], ["minimumOrder", "Minimum order"], ["leadTimeDays", "Lead time (days)"] ] as const).map(([field, label]) => <label key={field}>{t(label)}<input type="text" inputMode="numeric" value={supplierRaw[field] ?? (terms[field] === undefined ? "" : String(terms[field]))} placeholder="—" aria-invalid={Boolean(supplierErrors[field])} aria-describedby={supplierErrors[field] ? `supplier-${field}-error` : undefined} onChange={event => changeTerm(field, event.currentTarget.value)} />{supplierErrors[field] && <span id={`supplier-${field}-error`} className="pp-input-error" role="alert">{t(supplierErrors[field])}</span>}</label>)}</div>
-      {supplierInvalid ? <p>{t("Correct the supplier terms to update this suggestion.")}</p> : supplier.state === "unavailable" ? <p>{t(supplier.reason)}</p> : <><p>{hasSupplierQuantity ? t(`Supplier-adjusted order: ${numberText(supplier.quantity)} units.`) : t("Add a case size or minimum order to adjust the suggested quantity.")}{supplier.cases !== undefined && hasSupplierQuantity && ` ${t(`${numberText(supplier.cases)} cases of ${numberText(terms.caseSize ?? 1)}.`)}`}</p>{supplier.arrivalDate && <p>{t("Estimated arrival:")} {purchaseDate(supplier.arrivalDate, true)}</p>}{supplier.beyondPlanningWindow && <p className="pp-input-error">{t("Delivery falls outside this four-week plan. Lead time does not extend the forecast.")}</p>}{hasSupplierQuantity && <button type="button" className="btn btn--ghost btn--small" disabled={invalidQuantity} onClick={() => adopt(supplier.quantity)}>{t(`Use supplier quantity ${numberText(supplier.quantity)}`)}</button>}</>}
-      <p className="pp-small-note">{t("Saved buying restrictions are included automatically in suggestions. Check an adjusted order against the demand range.")}</p>
-    </div>} />
-    {blocked && stepsLeft.length > 0 && <div className="pp-steps-blocked" role="alert"><Stocky pose="magnify" size={40} /><p><b>{copy(`Finish ${stepsLeft.length} required ${stepsLeft.length > 1 ? "steps" : "step"} before moving on.`, `请先完成 ${stepsLeft.length} 个必填步骤再继续。`, `Lengkapkan ${stepsLeft.length} langkah wajib sebelum meneruskan.`)}</b> {copy("Next", "下一步", "Seterusnya")}: {stepTitle(stepsLeft[0].key, copy)}.</p><button type="button" className="btn btn--primary btn--small" onClick={() => productSteps.current?.openAt(stepsLeft[0].key)}>{copy(`Go to ${stepTitle(stepsLeft[0].key, copy)}`, `前往${stepTitle(stepsLeft[0].key, copy)}`, `Pergi ke ${stepTitle(stepsLeft[0].key, copy)}`)}</button></div>}
+    />
+    {impactChecks.length > 0 && <ProductDetailsSteps ref={productSteps} product={product} plan={plan} analysisDate={analysisDate} steps={impactChecks} onPlanningChange={canSave ? onPlanningChange : undefined} onImpact={onImpact} />}
+    {blocked && stepsLeft.length > 0 && <div className="pp-steps-blocked" role="alert"><Stocky pose="magnify" size={40} /><p><b>{copy(`Finish ${stepsLeft.length} required ${stepsLeft.length > 1 ? "steps" : "step"} before moving on.`, `请先完成 ${stepsLeft.length} 个必填步骤再继续。`, `Lengkapkan ${stepsLeft.length} langkah wajib sebelum meneruskan.`)}</b> {copy("Next", "下一步", "Seterusnya")}: {stepTitle(stepsLeft[0].key, copy)}.</p><button type="button" className="btn btn--primary btn--small" onClick={() => openCheck(stepsLeft[0].key)}>{copy(`Go to ${stepTitle(stepsLeft[0].key, copy)}`, `前往${stepTitle(stepsLeft[0].key, copy)}`, `Pergi ke ${stepTitle(stepsLeft[0].key, copy)}`)}</button></div>}
     <footer className="pp-detail-footer">{stepsLeft.length > 0 && !blocked && <small className="pp-done-hint">{copy(`${stepsLeft.length} required ${stepsLeft.length > 1 ? "checks" : "check"} left`, `还剩 ${stepsLeft.length} 项必填确认`, `${stepsLeft.length} semakan wajib lagi`)}</small>}<button type="button" className={`btn btn--primary${stepsLeft.length ? " is-locked" : ""}`} aria-disabled={stepsLeft.length > 0} onClick={finish}>{t("Done, next product →")}</button></footer>
   </section>;
 }

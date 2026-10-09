@@ -25,7 +25,7 @@ it('uses the purchase quantity directly with no separate decision form',()=>{
 });
 it('opens optional details for the selected product outside its saved filter',async()=>{
   const props=basePlan();render(<PurchasePlanScreen {...props} initialView={{snapshotId:props.snapshot.id,query:'000202',group:'all',positiveOnly:false,financialSort:false,expanded:false}} detailsFocus={{productKey:'A',revision:1}} />);
-  await waitFor(()=>expect(screen.getByRole('navigation',{name:'Product checks'})).toBeTruthy());
+  await waitFor(()=>expect(screen.getByRole('navigation',{name:'Expiry checks'})).toBeTruthy());
   expect(screen.getByText('Selected product outside current filter')).toBeTruthy();
   expect(screen.queryByLabelText('Final quantity')).toBeNull();
 });

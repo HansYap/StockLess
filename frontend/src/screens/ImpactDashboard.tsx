@@ -7,7 +7,7 @@ import { getSavedDataset, savedStockOutcomes, type SavedDataset } from '../stora
 import { downloadAnalysisWorkbook, downloadPlannedOrdersWorkbook, NoPlannedOrdersError, printAnalysisReport } from '../purchase-plan/analysis-report-export.ts';
 
 import { automaticPurchaseDrafts } from '../purchase-plan/suggested-orders.ts';
-import type { PlanningDetail } from '../components/product-estimates.ts';
+import { productEstimateDetails, type PlanningDetail } from '../components/product-estimates.ts';
 import { OutcomePeriodComparison } from '../components/OutcomePeriodComparison.tsx';
 import { StockOutcomeControls } from '../components/StockOutcomeControls.tsx';
 import { ImpactStory, type ImpactTile } from '../components/ImpactStory.tsx';
@@ -76,6 +76,15 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
 
   // One set of derived figures feeds the story, both lenses and the FAQ examples.
   const assessed=impact.products.filter(p=>p.excessUnits!==undefined);
+  const missingImpactDetails=useMemo(()=>{
+    const eligible=new Set(impact.products.filter(p=>p.excessUnits!==undefined).map(p=>p.productKey));
+    return products.flatMap(product=>{
+      if(!eligible.has(product.key))return [];
+      const missing=productEstimateDetails(snapshot,product.key,product.planningContext).missing;
+      return missing.length?[{product,missing}]:[];
+    });
+  },[products,snapshot,impact]);
+  const detailLabel=(field:PlanningDetail)=>field==='cost'?c('purchase cost','采购成本','kos belian'):field==='category'?c('food category','食品类别','kategori makanan'):c('weight per unit','单位重量','berat seunit');
   const lines=assessed.map(p=>({key:p.productKey,name:p.name,sku:p.code,available:p.available!,demandHigh:p.demandHigh!,units:p.excessUnits!}));
   const excess=assessed.reduce((sum,p)=>sum+p.excessUnits!,0);
   const planned=assessed.reduce((sum,p)=>sum+Math.max(0,p.available!),0);
@@ -183,6 +192,11 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
 
   return <main className="impact" aria-labelledby="impact-title">
     <ImpactStory head={head} aside={about} lines={lines} totalProducts={impact.products.length} business={businessTile} emissions={emissionsTile} onBack={onBack} onExcess={openExcessProducts} onBusiness={()=>openBusinessProducts('excess')} onEmissions={()=>openEnvironmentProducts('potential')} />
+    {missingImpactDetails.length>0 && <details className="impact-sec impact__missing-details">
+      <summary>{c('Review products with missing details','查看缺少信息的商品','Semak produk dengan butiran yang belum lengkap')} ({missingImpactDetails.length})</summary>
+      <p>{c('Some products are not included in the money or carbon estimates yet. Add their missing details to include them where supported. You can keep planning without filling these in.','部分商品尚未计入资金或碳排放估算。补充缺少的信息后，支持的商品即可计入。您也可以不填写并继续规划采购。','Sesetengah produk belum dikira dalam anggaran wang atau karbon. Tambah butiran yang belum lengkap untuk memasukkannya jika disokong. Anda boleh terus merancang tanpa mengisinya.')}</p>
+      <ul>{missingImpactDetails.map(({product,missing})=><li key={product.key}><span><b>{product.title}</b><small>{missing.map(detailLabel).join(' · ')}</small></span>{onProductDetails && <button type="button" className="btn btn--ghost btn--small" aria-label={`${c('Add details for','补充信息：','Tambah butiran untuk')} ${product.title} ${product.sku??''}`} onClick={()=>onProductDetails(product.key)}>{c('Add details','补充信息','Tambah butiran')}</button>}</li>)}</ul>
+    </details>}
     <section className="impact-sec impact__lines" id="impact-excess-products" ref={excessProducts} aria-labelledby="impact-excess-title">
       {secHead('box','impact-excess-title',c('Products with possible excess stock','可能有多余库存的商品','Produk dengan stok berlebihan berpotensi'),c(`${withExcess.length} of ${assessed.length} checked products`,`${assessed.length} 件已核对商品中的 ${withExcess.length} 件`,`${withExcess.length} daripada ${assessed.length} produk disemak`),withExcess.length>1?<div className="impact-sort" role="group" aria-label={c('Sort products','排序商品','Susun produk')}><button type="button" aria-pressed={excessSort==='units'} onClick={()=>setExcessSort('units')}>{c('By units','按数量','Ikut unit')}</button><button type="button" aria-pressed={excessSort==='money'} onClick={()=>setExcessSort('money')}>{c('By money','按金额','Ikut wang')}</button></div>:undefined,true)}
       {withExcess.length?<><div className="impact-bars__head" aria-hidden="true"><span>{c('Product','商品','Produk')}</span><span>{c('Units above expected demand','高于预期需求的数量','Unit melebihi permintaan dijangka')}</span><span style={{textAlign:'right'}}>{c('Money tied up','占用资金','Wang terikat')}</span></div>

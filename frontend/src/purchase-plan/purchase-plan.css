@@ -179,6 +179,19 @@
 .purchase-plan--new .pp-supplier-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
 .purchase-plan--new .pp-supplier-fields label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 .purchase-plan--new .pp-supplier-fields input { width: 100%; min-height: 36px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 8px; font: 400 14px var(--data); color: var(--ink); }
+.purchase-plan--new .pp-supplier-order { display: flex; flex-direction: column; gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: #f6faf8; }
+.purchase-plan--new .pp-supplier-order-head, .purchase-plan--new .pp-expiry-details-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; }
+.purchase-plan--new .pp-supplier-order .pp-supplier-fields { margin: 0; padding: 0; border: 0; min-width: 0; gap: 12px; }
+.purchase-plan--new .pp-supplier-order .pp-supplier-fields label { min-width: 0; font-size: 14px; font-weight: 600; color: var(--ink); }
+.purchase-plan--new .pp-supplier-order .pp-supplier-fields input { min-height: 44px; padding: 8px 10px; font-size: 16px; background: #fff; }
+.purchase-plan--new .pp-supplier-order-result { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.purchase-plan--new .pp-supplier-order-quantity { display: flex; flex: 1 1 240px; min-width: 0; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 12px; background: var(--teal-tint); font-size: 14px; overflow-wrap: anywhere; }
+.purchase-plan--new .pp-supplier-order-quantity > small { color: var(--muted); }
+.purchase-plan--new .pp-supplier-order-quantity > b, .frame.frame--i3 .purchase-plan--new .pp-supplier-order-quantity > b.num { font: 700 26px/1.25 var(--data); color: var(--teal-deep); }
+.purchase-plan--new .pp-supplier-order-quantity > b > small { font: 400 16px var(--body); }
+.purchase-plan--new .pp-supplier-order-result > .btn { flex: 0 1 auto; max-width: 100%; white-space: normal; }
+.purchase-plan--new .pp-expiry-details { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; scroll-margin-top: 140px; }
+.purchase-plan--new .pp-expiry-details-head > div { display: flex; flex-direction: column; gap: 4px; }
 .purchase-plan--new .pp-detail-footer { display: flex; justify-content: flex-end; }
 .purchase-plan--new .pp-spending { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: #fafcfb; }
 .purchase-plan--new .pp-spending-total { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 16px; }
@@ -311,6 +324,9 @@
   .purchase-plan--new .pp-table td:nth-child(5) { grid-column: 2; grid-row: 1; padding-left: 8px; }
 }
 @media (max-width: 600px) {
+  .purchase-plan--new .pp-supplier-order { padding: 16px; }
+  .purchase-plan--new .pp-supplier-order .pp-supplier-fields { grid-template-columns: 1fr; }
+  .purchase-plan--new .pp-supplier-order-result > .btn { width: 100%; }
   .purchase-plan--new .pp-detail { padding: 16px; }
   .purchase-plan--new .pp-two { grid-template-columns: 1fr; }
   .purchase-plan--new .pp-demand { padding: 14px; }

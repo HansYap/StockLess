@@ -4,7 +4,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { PurchasePlanScreen } from "../src/screens/PurchasePlanScreen.tsx";
 import { PurchaseStockChart } from "../src/purchase-plan/PurchaseStockChart.tsx";
 import { PurchaseDemandChart } from "../src/purchase-plan/PurchaseDemandChart.tsx";
-import { buildDemandReview, evaluateProductPurchasePlan, suggestSupplierOrder } from "../src/engine.ts";
+import { ProductPurchasePanel } from "../src/purchase-plan/ProductPurchasePanel.tsx";
+import { buildDemandReview, evaluateProductPurchasePlan, suggestSupplierOrder, emptyProductPurchaseInputs, type ProductPlanningContext } from "../src/engine.ts";
 import { joinPurchaseEvidence, type PurchaseDrafts } from "../src/purchase-plan/model.ts";
 import { makeEvidence } from "./fixtures.ts";
 
@@ -15,8 +16,8 @@ function Harness({ data, evaluate = evaluateProductPurchasePlan }: { data?: Retu
 }
 const open = (sku = "000101") => fireEvent.click(screen.getByRole("button", { name: new RegExp(`Open purchase plan.*${sku}`) }));
 const detail = () => within(screen.getByRole("region", { name: "Same product name" }));
-const openDetails = () => fireEvent.click(screen.getByRole("button", { name: "Open" }));
-const checksOpen = () => screen.queryByRole("navigation", { name: "Product checks" }) !== null;
+const openDetails = () => fireEvent.click(screen.getByRole("button", { name: "Review expiry" }));
+const checksOpen = () => screen.queryByRole("navigation", { name: /^(Product|Expiry) checks$/ }) !== null;
 
 describe("purchase planning", () => {
   it("routes both impact actions to the existing dashboard callback", () => {
@@ -160,26 +161,53 @@ describe("purchase planning", () => {
     render(<Harness />); open();
     fireEvent.click(screen.getByRole("button",{name:"Use suggested 12"}));
     const initial = (screen.getByLabelText("Planned order") as HTMLInputElement).value;
-    openDetails();
-    fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
-    fireEvent.change(screen.getByLabelText("Case size"), { target: { value: "12" } });
-    fireEvent.change(screen.getByLabelText("Minimum order"), { target: { value: "36" } });
-    fireEvent.change(screen.getByLabelText("Lead time (days)"), { target: { value: "29" } });
+    expect(checksOpen()).toBe(false);
+    fireEvent.change(screen.getByLabelText("Units per case"), { target: { value: "12" } });
+    fireEvent.change(screen.getByLabelText("Minimum order (units)"), { target: { value: "36" } });
+    fireEvent.change(screen.getByLabelText("Delivery time (days)"), { target: { value: "29" } });
     expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe(initial);
     expect(screen.getByText(/Delivery falls outside/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Use supplier quantity 36" }));
+    fireEvent.click(screen.getByRole("button", { name: "Use 36 units in my plan" }));
     expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("36");
     expect(screen.getByText("This plan looks too high.")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Case size"), { target: { value: "0" } });
-    expect(screen.queryByRole("button", { name: /^Use supplier quantity/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Units per case"), { target: { value: "0" } });
+    expect(screen.queryByRole("button", { name: /^Use .* units in my plan/ })).toBeNull();
     expect(screen.getByRole("alert").textContent).toContain("whole case size");
-    open("000202"); openDetails(); fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
-    expect((screen.getByLabelText("Case size") as HTMLInputElement).value).toBe("");
-    open(); openDetails(); fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
-    expect((screen.getByLabelText("Case size") as HTMLInputElement).value).toBe("12");
+    open("000202");
+    expect((screen.getByLabelText("Units per case") as HTMLInputElement).value).toBe("");
+    open();
+    expect((screen.getByLabelText("Units per case") as HTMLInputElement).value).toBe("12");
     const product = joinPurchaseEvidence(makeEvidence().snapshot, makeEvidence().forecast)[0];
     const plan = evaluateProductPurchasePlan(product.demand!, { analysisDate: "2026-09-14", stock: product.stock });
     expect(suggestSupplierOrder(plan.estimatedRestock, { caseSize: 12, minimumOrder: 36 }, "2026-09-14")).toMatchObject({ quantity: 36 });
+  });
+  it("keeps expiry completion separate from impact details and leaves supplier rules optional", () => {
+    const data = makeEvidence();
+    const snapshot = { ...data.snapshot, evidenceKey: "split-checks" };
+    const context: ProductPlanningContext = { evidenceKey: "split-checks", unitCost: 8.9, category: "margarine", categoryConfirmed: true, categorySource: "manual", kgPerUnit: 0.48 };
+    const product = joinPurchaseEvidence(snapshot, data.forecast, { A: context })[0];
+    const inputs = emptyProductPurchaseInputs();
+    const plan = evaluateProductPurchasePlan(product.demand!, { analysisDate: snapshot.analysisDate, stock: product.stock, inputs });
+    const onPlanningChange = vi.fn(), onDone = vi.fn();
+    const props = { product, plan, inputs, analysisDate: snapshot.analysisDate, terms: {}, onTermsChange: vi.fn(), onChange: vi.fn(), onReviewData: vi.fn(), onPlanningChange, onDone, total: 3 };
+    const view = render(<ProductPurchasePanel {...props} />);
+    const impact = within(screen.getByRole("region", { name: "Impact dashboard details" }));
+    expect(impact.getByText(/Purchase cost · MYR 8.90/)).toBeTruthy();
+    expect(impact.getByText(/Food category · Margarine/)).toBeTruthy();
+    expect(impact.getByText(/Weight per unit · 0.48 kg/)).toBeTruthy();
+    expect(impact.queryByText(/Expiry|Supplier/)).toBeNull();
+    expect(screen.getByRole("region", { name: "Supplier ordering rules" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Done, next product →" }));
+    expect(onDone).not.toHaveBeenCalled();
+    const expiry = within(screen.getByRole("region", { name: "Expiry check" }));
+    fireEvent.click(expiry.getByRole("radio", { name: /It does not expire/ }));
+    fireEvent.click(expiry.getByRole("button", { name: "Next →" }));
+    expect(onPlanningChange).toHaveBeenLastCalledWith(expect.objectContaining({ noExpiry: true, unitCost: 8.9, kgPerUnit: 0.48 }));
+    const completedProduct = joinPurchaseEvidence(snapshot, data.forecast, { A: { ...context, noExpiry: true } })[0];
+    view.rerender(<ProductPurchasePanel {...props} product={completedProduct} />);
+    fireEvent.click(screen.getByRole("button", { name: "Done, next product →" }));
+    expect(onDone).toHaveBeenCalledOnce();
+    expect(screen.queryByText(/Supplier terms ·/)).toBeNull();
   });
 });
 
