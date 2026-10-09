@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { t, useLanguage } from "../i18n/index.ts";
 import { ProductLabelList } from "../components/ProductLabelList.tsx";
 import { PlanningInputsPanel } from "../components/PlanningInputsPanel.tsx";
-import { DecisionOutcomeControls } from "../components/DecisionOutcomeControls.tsx";
 
 import { addCalendarDays, applyPurchaseQuantityEdit, createPurchaseQuantity, estimatePurchaseCost, evaluateProductPurchasePlan, EPIC5_POLICY, suggestSupplierOrder, type ProductPurchaseInputs, type ProductPurchasePlan, type SupplierOrderTerms, type ProductPlanningContext } from "../engine.ts";
 import { purchaseGroup, purchaseGroupLabels, type PurchaseProduct } from "./model.ts";
@@ -15,13 +14,11 @@ interface Props {
   analysisDate: string; terms: SupplierOrderTerms; onTermsChange: (terms: SupplierOrderTerms) => void;
   onChange: (inputs: ProductPurchaseInputs) => void; onReviewData: () => void;
   datasetId?: string; onPlanningChange?: (context: ProductPlanningContext) => void;
-  decisionFocus?: { productKey: string; revision: number };
   detailsFocus?: { productKey: string; revision: number };
-  onOutcomes?: () => void; onDownloads?: () => void;
   position?: number; total: number; onPrevious?: () => void; onNext?: () => void; onDone: () => void;
 }
 
-export function ProductPurchasePanel({ product, plan, inputs, analysisDate, terms, onTermsChange, onChange, onReviewData, datasetId, onPlanningChange, decisionFocus, detailsFocus, onOutcomes, onDownloads, position, total, onPrevious, onNext, onDone }: Props) {
+export function ProductPurchasePanel({ product, plan, inputs, analysisDate, terms, onTermsChange, onChange, onReviewData, datasetId, onPlanningChange, detailsFocus, position, total, onPrevious, onNext, onDone }: Props) {
   const language = useLanguage();
   const copy = (en:string,zh:string,ms:string) => language === "zh" ? zh : language === "ms" ? ms : en;
   const [showEvidence, setShowEvidence] = useState(true);
@@ -30,12 +27,9 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
   const [errors, setErrors] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
   const [supplierRaw, setSupplierRaw] = useState<Partial<Record<keyof SupplierOrderTerms, string>>>({});
   const [supplierErrors, setSupplierErrors] = useState<Partial<Record<keyof SupplierOrderTerms, string>>>({});
-  const [decisionOpen, setDecisionOpen] = useState(false);
   const [detailsOpen,setDetailsOpen] = useState(false);
   const productDetails = useRef<HTMLDetailsElement>(null);
   useEffect(()=>{if(detailsFocus?.productKey === product.key){setDetailsOpen(true);requestAnimationFrame(()=>{productDetails.current?.scrollIntoView?.({behavior:"smooth",block:"start"});productDetails.current?.querySelector("summary")?.focus({preventScroll:true});});}},[detailsFocus,product.key]);
-  const decision = useRef<HTMLDetailsElement>(null);
-  useEffect(() => { if (decisionFocus?.productKey === product.key) { setDecisionOpen(true); requestAnimationFrame(() => { decision.current?.scrollIntoView?.({behavior:'smooth',block:'start'}); decision.current?.querySelector('summary')?.focus({preventScroll:true}); }); } }, [decisionFocus, product.key]);
   // A reviewed bulk change must also replace any local text for the old order.
   useEffect(() => {
     setTyped(previous => {
@@ -134,7 +128,6 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
     <section className="pp-spending" aria-label={t("Estimated purchase spending")}><div className="pp-spending-total"><h3>{t("Estimated purchase spending")}</h3><b className="num">{spending?.state === "estimated" && !invalidQuantity ? `MYR ${spending.amount.toFixed(2)}` : t(spending?.state === "not_entered" && !invalidQuantity ? "Not entered" : "Unavailable")}</b></div>{spending?.state === "estimated" && !invalidQuantity ? <small>{spending.quantity} × MYR {spending.unitCost} · {t("Estimated")}</small> : <p className="pp-small-note">{t(invalidQuantity ? "Correct the quantity." : spending?.state !== "estimated" ? spending?.reason : "No validated unit cost.")} {spending?.state !== "estimated" && !invalidQuantity && t(spending?.correctiveAction)}</p>}</section>
     {plan?.expiryRisk?.state === "estimated" && plan.expiryRisk.quantity > 0 && <p className="pp-expiry-warning" role="status">{copy(`${numberText(plan.expiryRisk.quantity)} units may reach expiry before selling. Review expiry information below.`, `${numberText(plan.expiryRisk.quantity)} 件库存可能在售出前到期。请查看下方到期信息。`, `${numberText(plan.expiryRisk.quantity)} unit mungkin luput sebelum dijual. Semak maklumat luput di bawah.`)}</p>}
     <footer className="pp-detail-footer"><button type="button" className="btn btn--primary" onClick={onDone}>{t("Done, next product →")}</button></footer>
-    {product.readinessSnapshot && <details className="cp3-controls pp-final-choice" ref={decision} open={decisionOpen} onToggle={event=>setDecisionOpen(event.currentTarget.open)}><summary>{copy('Save your final choice', '保存最终选择', 'Simpan pilihan akhir anda')}<small>{copy('Optional · decide what to buy after reviewing your draft', '可选 · 核对草稿后确定采购量', 'Pilihan · putuskan belian selepas menyemak draf')}</small></summary>{decisionOpen && <DecisionOutcomeControls mode="decisions" datasetId={datasetId} product={product} snapshot={product.readinessSnapshot} plan={plan} plannedQuantity={inputs.plannedOrder.state === 'value' ? inputs.plannedOrder.value : undefined} />}{decisionOpen && (onOutcomes || onDownloads) && <div className="cp3-actions">{onDownloads && <button type="button" className="btn btn--ghost" onClick={onDownloads}>{copy('Download saved final orders', '下载已保存的最终订单', 'Muat turun pesanan akhir disimpan')} →</button>}{onOutcomes && <button type="button" className="btn btn--ghost" onClick={onOutcomes}>{copy('Record what happened in Impact', '在影响页记录实际情况', 'Rekod apa yang berlaku dalam Impak')} →</button>}</div>}</details>}
     <details className="pp-product-details" ref={productDetails} open={detailsOpen} onToggle={event=>setDetailsOpen(event.currentTarget.open)}><summary>{copy("More product details", "更多商品详情", "Butiran produk lanjut")}<small>{copy("Optional corrections, expiry and buying restrictions", "可选修正、到期与采购限制", "Pembetulan pilihan, luput dan sekatan belian")}</small></summary><div className="pp-product-details-body">
     {product.demand?.historyEvidence && <details className="pp-check-explanation"><summary>{t("History to improve")}</summary><p>{t("Usable complete weeks")}: {product.demand.historyEvidence.usableWeekStarts.length} / 8</p><p>{t("Missing weeks")}: {product.demand.historyEvidence.missingWeekStarts.join(", ") || t("None")}</p>{product.demand.historyEvidence.excludedPeriods.map(period => <p key={period.weekStart}>{period.weekStart} · {t("Excluded records")}: {period.sourceRows.join(", ")} · {period.reasons.map(t).join(" ")}</p>)}<p>{t(product.demand.historyEvidence.correctiveAction)}</p><p>{t("Forecast uses positive sales; returns are retained separately.")}</p></details>}
     <div className="pp-two pp-extras"><section className="pp-extra"><button type="button" className="pp-extra-toggle" aria-expanded={extra === "expiry"} aria-controls="purchase-expiry-extra" onClick={() => setExtra(extra === "expiry" ? null : "expiry")}><span><b>{t("Expiry information")}</b><small>{t(plan?.expiry.message ?? "Expiry not checked — evidence mismatch for this product")}</small></span><span aria-hidden="true">{extra === "expiry" ? "−" : "+"}</span></button>{extra === "expiry" && <div id="purchase-expiry-extra" className="pp-extra-body"><p>{copy('Checked expiry information from your file is included automatically.','文件中已核对的到期信息会自动计入。','Maklumat luput disemak daripada fail dikira secara automatik.')}</p>{plan?.expiryRisk?.state === 'estimated' && <p><b>{numberText(plan.expiryRisk.quantity)} {t('units')}</b> {copy('may expire before selling.','可能在售出前到期。','mungkin luput sebelum dijual.')}</p>}{plan?.expiry && "earliestDate" in plan.expiry && <p>{t("Earliest expiry:")} {purchaseDate(plan.expiry.earliestDate, true)} <SourceTag source="from your file" /></p>}{plan?.expiryRisk && plan.expiryRisk.state !== "estimated" && <p>{t(plan.expiryRisk.reason)} {copy("To check expiry, map Expiry date and Expiry quantity (units in each batch at the stock count date) in Step 2. Until then, the check is based on stock and demand only.", "如需检查过期，请在第 2 步对应“到期日”和“到期数量”（盘点日每批数量）。在此之前，检查仅基于库存和需求。", "Untuk menyemak luput, padankan Tarikh luput dan Kuantiti luput (unit setiap kelompok pada tarikh kiraan stok) dalam Langkah 2. Sebelum itu, semakan berdasarkan stok dan permintaan sahaja.")}</p>}</div>}</section>

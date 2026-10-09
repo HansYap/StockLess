@@ -3,13 +3,13 @@ import { getLocale, t, useLanguage } from '../i18n/index.ts';
 import { addCalendarDays, buildEnvironmentalImpact, buildImpactReview, buildMissingCostQueue, buildAnalysisReport, CARBON_MALAYSIA_ILLUSTRATION, evaluateProductPurchasePlan,
   type CarbonImpactKind, type CarbonImpactResult, type CarbonImpactSummary, type DemandForecastReview, type ImpactProduct, type MonetaryFigure, type MonetaryTotal, type PlanningContexts, type ProductPlanningContext, type ReadinessSnapshot, type SupplierOrderTerms } from '../engine.ts';
 import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from '../purchase-plan/model.ts';
-import { getSavedDataset, savedPurchaseDecisions, savedStockOutcomes, type SavedDataset } from '../storage/saved-datasets.ts';
-import { downloadAnalysisWorkbook, downloadFinalisedOrdersWorkbook, NoFinalisedOrdersError, printAnalysisReport } from '../purchase-plan/analysis-report-export.ts';
+import { getSavedDataset, savedStockOutcomes, type SavedDataset } from '../storage/saved-datasets.ts';
+import { downloadAnalysisWorkbook, downloadPlannedOrdersWorkbook, NoPlannedOrdersError, printAnalysisReport } from '../purchase-plan/analysis-report-export.ts';
 
 import { automaticPurchaseDrafts } from '../purchase-plan/suggested-orders.ts';
 import type { PlanningDetail } from '../components/product-estimates.ts';
 import { OutcomePeriodComparison } from '../components/OutcomePeriodComparison.tsx';
-import { DecisionOutcomeControls } from '../components/DecisionOutcomeControls.tsx';
+import { StockOutcomeControls } from '../components/StockOutcomeControls.tsx';
 import { ImpactStory, type ImpactTile } from '../components/ImpactStory.tsx';
 import { ImpactIcon, type ImpactIconName } from '../components/ImpactIcon.tsx';
 import './impact-reference.css';
@@ -23,7 +23,6 @@ interface Props {
   onContextsChange?: (updates:PlanningContexts)=>void;
   selectedKey?: string | null; onSelect?: (key:string)=>void;
   focus?: { section: ImpactSection; revision: number };
-  onPurchaseDecision?: (key:string)=>void;
   onProductDetails?: (key:string)=>void;
   onBack:()=>void; onNew?:()=>void;
 }
@@ -38,7 +37,7 @@ export function calculatePotentialExcess(snapshot: ReadinessSnapshot, forecast: 
 }
 
 /** Step 5 in the supplied Impact Dashboard design, filled from the same CP3 engine figures as Step 4. */
-export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts=EMPTY_CONTEXTS,datasetId,shopName,datasetName,supplierDrafts,onContextChange,onContextsChange,selectedKey,onSelect,focus,onPurchaseDecision,onProductDetails,onBack,onNew}:Props) {
+export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts=EMPTY_CONTEXTS,datasetId,shopName,datasetName,supplierDrafts,onContextChange,onContextsChange,selectedKey,onSelect,focus,onProductDetails,onBack,onNew}:Props) {
   const language=useLanguage(), c=(en:string,zh:string,ms:string)=>language==='zh'?zh:language==='ms'?ms:en;
   const n=(v:number)=>v.toLocaleString(getLocale(),{maximumFractionDigits:3});
   const units=(v:number)=>Math.round(v).toLocaleString(getLocale());
@@ -107,11 +106,11 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
   const makeReport=(history=saved)=>{const reportOutcomes=history?savedStockOutcomes(history):[];
     const reportEnvironment=history===saved?environmental:buildEnvironmentalImpact(snapshot,impact,contexts,reportOutcomes,{datasetId});
     return buildAnalysisReport({snapshot,forecast,plans,impact,datasetId:datasetId??'sample-preview',shopName,datasetName,
-    decisions:history?savedPurchaseDecisions(history):[],outcomes:reportOutcomes,carbonResults:[...reportEnvironment.actualResults,...reportEnvironment.potentialResults,...reportEnvironment.scenarioResults],
+    outcomes:reportOutcomes,carbonResults:[...reportEnvironment.actualResults,...reportEnvironment.potentialResults,...reportEnvironment.scenarioResults],
     supplierScenariosByProduct:Object.fromEntries(Object.entries(supplierDrafts??{}).filter((entry):entry is [string,SupplierOrderTerms]=>!!entry[1]).map(([key,terms])=>[key,[{id:'current-terms',name:c('Entered supplier terms','已填写的供应商条件','Terma pembekal dimasukkan'),terms}]]))});};
   const currentReport=async()=>{const request=++historyRequest.current, history=datasetId?await getSavedDataset(datasetId):undefined;if(datasetId&&!history)throw new Error(c('Saved records could not be read. Reopen this dataset and try again.','无法读取已保存的记录。请重新打开此数据集后重试。','Rekod disimpan tidak dapat dibaca. Buka semula set data ini dan cuba lagi.'));if(history&&request===historyRequest.current)setSaved(history);return makeReport(history);};
-  const fail=(e:unknown)=>{setNoOrders(e instanceof NoFinalisedOrdersError);setError(e instanceof NoFinalisedOrdersError?c('No finalised orders. Save a positive final quantity in purchase planning first.','没有已确定的订单。请先在采购计划中保存大于零的最终数量。','Tiada pesanan dimuktamadkan. Simpan kuantiti akhir positif dalam perancangan belian dahulu.'):e instanceof Error?t(e.message):unavailable);};
-  const download=async(finalOnly=false)=>{setError('');setNoOrders(false);setBusy(true);try{const report=await currentReport();if(finalOnly)await downloadFinalisedOrdersWorkbook(report);else await downloadAnalysisWorkbook(report);}catch(e){fail(e);}finally{setBusy(false);}};
+  const fail=(e:unknown)=>{setNoOrders(e instanceof NoPlannedOrdersError);setError(e instanceof NoPlannedOrdersError?c('No planned orders. Enter a positive quantity in Purchase plan.','没有计划订单。请在采购计划中填写大于零的数量。','Tiada pesanan dirancang. Masukkan kuantiti positif dalam Pelan belian.'):e instanceof Error?t(e.message):unavailable);};
+  const download=async(finalOnly=false)=>{setError('');setNoOrders(false);setBusy(true);try{const report=await currentReport();if(finalOnly)await downloadPlannedOrdersWorkbook(report);else await downloadAnalysisWorkbook(report);}catch(e){fail(e);}finally{setBusy(false);}};
   const pdf=async()=>{setError('');setNoOrders(false);setBusy(true);try{const {downloadAnalysisPdf}=await import('../purchase-plan/analysis-report-pdf.ts');await downloadAnalysisPdf(await currentReport());}catch(e){fail(e);}finally{setBusy(false);}};
   const baselineOf=(kind:CarbonImpactKind)=>kind==='potential_excess'?c('the top of the expected four-week demand range','预期四周需求区间的上限','had atas julat permintaan empat minggu dijangka'):kind==='recorded_waste'?c('none — recorded waste is reported as you entered it','无——实际报损按您的记录呈现','tiada — sisa direkod dilaporkan seperti dimasukkan'):'';
   const explain=(result:CarbonImpactResult,index:number)=><details className="cp3-controls ix-explain" key={`${result.kind}-${result.productKey}-${index}`}><summary>{result.productName??result.productKey} · {result.state==='estimated'?`${n(result.kgCO2e)} kg CO₂e`:result.state==='no_record'?c('No outcome recorded','尚无实际结果记录','Tiada hasil direkodkan'):unavailable}</summary>
@@ -181,16 +180,16 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
 
   return <main className="impact" aria-labelledby="impact-title">
     <ImpactStory head={head} lines={lines} totalProducts={impact.products.length} business={businessTile} emissions={emissionsTile} onBack={onBack} onExcess={openExcessProducts} onBusiness={()=>openBusinessProducts('excess')} onEmissions={()=>openEnvironmentProducts('potential')} />
-    <details className="sx-card impact__disclosure impact__downloads" ref={downloads} open={downloadsOpen} onToggle={event=>setDownloadsOpen(event.currentTarget.open)}><summary><span>{c('Download your results','下载结果','Muat turun hasil anda')}</span><small>{c('Analysis or saved final orders · Excel, PDF or print','分析或已保存的最终订单 · Excel、PDF 或打印','Analisis atau pesanan akhir disimpan · Excel, PDF atau cetak')}</small></summary>
-    <section className="impact__download-section"><h3>{c('Plan analysis','计划分析','Analisis pelan')}</h3><p>{c('Estimates use your current draft. Recorded decisions and actual outcomes are included separately.','估算使用当前草稿。已记录的决定与实际结果单独列出。','Anggaran menggunakan draf semasa. Keputusan dan hasil sebenar direkod disertakan berasingan.')}</p>
+    <details className="sx-card impact__disclosure impact__downloads" ref={downloads} open={downloadsOpen} onToggle={event=>setDownloadsOpen(event.currentTarget.open)}><summary><span>{c('Download your results','下载结果','Muat turun hasil anda')}</span><small>{c('Analysis or current order list · Excel, PDF or print','分析或当前订单清单 · Excel、PDF 或打印','Analisis atau senarai pesanan semasa · Excel, PDF atau cetak')}</small></summary>
+    <section className="impact__download-section"><h3>{c('Plan analysis','计划分析','Analisis pelan')}</h3><p>{c('Estimates and the order list use your current Purchase plan. Actual outcomes are shown separately.','估算和订单清单使用当前采购计划。实际结果单独列出。','Anggaran dan senarai pesanan menggunakan Pelan belian semasa. Hasil sebenar ditunjukkan berasingan.')}</p>
     <div className="impact__toolbar" role="group" aria-label={c('Download your results','下载结果','Muat turun hasil anda')}>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download()}>{c('Download analysis Excel','下载分析 Excel','Muat turun Excel analisis')}</button>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void pdf()}>{c('Download analysis PDF','下载分析 PDF','Muat turun PDF analisis')}</button>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy || (!!datasetId && !saved)} onClick={()=>{setError('');setNoOrders(false);try{printAnalysisReport(makeReport());}catch(e){fail(e);}}}>{c('Print / Save PDF','打印／保存 PDF','Cetak / Simpan PDF')}</button>
     </div>
-    </section><section className="impact__download-section"><h3>{c('Saved final orders','已保存的最终订单','Pesanan akhir disimpan')}</h3><p>{c('Only positive quantities from saved final choices appear here. Later draft edits do not change a saved choice.','这里只包含已保存最终选择中的正数数量。后续草稿修改不会改变已保存的选择。','Hanya kuantiti positif daripada pilihan akhir disimpan dipaparkan di sini. Suntingan draf kemudian tidak mengubah pilihan disimpan.')}</p><div className="impact__toolbar"><button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download(true)}>{c('Download final orders Excel','下载最终订单 Excel','Muat turun Excel pesanan akhir')}</button>{onPurchaseDecision && selected && <button type="button" className="btn btn--ghost btn--small" onClick={()=>onPurchaseDecision(selected)}>{c('Review final choices in Purchase plan','在采购计划中核对最终选择','Semak pilihan akhir dalam Pelan belian')} →</button>}</div></section>
+    </section><section className="impact__download-section"><h3>{c('Current order list','当前订单清单','Senarai pesanan semasa')}</h3><p>{c('Uses the quantities currently shown in Purchase plan. Changes there update the next download; zero orders are left out.','使用采购计划当前显示的数量。修改后下次下载会更新，零订购量不会列入。','Menggunakan kuantiti semasa dalam Pelan belian. Perubahan mengemas kini muat turun seterusnya; pesanan sifar dikecualikan.')}</p><div className="impact__toolbar"><button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download(true)}>{c('Download order list Excel','下载订单清单 Excel','Muat turun Excel senarai pesanan')}</button></div></section>
     </details>
-    {error&&<div className="notice notice--error impact__error" role="alert"><span>{error}</span>{noOrders&&<button type="button" className="btn btn--ghost btn--small" onClick={()=>onPurchaseDecision&&selected?onPurchaseDecision(selected):onBack()}>{c('Save a final choice in Purchase plan','在采购计划中保存最终选择','Simpan pilihan akhir dalam Pelan belian')} →</button>}</div>}
+    {error&&<div className="notice notice--error impact__error" role="alert"><span>{error}</span>{noOrders&&<button type="button" className="btn btn--ghost btn--small" onClick={onBack}>{c('Edit quantities in Purchase plan','在采购计划中修改数量','Ubah kuantiti dalam Pelan belian')} →</button>}</div>}
 
     <details className="sx-card impact__disclosure impact__analysis" open={analysisOpen} onToggle={event=>setAnalysisOpen(event.currentTarget.open)}><summary><span>{c('Detailed estimates','详细估算','Anggaran terperinci')}</span><small>{c('Purchase spending, recorded waste and alternative orders','采购支出、实际报损与其他订购方案','Belanja belian, sisa direkod dan pesanan alternatif')}</small></summary>
     <div className="sx-lens">
@@ -277,12 +276,11 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
 
     <details className="sx-card impact__review impact__records" ref={records} open={outcomesOpen} onToggle={event=>setOutcomesOpen(event.currentTarget.open)}><summary><span className="impact__review-title">{c('Record what happened','记录实际情况','Rekod apa yang berlaku')}</span><small>{c('Discarded or expired stock, actual sales and stock counts','已丢弃或过期的库存、实际销量与库存盘点','Stok dibuang atau luput, jualan sebenar dan kiraan stok')}</small></summary>
       <label className="impact__review-product">{c('Product for actual records','实际记录的商品','Produk untuk rekod sebenar')} <select value={selected} onChange={event=>{setSelected(event.target.value);setInputFocus(undefined);}}>{products.map(product=><option key={product.key} value={product.key}>{product.title} · {product.sku} · {product.pack}</option>)}</select></label>
-      {outcomesOpen && (()=>{const product=products.find(p=>p.key===selected);return product?<DecisionOutcomeControls mode="outcomes" key={`outcomes-${selected}`} datasetId={datasetId} product={product} snapshot={snapshot} plan={plans.find(p=>p.productKey===selected)} onChanged={refresh} />:null;})()}
-      {onPurchaseDecision && selected && <button type="button" className="btn btn--ghost" onClick={()=>onPurchaseDecision(selected)}>{c("Review this product's final choice", '核对该商品的最终选择', 'Semak pilihan akhir produk ini')} →</button>}
+      {outcomesOpen && (()=>{const product=products.find(p=>p.key===selected);return product?<StockOutcomeControls key={`outcomes-${selected}`} datasetId={datasetId} product={product} snapshot={snapshot} onChanged={refresh} />:null;})()}
     </details>
 
     <details className="sx-card impact__review impact__history">
-      <summary><span className="impact__review-title">{c('Compare recorded history across two periods','比较两个期间的历史记录','Bandingkan sejarah direkod merentasi dua tempoh')}</span><small>{c('Recorded waste, saved financial estimates and what happened after each decision','实际报损、已保存的财务估算，以及每项决定之后的情况','Sisa direkod, anggaran kewangan tersimpan dan apa yang berlaku selepas setiap keputusan')}</small></summary>
+      <summary><span className="impact__review-title">{c('Compare recorded history across two periods','比较两个期间的历史记录','Bandingkan sejarah direkod merentasi dua tempoh')}</span><small>{c('Recorded waste, sales and stock counts','实际报损、已保存的财务估算，以及每项决定之后的情况','Sisa direkod, anggaran kewangan tersimpan dan apa yang berlaku selepas setiap keputusan')}</small></summary>
       <OutcomePeriodComparison key={`${datasetId}-${revision}`} datasetId={datasetId} currentSnapshot={snapshot} />
     </details>
 

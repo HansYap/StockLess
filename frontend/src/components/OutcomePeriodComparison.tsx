@@ -3,7 +3,7 @@ import { addCalendarDays, buildImportedOutcomeEvidence, compareOutcomePeriods, c
   type ReadinessSnapshot, type PurchaseDecision, type RecordedStockOutcome, type OutcomeUnit, type RecordedOutcomeSummary, type HistoricalFinancialSummary } from "../engine.ts";
 import { getLocale, useLanguage } from "../i18n/index.ts";
 import { getSavedDataset, savedPurchaseDecisions, savedStockOutcomes } from "../storage/saved-datasets.ts";
-import { malaysiaToday } from "./DecisionOutcomeControls.tsx";
+import { malaysiaToday } from "./StockOutcomeControls.tsx";
 import "./decision-outcome-controls.css";
 
 interface Props {
@@ -91,18 +91,20 @@ export function OutcomePeriodComparison({ datasetId, currentSnapshot, onLoaded }
         <h3>{copy("Recorded actual waste", "实际浪费记录", "Sisa sebenar direkodkan")}</h3>
         <div className="decision-outcomes__grid"><div><h4>{copy("First period", "第一个期间", "Tempoh pertama")}</h4>{wasteSummary(comparison.waste.first)}</div><div><h4>{copy("Second period", "第二个期间", "Tempoh kedua")}</h4>{wasteSummary(comparison.waste.second)}</div></div>
         <p>{comparison.waste.state === "compared" ? `${copy("Recorded waste change", "实际浪费变化", "Perubahan sisa direkodkan")}: ${number(comparison.waste.change)} ${unitName(comparison.waste.unit)}` : `${copy("Comparison unavailable", "比较不可用", "Perbandingan tidak tersedia")}: ${explain(comparison.waste.reason)}`}</p>
-        <h3>{copy("Historical financial estimates", "历史财务估算", "Anggaran kewangan sejarah")}</h3>
+        {decisions.length>0 && <><h3>{copy("Historical financial estimates", "历史财务估算", "Anggaran kewangan sejarah")}</h3>
         <p>{copy("Uses the validated Unit Cost preserved when each decision was recorded. These are estimated purchase commitments, not measured profit or achieved savings.", "使用记录每项决定时保留的已验证单位成本。这些是采购承诺估算，并非实际利润或已实现节省。", "Menggunakan Unit Cost disahkan yang dikekalkan semasa setiap keputusan direkodkan. Ini anggaran komitmen belian, bukan keuntungan diukur atau penjimatan tercapai.")}</p>
         <div className="decision-outcomes__grid"><div><h4>{copy("First period estimate", "第一个期间估算", "Anggaran tempoh pertama")}</h4>{financialSummary(comparison.financial.first)}</div><div><h4>{copy("Second period estimate", "第二个期间估算", "Anggaran tempoh kedua")}</h4>{financialSummary(comparison.financial.second)}</div></div>
         <p>{comparison.financial.state === "compared" ? `${copy("Estimated purchase-commitment difference", "采购承诺估算差额", "Perbezaan anggaran komitmen belian")}: MYR ${number(comparison.financial.change)}` : `${copy("Comparison unavailable", "比较不可用", "Perbandingan tidak tersedia")}: ${explain(comparison.financial.reason)}`}</p>
+        </>}
       </>}
-      <h3>{copy("Decision follow-up in the second period", "第二个期间的决定后续结果", "Susulan keputusan dalam tempoh kedua")}</h3>
+      {decisions.length>0 && <><h3>{copy("Decision follow-up in the second period", "第二个期间的决定后续结果", "Susulan keputusan dalam tempoh kedua")}</h3>
       <p>{copy("Later imported sales and stock counts are observations. Returns are separate; a stock decrease never becomes an inferred waste record.", "后续导入的销售与库存盘点属于观测记录。退货单独保留，库存减少不会被推断成浪费。", "Jualan import kemudian dan kiraan stok ialah pemerhatian. Pulangan diasingkan; pengurangan stok tidak menjadi rekod sisa tersirat.")}</p>
       <p>{copy("Imported return records kept separate", "单独保留的导入退货记录", "Rekod pulangan import diasingkan")}: {returnCount}</p>
       {!reviews.length ? <p>{copy("No purchase decision recorded.", "尚未记录采购决定。", "Tiada keputusan pembelian direkodkan.")}</p> : <ul className="decision-outcomes__history">{reviews.map(({ decision, review }) => <li key={decision.id}><strong>{decision.recommendation.productName}</strong>{decision.recommendation.productCode && <> · {decision.recommendation.productCode}</>}{decision.recommendation.packSize && <> · {decision.recommendation.packSize}</>}
         <p>{copy("Original recommendation", "原始建议", "Cadangan asal")}: {decision.recommendation.recommendedQuantity} · {copy("Final quantity", "最终数量", "Kuantiti akhir")}: {decision.finalQuantity} · {decision.decisionDate}</p>
         {!review?.records.length ? <p>{copy("No outcome recorded", "尚无实际结果记录", "Tiada hasil direkodkan")}</p> : <ul>{review.records.map(record => <li key={record.id}>{record.date} · {record.kind === "sales" ? copy("Recorded sales", "实际销售", "Jualan direkodkan") : record.kind === "stock" ? copy("Stock count", "库存盘点", "Kiraan stok") : record.kind === "expired" ? copy("Expired stock", "过期库存", "Stok luput") : copy("Discarded stock", "丢弃库存", "Stok dibuang")} · {number(record.quantity)} {unitName(record.unit)}{record.quantity === 0 && <> · {copy("Recorded zero", "已记录为零", "Sifar direkodkan")}</>}{record.provenance && <> · {record.provenance.sourceName} · {copy("Source rows", "来源行", "Baris sumber")}: {record.provenance.sourceRows.join(", ")}</>}</li>)}</ul>}
       </li>)}</ul>}
+      </>}
     </>}
   </section>;
 }

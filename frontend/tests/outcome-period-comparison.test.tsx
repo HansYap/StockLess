@@ -30,7 +30,8 @@ it("compares real recorded zero with observed waste and rejects unequal periods"
   expect(screen.getByText(/Recorded zero/)).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Second period end"), { target: { value: "2026-09-09" } });
   expect(screen.queryByText(/Recorded waste change:/)).toBeNull();
-  expect(screen.getAllByText(/same inclusive number of days/).length).toBe(2);
+  expect(screen.getAllByText(/same inclusive number of days/).length).toBe(1);
+  expect(screen.queryByText('Historical financial estimates')).toBeNull();
 });
 it("never compares different recorded units without a known conversion", async () => {
   const records = [createStockOutcome({ id: "a", datasetId: "dataset-1", productKey: "A", kind: "discarded", date: "2026-09-01", quantity: 1, unit: "pieces", referenceDate: "2026-10-08" }),

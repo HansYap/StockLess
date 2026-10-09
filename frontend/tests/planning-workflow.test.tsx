@@ -1,35 +1,67 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { PurchasePlanScreen, type PurchasePlanView } from '../src/screens/PurchasePlanScreen.tsx';
 import { ImpactDashboard } from '../src/screens/ImpactDashboard.tsx';
 import { createPurchaseDecision, type AnalysisReport } from '../src/engine.ts';
 import { getSavedDataset } from '../src/storage/saved-datasets.ts';
-import { downloadAnalysisWorkbook, downloadFinalisedOrdersWorkbook, printAnalysisReport } from '../src/purchase-plan/analysis-report-export.ts';
+import { downloadAnalysisWorkbook, downloadPlannedOrdersWorkbook, printAnalysisReport } from '../src/purchase-plan/analysis-report-export.ts';
 import { setLanguage } from '../src/i18n/index.ts';
 import { makeEvidence } from './fixtures.ts';
-
-vi.mock('../src/storage/saved-datasets.ts', async original => ({ ...await original<object>(), getSavedDataset:vi.fn() }));
-vi.mock('../src/purchase-plan/analysis-report-export.ts', async original => {
+vi.mock('../src/storage/saved-datasets.ts',async original=>({...await original<object>(),getSavedDataset:vi.fn()}));
+vi.mock('../src/purchase-plan/analysis-report-export.ts',async original=>{
   const actual=await original<typeof import('../src/purchase-plan/analysis-report-export.ts')>();
-  return { ...actual, downloadAnalysisWorkbook:vi.fn(), printAnalysisReport:vi.fn(), downloadFinalisedOrdersWorkbook:vi.fn(async (report:AnalysisReport)=>{if(!report.tables.find(table=>table.id==='finalorders')?.rows.length)throw new actual.NoFinalisedOrdersError();}) };
+  return {...actual,downloadAnalysisWorkbook:vi.fn(),printAnalysisReport:vi.fn(),downloadPlannedOrdersWorkbook:vi.fn(async(report:AnalysisReport)=>{if(!report.tables.find(table=>table.id==='orders')?.rows.length)throw new actual.NoPlannedOrdersError();})};
 });
 beforeEach(()=>{setLanguage('en');vi.clearAllMocks();vi.mocked(getSavedDataset).mockResolvedValue({decisions:[],outcomes:[]} as never);});
 const entered=(value:number)=>({plannedOrder:{state:'value' as const,value,source:'input by you' as const},incomingStock:{state:'empty' as const}});
-const basePlan=()=>({ ...makeEvidence(),drafts:{A:entered(100)},selectedKey:'A',onSelect:vi.fn(),onDraftChange:vi.fn(),onBack:vi.fn() });
-
-it('keeps final choices in Purchase plan and routes actual records and downloads to Impact', async ()=>{
-  const props=basePlan(), onImpact=vi.fn(); render(<PurchasePlanScreen {...props} datasetId="D" onImpact={onImpact} />);
-  const final=screen.getByText('Save your final choice'); expect(final.closest('details')?.open).toBe(false);
-  expect(screen.queryByRole('button',{name:'Save decision'})).toBeNull();
-  fireEvent.click(final);
-  expect((await screen.findByLabelText('Final quantity') as HTMLInputElement).value).toBe('100');
-  expect((screen.getByLabelText('Response') as HTMLSelectElement).value).toBe('Changed');
-  expect(screen.queryByLabelText('Recorded quantity')).toBeNull();
-  fireEvent.click(screen.getByRole('button',{name:'Record what happened in Impact →'}));
-  expect(onImpact).toHaveBeenLastCalledWith('outcomes');
-  fireEvent.click(screen.getByRole('button',{name:'Download saved final orders →'}));
-  expect(onImpact).toHaveBeenLastCalledWith('downloads');
+const basePlan=()=>({...makeEvidence(),drafts:{A:entered(100)},selectedKey:'A',onSelect:vi.fn(),onDraftChange:vi.fn(),onBack:vi.fn()});
+it('uses the purchase quantity directly with no separate decision form',()=>{
+  const props=basePlan();render(<PurchasePlanScreen {...props} datasetId="D" />);
+  expect((screen.getByLabelText('Exact planned order quantity') as HTMLInputElement).value).toBe('100');
+  expect(screen.queryByText('Save your final choice')).toBeNull();
+  expect(screen.queryByText('Record your purchase decision')).toBeNull();
+  expect(screen.queryByLabelText('Final quantity')).toBeNull();
   expect(props.onDraftChange).not.toHaveBeenCalled();
+});
+it('opens optional details for the selected product outside its saved filter',async()=>{
+  const props=basePlan();render(<PurchasePlanScreen {...props} initialView={{snapshotId:props.snapshot.id,query:'000202',group:'all',positiveOnly:false,financialSort:false,expanded:false}} detailsFocus={{productKey:'A',revision:1}} />);
+  await waitFor(()=>expect(screen.getByText('More product details').closest('details')?.open).toBe(true));
+  expect(screen.getByText('Selected product outside current filter')).toBeTruthy();
+  expect(screen.queryByLabelText('Final quantity')).toBeNull();
+});
+it('keeps actual records separate without a related-decision input',async()=>{
+  const props=basePlan(),onSelect=vi.fn();render(<ImpactDashboard {...props} selectedKey="B" onSelect={onSelect} focus={{section:'outcomes',revision:1}} />);
+  await waitFor(()=>expect(screen.getByText('Record what happened').closest('details')?.open).toBe(true));
+  expect((screen.getByLabelText('Product for actual records') as HTMLSelectElement).value).toBe('B');
+  expect(screen.getByLabelText('Recorded quantity')).toBeTruthy();
+  expect(screen.queryByLabelText('Related decision (optional)')).toBeNull();
+  expect(screen.queryByRole('button',{name:'Save decision'})).toBeNull();
+  fireEvent.change(screen.getByLabelText('Product for actual records'),{target:{value:'A'}});expect(onSelect).toHaveBeenCalledWith('A');
+});
+it('exports the current order, ignores older saved decisions and updates after a plan edit',async()=>{
+  const decision=createPurchaseDecision({id:'old',datasetId:'D',response:'Changed',finalQuantity:6,reason:'Old choice',referenceDate:'2026-10-08',recordedAt:'2026-10-08T10:00:00Z',recommendation:{productKey:'A',productName:'Same product name',sourceName:'old.csv',sourceSha256:'old',sourceMode:'user',analysisDate:'2026-09-14',policyVersion:'cp3-v2',recommendedQuantity:12,quantityUnit:'pieces'}});
+  const saved={decisions:[{id:decision.id,purchaseDecision:decision}],outcomes:[]},before=JSON.stringify(saved);
+  vi.mocked(getSavedDataset).mockResolvedValue(saved as never);
+  const props=basePlan(),view=render(<ImpactDashboard {...props} datasetId="D" focus={{section:'downloads',revision:1}} />);
+  fireEvent.click(await screen.findByRole('button',{name:'Download order list Excel'}));
+  await waitFor(()=>expect(downloadPlannedOrdersWorkbook).toHaveBeenCalledOnce());
+  const orders=()=>vi.mocked(downloadPlannedOrdersWorkbook).mock.lastCall![0].tables.find(t=>t.id==='orders')!;
+  expect(orders().rows.find(row=>row[3]==='A')?.[4]).toBe(100);
+  expect(orders().columns).not.toContain('Decision date');
+  view.rerender(<ImpactDashboard {...props} drafts={{A:entered(9),B:entered(0)}} datasetId="D" focus={{section:'downloads',revision:1}} />);
+  fireEvent.click(screen.getByRole('button',{name:'Download order list Excel'}));
+  await waitFor(()=>expect(downloadPlannedOrdersWorkbook).toHaveBeenCalledTimes(2));
+  expect(orders().rows.map(row=>row[4])).toEqual([9]);
+  fireEvent.click(screen.getByRole('button',{name:'Print / Save PDF'}));
+  expect(vi.mocked(printAnalysisReport).mock.lastCall![0].tables.find(t=>t.id==='orders')?.rows[0][4]).toBe(9);
+  expect(JSON.stringify(saved)).toBe(before);
+});
+it('returns an empty order list to quantity editing without requiring a decision',async()=>{
+  const props=basePlan();render(<ImpactDashboard {...props} drafts={{A:entered(0),B:entered(0)}} datasetId="D" focus={{section:'downloads',revision:1}} />);
+  fireEvent.click(await screen.findByRole('button',{name:'Download order list Excel'}));
+  expect((await screen.findByText(/^No planned orders\./)).closest('[role="alert"]')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:'Edit quantities in Purchase plan →'}));
+  expect(props.onBack).toHaveBeenCalledOnce();
 });
 
 it('restores filters and selection on returning, and resets the view for new source evidence', async ()=>{
@@ -45,51 +77,6 @@ it('restores filters and selection on returning, and resets the view for new sou
   expect((screen.getByRole('checkbox',{name:'Sort by estimated financial risk'}) as HTMLInputElement).checked).toBe(false);
 });
 
-it('opens the requested final choice even when its product is outside the saved filter', async ()=>{
-  const props=basePlan();
-  render(<PurchasePlanScreen {...props} initialView={{snapshotId:props.snapshot.id,query:'000202',group:'all',positiveOnly:false,financialSort:false,expanded:false}} decisionFocus={{productKey:'A',revision:1}} />);
-  await waitFor(()=>expect(screen.getByText('Save your final choice').closest('details')?.open).toBe(true));
-  expect(screen.getByText('Selected product outside current filter')).toBeTruthy();
-  expect((screen.getByLabelText('Final quantity') as HTMLInputElement).value).toBe('100');
-});
-
-it('opens actual records for the shared selected product without duplicating purchase choices', async ()=>{
-  const props=basePlan(), onSelect=vi.fn(), onPurchaseDecision=vi.fn();
-  render(<ImpactDashboard {...props} selectedKey="B" onSelect={onSelect} focus={{section:'outcomes',revision:1}} onPurchaseDecision={onPurchaseDecision} />);
-  await waitFor(()=>expect(screen.getByText('Record what happened').closest('details')?.open).toBe(true));
-  expect((screen.getByLabelText('Product for actual records') as HTMLSelectElement).value).toBe('B');
-  expect(screen.queryByLabelText('Response')).toBeNull();
-  expect(screen.getByLabelText('Recorded quantity')).toBeTruthy();
-  fireEvent.click(screen.getByRole('button',{name:"Review this product's final choice →"}));
-  expect(onPurchaseDecision).toHaveBeenCalledWith('B');
-  fireEvent.change(screen.getByLabelText('Product for actual records'),{target:{value:'A'}});
-  expect(onSelect).toHaveBeenCalledWith('A');
-});
-
-it('downloads freshly saved final choices separately from later draft edits', async ()=>{
-  const decision=createPurchaseDecision({id:'choice',datasetId:'D',response:'Changed',finalQuantity:6,reason:'Shelf space',referenceDate:'2026-10-08',recordedAt:'2026-10-08T10:00:00Z',recommendation:{productKey:'A',productName:'Same product name',productCode:'000101',sourceName:'test.csv',sourceSha256:'test',sourceMode:'user',analysisDate:'2026-09-14',policyVersion:'cp3-v2',recommendedQuantity:12,quantityUnit:'pieces'}});
-  let resolveInitial!: (value:never)=>void;
-  vi.mocked(getSavedDataset).mockImplementationOnce(()=>new Promise(resolve=>{resolveInitial=resolve;})).mockResolvedValue({decisions:[{id:decision.id,purchaseDecision:decision}],outcomes:[]} as never);
-  render(<ImpactDashboard {...basePlan()} datasetId="D" focus={{section:'downloads',revision:1}} />);
-  await screen.findByRole('button',{name:'Download final orders Excel'});
-  fireEvent.click(screen.getByRole('button',{name:'Download final orders Excel'}));
-  await waitFor(()=>expect(downloadFinalisedOrdersWorkbook).toHaveBeenCalledOnce());
-  const report=vi.mocked(downloadFinalisedOrdersWorkbook).mock.calls[0][0], final=report.tables.find(table=>table.id==='finalorders')!, drafts=report.tables.find(table=>table.id==='results')!;
-  expect(final.rows[0][final.columns.indexOf('Final quantity')]).toBe(6);
-  expect(drafts.rows.find(row=>row[drafts.columns.indexOf('Product key')]==='A')?.[drafts.columns.indexOf('Planned quantity')]).toBe(100);
-  await act(async()=>resolveInitial({decisions:[],outcomes:[]} as never));
-  fireEvent.click(screen.getByRole('button',{name:'Print / Save PDF'}));
-  expect(vi.mocked(printAnalysisReport).mock.calls[0][0].tables.find(table=>table.id==='finalorders')?.rows[0][4]).toBe(6);
-});
-
-it('returns an empty final-order download to the selected product final-choice prompt', async ()=>{
-  const onPurchaseDecision=vi.fn(); render(<ImpactDashboard {...basePlan()} datasetId="D" selectedKey="B" focus={{section:'downloads',revision:1}} onPurchaseDecision={onPurchaseDecision} />);
-  fireEvent.click(await screen.findByRole('button',{name:'Download final orders Excel'}));
-  expect((await screen.findByText(/^No finalised orders\./)).closest('[role="alert"]')).toBeTruthy();
-  fireEvent.click(screen.getByRole('button',{name:'Save a final choice in Purchase plan →'}));
-  expect(onPurchaseDecision).toHaveBeenCalledWith('B');
-  expect(screen.queryByRole('button',{name:'Save decision'})).toBeNull();
-});
 
 it('shares automatic draft quantities, AI provenance and manual zero between planning, impact and exports',async()=>{
   const data=makeEvidence();
@@ -110,6 +97,7 @@ it('shares automatic draft quantities, AI provenance and manual zero between pla
   expect(row('A')[results.columns.indexOf('Planned quantity')]).toBe(12);
   expect(row('B')[results.columns.indexOf('Planned quantity')]).toBe(0);
   expect(JSON.stringify(report)).toContain('AI-assigned food category, not manually confirmed');
-  expect(report.tables.find(table=>table.id==='finalorders')?.rows).toHaveLength(0);
+  expect(report.tables.find(table=>table.id==='orders')?.rows.map(row=>row[4])).toEqual([12]);
+  expect(report.tables.some(table=>['decisions','evidence','finalorders'].includes(table.id))).toBe(false);
   expect(JSON.stringify(drafts)).toBe(before);
 });

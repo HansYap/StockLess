@@ -94,10 +94,8 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const [productKey, setProductKey] = useState<string | null>(null);
   const [purchaseView, setPurchaseView] = useState<PurchasePlanView>();
   const [detailsFocus,setDetailsFocus] = useState<{productKey:string;revision:number}>();
-  const [decisionFocus, setDecisionFocus] = useState<{productKey:string;revision:number}>();
   const [impactFocus, setImpactFocus] = useState<{section:ImpactSection;revision:number}>();
-  const openImpact = (section?: ImpactSection) => { setDecisionFocus(undefined);setDetailsFocus(undefined); setImpactFocus(previous=>section?{section,revision:(previous?.revision??0)+1}:undefined); setShowImpact(true); };
-  const openDecision = (key:string) => { setDetailsFocus(undefined);setProductKey(key); setImpactFocus(undefined); setDecisionFocus(previous=>({productKey:key,revision:(previous?.revision??0)+1})); setShowImpact(false); };
+  const openImpact = (section?: ImpactSection) => { setDetailsFocus(undefined); setImpactFocus(previous=>section?{section,revision:(previous?.revision??0)+1}:undefined); setShowImpact(true); };
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<ReadinessSnapshot | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
@@ -283,12 +281,12 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   }, [activeSavedId, dataset, envelope, analysisDate, dateConfirmations, readiness, forecast, persistWork]);
 
   useEffect(() => {
-    if (step === 4 && (showImpact ? impactFocus : decisionFocus || detailsFocus)) return;
+    if (step === 4 && (showImpact ? impactFocus : detailsFocus)) return;
     const frame = requestAnimationFrame(() => {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [step, showImpact, impactFocus, decisionFocus, detailsFocus]);
+  }, [step, showImpact, impactFocus, detailsFocus]);
 
   const goTo = useCallback((next: StepId) => {
     setShowImpact(false);
@@ -308,7 +306,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const resetReadinessEvidence = useCallback(() => {
     setPurchaseDrafts({});
     setSupplierOrderDrafts({});
-    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined); setDecisionFocus(undefined); setImpactFocus(undefined);
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
     readinessAbort.current?.abort();
     readinessAbort.current = null;
     readinessRun.current += 1;
@@ -424,7 +422,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     setCp3Inputs(saved.cp3Inputs ?? {});
     setSupplierOrderDrafts(saved.supplierOrderDrafts ?? {});
     setProposals(null);
-    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined); setDecisionFocus(undefined); setImpactFocus(undefined);
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
     setShowImpact(false);
     setReadinessError(null);
     setForecastError(null);
@@ -553,7 +551,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     lastSavedEnvelope.current = null;
     setMappingError(null);
     setMappingNotice(null);
-    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined); setDecisionFocus(undefined); setImpactFocus(undefined);
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
     setAnalysisDate(malaysiaDate());
     setActiveSavedId(null);
     setWorkspaceInfo({ datasetName: parsed.sourceName.replace(/\.[^.]+$/, ""), shopName: target?.shopName ?? "", rowCount: parsed.rows.length });
@@ -629,7 +627,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     setProposals(null);
     setMappingError(null);
     setMappingNotice(null);
-    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined); setDecisionFocus(undefined); setImpactFocus(undefined);
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
     setReached(1);
     setStep(1);
     setShowImpact(false);
@@ -680,7 +678,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const beginReupload = handleClearSession;
 
   const navigateResults = async (destination: "purchase" | "impact") => {
-    setImpactFocus(undefined); setDecisionFocus(undefined); setDetailsFocus(undefined);
+    setImpactFocus(undefined);  setDetailsFocus(undefined);
     if (!dataset || updateTargetId) {
       const id = updateTargetId ?? activeSavedId ?? uploadTarget?.id;
       if (id) await openSavedDataset(id, destination);
@@ -802,8 +800,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           selectedKey={productKey}
           onSelect={setProductKey}
           focus={impactFocus}
-          onPurchaseDecision={openDecision}
-          onProductDetails={key=>{setProductKey(key);setDecisionFocus(undefined);setImpactFocus(undefined);setDetailsFocus(previous=>({productKey:key,revision:(previous?.revision??0)+1}));setShowImpact(false);}}
+          onProductDetails={key=>{setProductKey(key);setImpactFocus(undefined);setDetailsFocus(previous=>({productKey:key,revision:(previous?.revision??0)+1}));setShowImpact(false);}}
           snapshot={effectiveReadiness!}
           contexts={cp3Inputs}
           datasetId={activeSavedId ?? undefined}
@@ -814,7 +811,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           onContextsChange={updateContexts}
           forecast={forecast}
           drafts={purchaseDrafts}
-          onBack={() => { setImpactFocus(undefined); setDecisionFocus(undefined);setDetailsFocus(undefined); setShowImpact(false); }}
+          onBack={() => { setImpactFocus(undefined); setDetailsFocus(undefined); setShowImpact(false); }}
           onNew={beginReupload}
         />
       ))}
@@ -824,7 +821,6 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
         <PurchasePlanScreen
           initialView={purchaseView}
           onViewChange={setPurchaseView}
-          decisionFocus={decisionFocus}
           detailsFocus={detailsFocus}
           snapshot={effectiveReadiness!}
           contexts={cp3Inputs}

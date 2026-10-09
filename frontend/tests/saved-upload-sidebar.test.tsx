@@ -47,12 +47,12 @@ vi.mock("../src/screens/PurchasePlanScreen.tsx", () => ({ PurchasePlanScreen: (p
   <button onClick={() => props.onContextsChange?.({ A:{ ...props.contexts?.A,evidenceKey:props.snapshot.evidenceKey!,category:"rice",categoryConfirmed:true,isFood:true }, B:{ evidenceKey:props.snapshot.evidenceKey!,category:"rice",categoryConfirmed:true,isFood:true } })}>Confirm test categories</button>
   <span data-testid="restored-drafts">{JSON.stringify(props.drafts)}</span><span data-testid="restored-suppliers">{JSON.stringify(props.supplierDrafts)}</span>
   <span data-testid="restored-contexts">{JSON.stringify(props.contexts)}</span>
-  <span data-testid="plan-navigation">{JSON.stringify({selected:props.selectedKey,view:props.initialView,focus:props.decisionFocus})}</span>
+  <span data-testid="plan-navigation">{JSON.stringify({selected:props.selectedKey,view:props.initialView,focus:props.detailsFocus})}</span>
   <button onClick={()=>{props.onSelect('B');props.onViewChange?.({snapshotId:props.snapshot.id,query:'000202',group:'all',positiveOnly:true,financialSort:true,expanded:true});}}>Select and filter test product</button>
   <button onClick={()=>props.onImpact?.('outcomes')}>Open actual records</button>
   <button onClick={()=>props.onImpact?.('downloads')}>Open result downloads</button>
 </> }));
-vi.mock("../src/screens/ImpactDashboard.tsx", () => ({ ImpactDashboard: (props: ComponentProps<typeof import("../src/screens/ImpactDashboard.tsx").ImpactDashboard>) => <><h1>Saved impact dashboard</h1><span data-testid="impact-drafts">{JSON.stringify(props.drafts)}</span><span data-testid="impact-contexts">{JSON.stringify(props.contexts)}</span><span data-testid="impact-navigation">{JSON.stringify({selected:props.selectedKey,focus:props.focus})}</span><button onClick={()=>props.onSelect?.('A')}>Select actual product A</button><button onClick={()=>props.onPurchaseDecision?.(props.selectedKey??'A')}>Review selected final choice</button></> }));
+vi.mock("../src/screens/ImpactDashboard.tsx", () => ({ ImpactDashboard: (props: ComponentProps<typeof import("../src/screens/ImpactDashboard.tsx").ImpactDashboard>) => <><h1>Saved impact dashboard</h1><span data-testid="impact-drafts">{JSON.stringify(props.drafts)}</span><span data-testid="impact-contexts">{JSON.stringify(props.contexts)}</span><span data-testid="impact-navigation">{JSON.stringify({selected:props.selectedKey,focus:props.focus})}</span><button onClick={()=>props.onSelect?.('A')}>Select actual product A</button><button onClick={()=>props.onProductDetails?.(props.selectedKey??'A')}>Review selected product details</button></> }));
 
 function importedEnvelope() {
   const empty = createEmptySession();
@@ -489,7 +489,7 @@ it('retains product and filters between plan, actual records and downloads witho
   await screen.findByRole('heading',{name:'Saved impact dashboard'});
   expect(JSON.parse(screen.getByTestId('impact-navigation').textContent!)).toMatchObject({selected:'B',focus:{section:'outcomes'}});
   fireEvent.click(screen.getByText('Select actual product A'));
-  fireEvent.click(screen.getByText('Review selected final choice'));
+  fireEvent.click(screen.getByText('Review selected product details'));
   await screen.findByRole('heading',{name:'Saved purchase plan'});
   expect(JSON.parse(screen.getByTestId('plan-navigation').textContent!)).toMatchObject({selected:'A',view:before.view,focus:{productKey:'A'}});
   fireEvent.click(screen.getByText('Open result downloads'));
