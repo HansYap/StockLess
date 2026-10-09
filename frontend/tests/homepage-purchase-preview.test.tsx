@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomePage } from "../src/screens/HomePage.tsx";
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 function renderExample() {
   const { container } = render(<HomePage startHref="#start" />);
@@ -29,6 +29,32 @@ describe("redesigned homepage", () => {
       expect(screen.getByRole("link", { name: new RegExp(label) }).getAttribute("href")).toBe("#top");
     }
     expect(screen.getByRole("link", { name: "Try it with your own data →" }).getAttribute("href")).toBe("#start");
+  });
+
+  it("smoothly scrolls from the hero text and all four workflow cards", () => {
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    render(<HomePage startHref="#start" />);
+    fireEvent.click(screen.getByRole("link", { name: "Try the demo →" }));
+    expect(scrollIntoView.mock.contexts.at(-1)).toBe(document.getElementById("example"));
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: "smooth", block: "start" });
+    for (const label of ["Upload your sales data", "Map your columns", "Check your data is ready", "Plan your purchases"]) {
+      fireEvent.click(screen.getByRole("link", { name: new RegExp(label) }));
+      expect(scrollIntoView.mock.contexts.at(-1)).toBe(document.getElementById("top"));
+      expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: "smooth", block: "start" });
+    }
+    expect(scrollIntoView).toHaveBeenCalledTimes(5);
+  });
+
+  it("uses an immediate scroll when reduced motion is requested", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    render(<HomePage />);
+    fireEvent.click(screen.getByRole("link", { name: "Try the demo →" }));
+    fireEvent.click(screen.getByRole("link", { name: /Upload your sales data/ }));
+    expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: "auto", block: "start" });
   });
 
   it("checks high, low and balanced orders against the reference example and includes incoming stock", () => {
