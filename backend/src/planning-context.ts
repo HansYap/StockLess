@@ -8,6 +8,9 @@ export interface ProductPlanningContext {
   readonly evidenceKey: string;
   readonly category?: string;
   readonly categoryConfirmed?: boolean;
+  /** Derived AI estimates are distinct from a retailer's explicit confirmation. */
+  readonly categorySource?: 'ai' | 'manual';
+  readonly categoryProvenance?: string;
   readonly isFood?: boolean;
   readonly unitCost?: number;
   /** Retailer's selling price per sales unit (MYR); only for the estimated sales value, never a cost. */
@@ -43,13 +46,13 @@ export function planningMass(snapshot: ReadinessSnapshot, productKey: string, or
   const weight = snapshot.productWeights?.find(p => p.productKey === productKey);
   if (context?.kgPerUnit === undefined && weight && ['invalid','conflicting'].includes(weight.state)) return { state: 'unavailable' as const, reason: 'Weight has invalid or conflicting source values; correct it or enter an explicit verified weight.', correctiveAction: 'Correct weight evidence.' };
   const result = resolveProductMass({ packText: row?.packVariant ?? '', productName: row?.productName,
-    confirmedCategory: context?.categoryConfirmed ? context.category : undefined,
+    confirmedCategory: context?.categoryConfirmed || context?.categorySource === 'ai' ? context.category : undefined,
     manualKgPerUnit: context?.kgPerUnit ?? (weight?.state === 'usable' ? weight.value : undefined), allowEstimatedDensity });
   if (result.state === 'available') return weight?.state === 'usable' && context?.kgPerUnit === undefined
     ? { ...result, provenance: `Validated file weight: ${weight.sourceColumn ?? 'Weight per unit'}; source rows ${weight.sourceRows.join(', ')}` } : result;
   // The standalone reference API estimates ONE piece. Inventory units can be trays
   // or packs, so an explicit count is mandatory and is read only from packVariant.
-  if (result.reasonCode !== 'count_unit' || !context?.categoryConfirmed || !context.category || context.isFood === false
+  if (result.reasonCode !== 'count_unit' || !(context?.categoryConfirmed || context?.categorySource === 'ai') || !context.category || context.isFood === false
     || snapshot.productLimitations.some(item => item.productKey === productKey && item.code === 'IDENTITY_CONFLICT')) return result;
   const count = explicitPackPieceCount(row?.packVariant ?? '', context.category);
   if (count === undefined) return result;

@@ -12,4 +12,7 @@
 .decision-outcomes__history { padding-inline-start: 1.2rem; }
 .decision-outcomes__history li { margin-bottom: 1rem; }
 .decision-outcomes__note { padding: .75rem; border-radius: .5rem; background: #fff4df; color: #765a2d; }
+.decision-outcomes__optional,.decision-outcomes__records { margin-block:1rem; padding-block:1rem; border-top:1px solid #d7e5e0; }
+.decision-outcomes__optional>summary,.decision-outcomes__records>summary { cursor:pointer; font-weight:700; color:#176f69; }
+.decision-outcomes__optional[open]>.decision-outcomes__grid,.decision-outcomes__records[open]>.decision-outcomes__grid { margin-top:1rem; }
 @media (max-width: 560px) { .decision-outcomes { padding: .8rem; } .decision-outcomes__grid { grid-template-columns: minmax(0, 1fr); } }

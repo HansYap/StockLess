@@ -1,16 +1,18 @@
 import type { ReadinessSnapshot } from './contracts.ts';
 import type { ImpactReview } from './impact.ts';
-import { activePlanningContext, planningMass, type PlanningContexts } from './planning-context.ts';
+import { planningMass, type PlanningContexts } from './planning-context.ts';
 import { estimateCarbonImpact, summarizeCarbonImpact, type CarbonImpactInput } from './carbon.ts';
 import { parsePackQuantity } from './cp3-mass.ts';
 import type { RecordedStockOutcome, ReportingPeriod } from './outcomes.ts';
+import { resolveProductPlanningContext } from './automatic-planning.ts';
 
 /** Recorded waste, potential excess and the named scenario difference never share a total. */
 export function buildEnvironmentalImpact(snapshot: ReadinessSnapshot, impact: ImpactReview, contexts: PlanningContexts = {}, outcomes: readonly RecordedStockOutcome[] = [], options: { datasetId?: string; period?: ReportingPeriod } = {}) {
   if (impact.snapshotId !== snapshot.id || impact.sourceSha256 !== snapshot.sourceSha256 || impact.analysisDate !== snapshot.analysisDate) throw new Error('Environmental impact requires current analysis evidence.');
   const evidence = (key:string) => {
-    const context = activePlanningContext(snapshot,contexts[key]), mass = planningMass(snapshot,key,context,true);
+    const context = resolveProductPlanningContext(snapshot,key,contexts[key]), mass = planningMass(snapshot,key,context,true);
     const base = { productKey:key, category:context?.category, categoryConfirmed:context?.categoryConfirmed ?? false, isFood:context?.isFood !== false,
+      categorySource:context?.categorySource, categoryProvenance:context?.categoryProvenance,
       massKgPerUnit:mass.state === 'available' ? mass.kgPerUnit : undefined, conversionSource:mass.state === 'available' ? mass.provenance : undefined,
       massEstimated:mass.state === 'available' && mass.method !== 'manual' && (mass.method !== 'pack_parser' || mass.approximate) };
     return { base,mass };

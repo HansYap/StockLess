@@ -1,12 +1,13 @@
 import type { ReadinessSnapshot } from './contracts.ts';
 import { parsePackQuantity } from './cp3-mass.ts';
-import { activePlanningContext, type PlanningContexts, type ProductPlanningContext } from './planning-context.ts';
+import { type PlanningContexts, type ProductPlanningContext } from './planning-context.ts';
 import { PRICECATCHER_REFERENCES } from './reference-data/cp3-prices.ts';
 import { rankMissingCostRequests, type ImpactReview } from './impact.ts';
+import { resolveProductPlanningContext } from './automatic-planning.ts';
 
 /** A reference retail price is used solely to prioritise missing seller-cost requests. */
 export function resolveReferencePrice(snapshot: ReadinessSnapshot, productKey: string, original?: ProductPlanningContext) {
-  const context = activePlanningContext(snapshot, original);
+  const context = resolveProductPlanningContext(snapshot, productKey, original);
   const ref = PRICECATCHER_REFERENCES.find(r => r.itemCode === context?.priceCatcherItemCode);
   const none = (reason: string) => ({ state: 'unavailable' as const, reason });
   if (!ref) return none('Choose and confirm a matching PriceCatcher reference item. Shop product codes are not PriceCatcher codes.');

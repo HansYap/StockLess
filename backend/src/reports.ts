@@ -1,7 +1,7 @@
 import type { DemandForecastReview, ProductPurchasePlan, ReadinessSnapshot } from "./contracts.ts";
 import type { ImpactReview, MonetaryFigure } from "./impact.ts";
 import { summarizeCarbonImpact, type CarbonImpactResult, type CarbonImpactKind } from "./carbon.ts";
-import { filterPurchaseDecisions, finalisedOrderRows, type PurchaseDecision } from "./decisions.ts";
+import type { PurchaseDecision } from "./decisions.ts";
 import { validateReportingPeriod, type RecordedStockOutcome, type ReportingPeriod } from "./outcomes.ts";
 import { buildProductTimelines } from "./timeline.ts";
 import { buildPurchasePlanReview } from "./purchase-plan.ts";
@@ -43,6 +43,7 @@ export interface AnalysisReportInput {
   readonly datasetName?: string;
   readonly generatedAt?: string;
   readonly period?: ReportingPeriod;
+  /** Legacy records remain in storage; current orders never depend on them. */
   readonly decisions?: readonly PurchaseDecision[];
   readonly outcomes?: readonly RecordedStockOutcome[];
   readonly carbonResults?: readonly CarbonImpactResult[];
@@ -72,8 +73,7 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   if (!/^\d{4}-\d{2}-\d{2}T/.test(generatedAt) || !Number.isFinite(Date.parse(generatedAt))) throw new Error("A valid report generation date and time is required.");
   const dates = snapshot.rows.flatMap(row => row.interpretedValues.transactionDate && row.interpretedValues.transactionDate <= snapshot.analysisDate ? [row.interpretedValues.transactionDate] : []).sort();
-  // Decisions and outcomes recorded after the analysis date stay inside the default period.
-  const recorded = [...(input.decisions ?? []).map(item => item.decisionDate), ...(input.outcomes ?? []).map(item => item.date)];
+  const recorded = (input.outcomes ?? []).filter(item=>item.datasetId===input.datasetId).map(item => item.date);
   const period = input.period ?? { start: dates[0] ?? snapshot.analysisDate, end: [snapshot.analysisDate, ...recorded].sort().pop()! };
   validateReportingPeriod(period);
   const metadata = Object.freeze({ shopName: input.shopName?.trim() || "Not supplied", datasetId: input.datasetId,
@@ -96,16 +96,16 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
   }
   for (const [key, labels] of labelSets) identities.set(key, [[...labels[0]].join(" | ") || "Not supplied", [...labels[1]].join(" | "), [...labels[2]].join(" | ")]);
   const identity = (key: string): readonly AnalysisReportCell[] => identities.get(key) ?? ["Not supplied", "", ""];
-  const decisions = filterPurchaseDecisions(input.decisions ?? [], { datasetId: input.datasetId, from: period.start, to: period.end });
   const outcomes = (input.outcomes ?? []).filter(item => item.datasetId === input.datasetId && item.date >= period.start && item.date <= period.end);
   const limitations = Object.freeze([
     "Forecasts, purchase commitments, potential excess and CO2e are estimates; recorded sales and waste are reported separately.",
     "Missing values and unentered quantities are not replaced by zero. Returns remain separate from positive sales demand.",
-    "Decision-time recommendations and cost evidence are preserved; current inputs do not rewrite historical estimates.",
+    "The order list uses current Purchase plan quantities. Editing the plan changes the next export; it does not establish an actual purchase or stock outcome.",
     "Supplier comparisons are quantities and arrival dates; no supplier price or achieved savings is assumed.",
-    "Current product and scenario results describe the analysis date and the next four-week demand horizon. The reporting period filters saved decisions and recorded outcomes, not the current forecast.",
-    "The finalised order list uses the latest saved decision per product in this dataset, including decisions outside the report history period; newer zero decisions remove an earlier order.",
+    "Current product and scenario results describe the analysis date and the next four-week demand horizon. The reporting period filters recorded outcomes, not the current forecast or order list.",
+    "Only positive current planned quantities appear in the order list. Zero orders and unentered quantities remain distinct in Product Results.",
     "CO2e source agreement is not ground-truth validation or evidence of achieved emissions reductions.",
+    "Automatic planned quantities are labelled worked out by StockLess. AI-assigned categories retain model and source provenance and are not manual confirmations.",
     ...(snapshot.sourceMode === "sample" ? ["Sample data: these results are illustrative and are not this retailer's recorded outcomes."] : []),
   ]);
   const tables: AnalysisReportTable[] = [];
@@ -144,15 +144,6 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
       scenario.result.state === "available" ? present(scenario.result.arrivalDate) : "Unavailable", scenario.result.state === "available" ? scenario.result.beyondPlanningWindow : "Unavailable",
       present(scenario.extraUnits), scenario.result.state, scenario.result.state === "unavailable" ? scenario.result.reason : "",
     ]))));
-  tables.push(table("decisions", "Saved Decisions", ["Product name", "Product code", "Pack size", "Product key", "Decision ID", "Dataset ID", "Response", "Original recommendation", "Final quantity", "Quantity unit", "Decision date", "Restock date", "Reason", "Supplier", "Original analysis date", "Original source file", "Original source SHA-256", "Original policy", "Original unit cost (MYR)", "Source", "Recorded at", "Updated at"],
-    decisions.map(item => [item.recommendation.productName, item.recommendation.productCode ?? "", item.recommendation.packSize ?? "", item.productKey, item.id, item.datasetId, item.response,
-      item.recommendation.recommendedQuantity, item.finalQuantity, item.recommendation.quantityUnit, item.decisionDate, item.restockDate ?? "", item.reason ?? "", item.supplier ?? "", item.recommendation.analysisDate,
-      item.recommendation.sourceName, item.recommendation.sourceSha256, item.recommendation.policyVersion, present(item.recommendation.unitCost), item.recommendation.sourceMode === "sample" ? "Sample data" : "Retailer file", item.recordedAt, item.updatedAt ?? ""] )));
-  // Excel cells have a 32767-character limit. Chunking retains the complete frozen snapshot.
-  tables.push(table("evidence", "Decision Evidence", ["Decision ID", "Part", "Parts", "Frozen recommendation JSON"], decisions.flatMap(item => {
-    const json = JSON.stringify(item.recommendation), parts = Math.max(1, Math.ceil(json.length / 30000));
-    return Array.from({ length: parts }, (_, part) => [item.id, part + 1, parts, json.slice(part * 30000, (part + 1) * 30000)]);
-  })));
   tables.push(table("impact", "Financial Impact", ["Product name", "Product code", "Pack size", "Product key", "Planned quantity", "Scenario quantity", "Potential excess units", "Potential shortfall units", "Planned spend (MYR)", "Incoming spend (MYR)", "Combined commitment (MYR)", "Excess-stock cost (MYR)", "Scenario spend (MYR)", "Estimated purchase-spend difference (MYR)", "Exclusion or limitation", "Source"],
     (input.impact?.products ?? []).map(item => [...identity(item.productKey), item.productKey, present(item.plannedQuantity, "Not entered"), present(item.scenarioQuantity), present(item.excessUnits), present(item.shortfallUnits),
       money(item.plannedSpend), money(item.incomingSpend), money(item.combinedCommitment), money(item.excessCost), money(item.scenarioSpend), money(item.spendDifference), item.exclusionReason ?? moneyReason(item.excessCost), metadata.sourceLabel])));
@@ -173,15 +164,19 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
       return [kind, total.state, present(total.kgCO2e), present(total.kgCO2eRange?.low), present(total.kgCO2eRange?.high), total.includedProductCount, total.excludedProductCount,
         total.massKgSourcesAgree, total.massKgEstimate, total.reason ?? (total.excludedProductCount ? "Partial estimate: excluded products are not zero." : "Estimate; separate from achieved environmental outcomes."), metadata.sourceLabel];
     })));
-  tables.push(table("outcomes", "Recorded Outcomes", ["Product name", "Product code", "Pack size", "Product key", "Record ID", "Decision ID", "Kind", "Date", "Recorded quantity", "Unit", "kg per unit", "Conversion source", "Description", "Recorded at", "Updated at"],
-    outcomes.map(item => [...identity(item.productKey), item.productKey, item.id, item.decisionId ?? "Not linked", item.kind, item.date, item.quantity, item.unit,
+  tables.push(table("outcomes", "Recorded Outcomes", ["Product name", "Product code", "Pack size", "Product key", "Record ID", "Kind", "Date", "Recorded quantity", "Unit", "kg per unit", "Conversion source", "Description", "Recorded at", "Updated at"],
+    outcomes.map(item => [...identity(item.productKey), item.productKey, item.id, item.kind, item.date, item.quantity, item.unit,
       present(item.conversion?.kilogramsPerUnit, "Not supplied"), item.conversion?.source ?? "Not supplied", item.description ?? "", item.recordedAt, item.updatedAt ?? ""] )));
   tables.push(table("problems", "Problems to Fix", ["Product name", "Product code", "Pack size", "Product key", "Source row", "Issue", "Field", "Source column", "Observed value", "Reason", "Corrective action", "State"],
     snapshot.issues.map(item => [...identity(item.productKey ?? ""), item.productKey ?? "Not supplied", item.sourceRow, item.issueCode, item.field ?? "", item.sourceColumn ?? "", item.observedValue, item.reason, item.correctiveAction, item.resolutionState])));
-  const orders = finalisedOrderRows(input.decisions ?? [], input.datasetId);
-  tables.push(table("finalorders", "Finalised Orders", ["Product name", "Product code", "Pack size", "Product key", "Final quantity", "Quantity unit", "Supplier", "Decision date", "Restock date", "Decision ID", "Dataset ID", "Dataset", "Export date", "Source"],
-    orders.map(item => [item.productName, item.productCode, item.packSize, item.productKey, item.finalQuantity, item.quantityUnit, item.supplier, item.decisionDate, item.restockDate,
-      item.decisionId, item.datasetId, metadata.datasetName, generatedAt, item.sourceMode === "sample" ? "Sample data" : "Retailer file"])));
+  tables.splice(1,0,table("orders", "Purchase Orders", ["Product name", "Product code", "Pack size", "Product key", "Planned quantity", "Quantity unit", "Quantity source", "Planned spend (MYR)", "Purchase check", "Analysis date", "Dataset ID", "Dataset", "Export date", "Source"],
+    [...keys].sort().flatMap(key=>{
+      const plan=plans.get(key),quantity=plan?.inputs.plannedOrder;
+      if(!plan || quantity?.state!=="value" || quantity.value<=0)return [];
+      return [[...identity(key),key,quantity.value,"pieces",quantity.source,money(impact.get(key)?.plannedSpend),
+        plan.audit.state==="verdict"?plan.audit.verdict:plan.audit.state==="cannot_judge"?"Cannot judge":"Not assessed",
+        metadata.analysisDate,metadata.datasetId,metadata.datasetName,generatedAt,metadata.sourceLabel]];
+    })));
   tables.push(table("limitations", "Explanations and Limits", ["Explanation"], limitations.map(item => [item])));
   return copyObject({ schemaVersion: 1 as const, metadata, tables, limitations });
 }

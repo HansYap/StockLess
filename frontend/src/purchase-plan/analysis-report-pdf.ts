@@ -38,7 +38,7 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   addPage(); heading('Analysis summary');
   const m=report.metadata;
   paragraph(`Shop: ${m.shopName} · Dataset: ${m.datasetName}\nSource: ${m.sourceName}\nReporting period: ${m.period.start} to ${m.period.end} · Analysis date: ${m.analysisDate}\nGenerated: ${m.generatedAt}\nSource SHA-256: ${m.sourceSha256}`);
-  paragraph('Current forecasts and scenarios are estimates. Recorded outcomes are separate. Missing data remains unavailable; recorded zero remains zero. The detailed Excel workbook contains all source rows and frozen decision evidence.');
+  paragraph('Current forecasts and scenarios are estimates. Recorded outcomes are separate. Missing data remains unavailable; recorded zero remains zero. The detailed Excel workbook contains all source rows and current planning evidence.');
 
   // Up to twelve readable charts; every product remains in the result tables/workbook.
   const history=report.tables.find(t=>t.id==='history');
@@ -61,7 +61,7 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   }
   const drawTable=(table:AnalysisReportTable)=>{
     heading(table.title);
-    if(!table.rows.length){paragraph(table.id==='finalorders'?'No finalised orders. Save a positive final quantity in purchase planning.':'No records available.');return;}
+    if(!table.rows.length){paragraph(table.id==='orders'?'No planned orders. Enter a positive quantity in Purchase plan.':'No records available.');return;}
     const size=7.5,lineHeight=11,colWidth=inner/table.columns.length,pad=4;
     const header=()=>{
       const labels=table.columns.map(v=>wrap(v,colWidth-pad*2,size));

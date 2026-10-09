@@ -5,6 +5,9 @@ import { onboardingMessages } from "./onboarding.ts";
 import { i3CompletionMessages } from "./i3-completion.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
 export const messages: Record<string, readonly [string, string]> = {
+  "Suggested drafts are calculated automatically. Adjust the quantity if needed; zero is a valid order.": ["建议草稿会自动计算。需要时可调整数量；零也是有效订单。", "Draf cadangan dikira secara automatik. Laraskan kuantiti jika perlu; sifar ialah pesanan sah."],
+  "Saved buying restrictions are included automatically in suggestions. Check an adjusted order against the demand range.": ["保存的采购限制会自动计入建议。请按需求区间核对调整后的订单。", "Sekatan belian disimpan dikira secara automatik dalam cadangan. Semak pesanan dilaraskan berbanding julat permintaan."],
+
   "Language": [
     "语言",
     "Bahasa"
@@ -2587,6 +2590,8 @@ export const messages: Record<string, readonly [string, string]> = {
 
 // Copy confirmed by the supplied upload and mapping HTML designs.
 Object.assign(messages, {
+  "Reset order to suggestion": ["重置为建议订购量", "Tetapkan semula pesanan kepada cadangan"],
+  "Reset to suggestion": ["重置为建议量", "Kembali kepada cadangan"],
   "Start with what you already have": [
     "从您现有的资料开始",
     "Mulakan dengan apa yang anda sudah ada"
@@ -3730,4 +3735,7 @@ Object.assign(messages, {
   "Putting your products together…": ["正在整理您的产品…", "Menyusun produk anda…"],
   "Big files can take a little longer.": ["文件较大时会稍慢一些。", "Fail besar mungkin mengambil masa lebih sedikit."],
   "In progress": ["进行中", "Sedang berjalan"],
+  "Delivery falls outside the next 4 weeks. Review this product individually.": ["送货时间在未来四周之外。请单独查看此商品。", "Penghantaran di luar 4 minggu akan datang. Semak produk ini secara individu."],
+  "The supplier quantity exceeds the storage limit. Review this product individually.": ["供应商订购量超过储存限制。请单独查看此商品。", "Kuantiti pembekal melebihi had penyimpanan. Semak produk ini secara individu."],
+  "A reliable purchase check is required first.": ["请先完成可靠的采购检查。", "Semakan belian yang boleh dipercayai diperlukan dahulu."],
 });

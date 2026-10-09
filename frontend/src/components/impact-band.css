@@ -64,3 +64,13 @@
 .saved-workspace__content > .page:has(> main.impact .sx-band){max-width:none;width:100%;margin:0}
 main.impact:has(.sx-band){width:min(1100px,calc(100% - 80px));max-width:none;margin-left:auto;margin-right:auto}
 @media (max-width:640px){main.impact:has(.sx-band){width:calc(100% - 32px)}}
+.sx-kpis.sx-kpis--summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+.sx-kpis.sx-kpis--summary li{display:block;padding:0;overflow:hidden}
+.sx-kpi-button{display:flex;align-items:flex-start;gap:12px;width:100%;height:100%;padding:18px 16px;border:0;background:transparent;text-align:left;cursor:pointer;color:var(--ink);font-family:var(--body)}
+.sx-kpi-button>span:last-child{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sx-kpi-button:hover{background:#f6faf8}
+.sx-kpi-button:focus-visible{outline:3px solid var(--teal);outline-offset:-3px;border-radius:16px}
+.sx-kpi-label{font:700 14px/1.4 var(--display)}
+.sx-kpi-button b{overflow-wrap:anywhere}
+.sx-kpi-link{margin-top:4px;font:700 13px/1.5 var(--body);color:var(--teal-deep)}
+@media(max-width:760px){.sx-kpis.sx-kpis--summary{grid-template-columns:1fr}.sx-kpi-button{padding:16px}}

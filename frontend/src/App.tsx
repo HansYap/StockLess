@@ -5,8 +5,8 @@ import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
 import { ReadinessScreen, type ReadinessIssueFilter } from "./screens/ReadinessScreen.tsx";
-import { PurchasePlanScreen, type SupplierDrafts } from "./screens/PurchasePlanScreen.tsx";
-import { ImpactDashboard } from "./screens/ImpactDashboard.tsx";
+import { PurchasePlanScreen, type PurchasePlanView, type SupplierDrafts } from "./screens/PurchasePlanScreen.tsx";
+import { ImpactDashboard, type ImpactSection } from "./screens/ImpactDashboard.tsx";
 import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from "./purchase-plan/model.ts";
 import {
   MappingConflictError,
@@ -92,6 +92,10 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const [issueFilter, setIssueFilter] = useState<ReadinessIssueFilter | null>(null);
   const [readinessFocus, setReadinessFocus] = useState<string | null>(null);
   const [productKey, setProductKey] = useState<string | null>(null);
+  const [purchaseView, setPurchaseView] = useState<PurchasePlanView>();
+  const [detailsFocus,setDetailsFocus] = useState<{productKey:string;revision:number}>();
+  const [impactFocus, setImpactFocus] = useState<{section:ImpactSection;revision:number}>();
+  const openImpact = (section?: ImpactSection) => { setDetailsFocus(undefined); setImpactFocus(previous=>section?{section,revision:(previous?.revision??0)+1}:undefined); setShowImpact(true); };
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<ReadinessSnapshot | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
@@ -123,8 +127,10 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const mounted = useRef(true);
   const latestDrafts = useRef(purchaseDrafts);
   const latestSupplierDrafts = useRef(supplierOrderDrafts);
+  const latestContexts = useRef(cp3Inputs);
   latestDrafts.current = purchaseDrafts;
   latestSupplierDrafts.current = supplierOrderDrafts;
+  latestContexts.current = cp3Inputs;
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; retrySaves.current.clear(); };
@@ -186,6 +192,11 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     };
     await flush();
   }, []);
+  const updateContexts = (updates: PlanningContexts) => {
+    const next = { ...latestContexts.current, ...updates };
+    latestContexts.current = next; setCp3Inputs(next);
+    if (activeSavedId) void persistWork(activeSavedId, { cp3Inputs: next });
+  };
 
   useEffect(() => {
     if (!saveError || retrySaves.current.size === 0) return;
@@ -270,11 +281,12 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   }, [activeSavedId, dataset, envelope, analysisDate, dateConfirmations, readiness, forecast, persistWork]);
 
   useEffect(() => {
+    if (step === 4 && (showImpact ? impactFocus : detailsFocus)) return;
     const frame = requestAnimationFrame(() => {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [step, showImpact]);
+  }, [step, showImpact, impactFocus, detailsFocus]);
 
   const goTo = useCallback((next: StepId) => {
     setShowImpact(false);
@@ -294,7 +306,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const resetReadinessEvidence = useCallback(() => {
     setPurchaseDrafts({});
     setSupplierOrderDrafts({});
-    setProductKey(null);
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
     readinessAbort.current?.abort();
     readinessAbort.current = null;
     readinessRun.current += 1;
@@ -410,7 +422,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     setCp3Inputs(saved.cp3Inputs ?? {});
     setSupplierOrderDrafts(saved.supplierOrderDrafts ?? {});
     setProposals(null);
-    setProductKey(null);
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
     setShowImpact(false);
     setReadinessError(null);
     setForecastError(null);
@@ -539,7 +551,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     lastSavedEnvelope.current = null;
     setMappingError(null);
     setMappingNotice(null);
-    setProductKey(null);
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
     setAnalysisDate(malaysiaDate());
     setActiveSavedId(null);
     setWorkspaceInfo({ datasetName: parsed.sourceName.replace(/\.[^.]+$/, ""), shopName: target?.shopName ?? "", rowCount: parsed.rows.length });
@@ -615,7 +627,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     setProposals(null);
     setMappingError(null);
     setMappingNotice(null);
-    setProductKey(null);
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
     setReached(1);
     setStep(1);
     setShowImpact(false);
@@ -666,6 +678,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const beginReupload = handleClearSession;
 
   const navigateResults = async (destination: "purchase" | "impact") => {
+    setImpactFocus(undefined);  setDetailsFocus(undefined);
     if (!dataset || updateTargetId) {
       const id = updateTargetId ?? activeSavedId ?? uploadTarget?.id;
       if (id) await openSavedDataset(id, destination);
@@ -784,16 +797,21 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
 
       {t(step === 4 && readiness && forecast && showImpact && (
         <ImpactDashboard
+          selectedKey={productKey}
+          onSelect={setProductKey}
+          focus={impactFocus}
+          onProductDetails={key=>{setProductKey(key);setImpactFocus(undefined);setDetailsFocus(previous=>({productKey:key,revision:(previous?.revision??0)+1}));setShowImpact(false);}}
           snapshot={effectiveReadiness!}
           contexts={cp3Inputs}
           datasetId={activeSavedId ?? undefined}
           shopName={workspaceDataset.shopName}
           datasetName={workspaceDataset.datasetName}
           supplierDrafts={supplierOrderDrafts}
-          onContextChange={(key, value) => { const next = { ...cp3Inputs, [key]: value }; setCp3Inputs(next); if (activeSavedId) void persistWork(activeSavedId, { cp3Inputs: next }); }}
+          onContextChange={(key, value) => updateContexts({ [key]: value })}
+          onContextsChange={updateContexts}
           forecast={forecast}
           drafts={purchaseDrafts}
-          onBack={() => setShowImpact(false)}
+          onBack={() => { setImpactFocus(undefined); setDetailsFocus(undefined); setShowImpact(false); }}
           onNew={beginReupload}
         />
       ))}
@@ -801,14 +819,24 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
       {t(step === 4 && readiness && forecast && !showImpact && (
         <>
         <PurchasePlanScreen
+          initialView={purchaseView}
+          onViewChange={setPurchaseView}
+          detailsFocus={detailsFocus}
           snapshot={effectiveReadiness!}
           contexts={cp3Inputs}
           datasetId={activeSavedId ?? undefined}
-          onContextChange={(key, value) => { const next = { ...cp3Inputs, [key]: value }; setCp3Inputs(next); if (activeSavedId) void persistWork(activeSavedId, { cp3Inputs: next }); }}
+          onContextChange={(key, value) => updateContexts({ [key]: value })}
+          onContextsChange={updateContexts}
           forecast={forecast}
           drafts={purchaseDrafts}
           onDraftChange={(key, inputs) => {
-            const next = { ...purchaseDrafts, [key]: inputs };
+            const next = { ...latestDrafts.current, [key]: inputs };
+            latestDrafts.current = next;
+            setPurchaseDrafts(next);
+            if (activeSavedId) void persistWork(activeSavedId, { purchaseDrafts: next });
+          }}
+          onDraftsChange={updates => {
+            const next = { ...latestDrafts.current, ...updates };
             latestDrafts.current = next;
             setPurchaseDrafts(next);
             if (activeSavedId) void persistWork(activeSavedId, { purchaseDrafts: next });
@@ -824,7 +852,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           onSelect={setProductKey}
           onBack={() => { setReadinessFocus(null); setStep(3); }}
           onReviewProduct={key => { const values = readiness.rows.find(row => row.productKey === key)?.interpretedValues; setReadinessFocus(values?.productCode ?? values?.productName ?? null); setStep(3); }}
-          onImpact={() => setShowImpact(true)}
+          onImpact={openImpact}
         />
         </>
       ))}

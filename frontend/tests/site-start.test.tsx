@@ -9,7 +9,7 @@ vi.mock("../src/App.tsx", () => ({ default: ({ initialDatasetId }: { initialData
   {initialDatasetId && <aside aria-label="Workspace navigation">{initialDatasetId}</aside>}
 </> }));
 
-beforeEach(() => { vi.resetAllMocks(); window.location.hash = "#start"; });
+beforeEach(() => { vi.resetAllMocks(); HTMLElement.prototype.scrollIntoView = vi.fn(); window.location.hash = "#start"; });
 
 it("opens Upload when saved storage cannot be checked from Start", async () => {
   vi.mocked(listSavedDatasets).mockRejectedValue(new Error("Storage unavailable"));
@@ -26,6 +26,16 @@ it.each(["", "#home", "#start"])("opens returning visitors directly in the lates
   expect(window.location.hash).toBe("#dataset/latest%20%2F%20file");
   expect(screen.getByRole("complementary", { name: "Workspace navigation" }).textContent).toBe("latest / file");
   expect(screen.queryByRole("heading", { name: "Upload history" })).toBeNull();
+});
+
+it.each([false, true])("keeps the homepage top open after clicking a workflow card (saved data: %s)", async hasSavedData => {
+  window.location.hash = "#top";
+  vi.mocked(listSavedDatasets).mockResolvedValue(hasSavedData ? [{ id: "latest" }] as Awaited<ReturnType<typeof listSavedDatasets>> : []);
+  render(<Site />);
+  await waitFor(() => expect(document.getElementById("home-title")).toBeTruthy());
+  expect(window.location.hash).toBe("#top");
+  expect(screen.queryByRole("heading", { name: "Current purchase plan" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Upload your sales file" })).toBeNull();
 });
 
 it.each(["", "#home", "#workspace", "#guide", "#history", "#returning"])("returns visitors without saved work to the landing page when reopening %s", async hash => {

@@ -275,3 +275,29 @@
 .ix-left-out{margin-top:12px}
 .ix-left-out>summary{cursor:pointer;font-size:var(--text-secondary);font-weight:700;color:var(--teal-deep)}
 .ix-left-out[open]>summary{margin-bottom:8px}
+
+/* The daily overview keeps detailed tools available on request. */
+.impact .impact__disclosure{width:100%;margin-top:16px;padding:0 20px;scroll-margin-top:90px}
+.impact .impact__disclosure>summary{display:flex;flex-direction:column;gap:4px;padding:16px 0;cursor:pointer;list-style:none;color:var(--ink)}
+.impact .impact__disclosure>summary::-webkit-details-marker{display:none}
+.impact .impact__disclosure>summary>span{font:700 18px/1.4 var(--display)}
+.impact .impact__disclosure>summary>span::after{content:" +";color:var(--teal-deep)}
+.impact .impact__disclosure[open]>summary>span::after{content:" −"}
+.impact .impact__disclosure>summary>small{font:400 14px/1.5 var(--body);color:var(--muted)}
+.impact .impact__disclosure>summary:focus-visible{outline:3px solid var(--teal);outline-offset:4px;border-radius:8px}
+.impact .impact__disclosure[open]{padding-bottom:20px}
+.impact .impact__downloads .impact__toolbar{margin:0;padding:0;border:0;box-shadow:none}
+.impact .impact__download-section { padding:16px 0; border-top:1px solid var(--line); }
+.impact .impact__download-section h3 { margin:0 0 8px; font-size:18px; }
+.impact .impact__download-section p { margin:0 0 12px; color:var(--muted); font-size:14px; line-height:1.6; }
+.impact .impact__records>.decision-outcomes { padding:0; border:0; }
+.impact .impact__analysis .sx-lens{margin:0;padding:0;border-radius:0}
+.impact .impact__review{margin-top:16px;scroll-margin-top:90px}
+.impact .impact__learn>.sx-sec:first-of-type{margin-top:8px}
+.impact .sx-story-note{margin:0;font:400 14px/1.5 var(--body);color:var(--muted)}
+.impact .sx-story-details>.sx-play{margin-top:12px}
+.impact .ix-breakdown>summary{cursor:pointer;font:700 16px/1.5 var(--display);color:var(--teal-deep)}
+.impact .ix-breakdown[open]>summary{margin-bottom:12px}
+.impact .ix-breakdown{scroll-margin-top:90px}
+.impact .ix-breakdown>summary:focus-visible{outline:3px solid var(--teal);outline-offset:4px;border-radius:4px}
+@media(max-width:640px){.impact .impact__disclosure{padding-left:14px;padding-right:14px}.impact .impact__disclosure>summary>span{font-size:16px}}

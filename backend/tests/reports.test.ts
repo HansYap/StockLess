@@ -63,15 +63,23 @@ test("report preserves provenance, source labels, separate identity columns and 
   assert.ok(report.limitations.some(text => text.includes("Sample data")));
 });
 
-test("final order export excludes old superseded positive, zero, unfinished and other dataset orders", async () => {
-  const { report } = await reportFixture();
-  const orders = report.tables.find(item => item.id === "finalorders")!;
-  assert.equal(orders.rows.length, 1);
-  assert.equal(rowValue(report, "finalorders", "Product code", 0), "000102");
-  assert.equal(rowValue(report, "finalorders", "Final quantity", 0), 10);
-  assert.equal(rowValue(report, "finalorders", "Supplier", 0), "Bakery");
-  assert.equal(rowValue(report, "finalorders", "Export date", 0), GENERATED);
-  assert.equal(rowValue(report, "finalorders", "Source", 0), "Sample data");
+test('order export uses positive current plan quantities instead of older decisions',async()=>{
+  const {snapshot,forecast,decisions}=await reportFixture();
+  const make=(quantity:number)=>{
+    const inputs={'ID|000101':{...emptyProductPurchaseInputs(),plannedOrder:createPurchaseQuantity(0,'input by you')},'ID|000102':{...emptyProductPurchaseInputs(),plannedOrder:createPurchaseQuantity(quantity,'input by you')}};
+    const plans=buildPurchasePlanReview(snapshot,forecast,{inputsByProduct:inputs}).products,impact=buildImpactReview(snapshot,forecast,inputs,plans);
+    return buildAnalysisReport({snapshot,forecast,plans,impact,datasetId:'D',decisions,generatedAt:GENERATED,period:{start:DATE,end:DATE}});
+  };
+  const report=make(17),orders=report.tables.find(t=>t.id==='orders')!;
+  assert.equal(orders.rows.length,1);
+  assert.equal(rowValue(report,'orders','Product code',0),'000102');
+  assert.equal(rowValue(report,'orders','Planned quantity',0),17);
+  assert.equal(rowValue(report,'orders','Quantity source',0),'input by you');
+  assert.equal(rowValue(report,'orders','Planned spend (MYR)',0),42.5);
+  assert.equal(rowValue(report,'orders','Export date',0),GENERATED);
+  assert.equal(make(0).tables.find(t=>t.id==='orders')!.rows.length,0);
+  assert.equal(make(3).tables.find(t=>t.id==='orders')!.rows[0][4],3);
+  assert.equal(orders.columns.includes('Decision date'),false);
 });
 
 test("history, supplier comparison and carbon retain missing weeks, returns and recorded-zero evidence", async () => {
@@ -85,17 +93,13 @@ test("history, supplier comparison and carbon retain missing weeks, returns and 
   assert.ok(String(rowValue(report, "carbon", "Source names", 0)).length > 0);
 });
 
-test("decision export retains frozen recommendation and full evidence independent of current plan", async () => {
-  const { report, decisions } = await reportFixture();
-  const evidence = report.tables.find(item => item.id === "evidence")!;
-  const chunks = evidence.rows.filter(row => row[0] === "new-zero").sort((a, b) => Number(a[1]) - Number(b[1])).map(row => row[3]).join("");
-  const original = JSON.parse(chunks);
-  assert.deepEqual(original, JSON.parse(JSON.stringify(decisions.find(item => item.id === "new-zero")!.recommendation)));
-  assert.equal(original.sourceSha256, "old-hash");
-  assert.equal(original.recommendedQuantity, 40);
-  assert.equal(original.unitCost, 1);
-  assert.ok(Object.isFrozen(report.tables));
-  assert.ok(Object.isFrozen(report.tables[0].rows[0]));
+test('current reports omit decision forms and evidence while leaving old saved records unchanged',async()=>{
+  const {snapshot,forecast,decisions}=await reportFixture(),before=JSON.stringify(decisions);
+  const report=buildAnalysisReport({snapshot,forecast,datasetId:'D',decisions,generatedAt:GENERATED});
+  assert.equal(report.tables.some(t=>['decisions','evidence','finalorders'].includes(t.id)),false);
+  assert.equal(JSON.stringify(decisions),before);
+  assert.equal(report.metadata.period.end,DATE);
+  assert.ok(Object.isFrozen(report.tables));assert.ok(Object.isFrozen(report.tables[0].rows[0]));
 });
 
 test("report rejects mixed stale snapshots and invalid metadata dates", async () => {
