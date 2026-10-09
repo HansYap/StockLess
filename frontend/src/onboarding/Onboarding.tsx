@@ -31,7 +31,7 @@ export function GuideButton({ onStart }: { readonly onStart?: () => Promise<void
   return <button type="button" className="onboarding-guide-button" disabled={busy} aria-busy={busy} onClick={() => {
     setBusy(true);
     void (onStart ? onStart() : onboarding.startReplay()).finally(() => setBusy(false));
-  }}><span className="onboarding-guide-button__face" aria-hidden="true"><Stocky pose="idle" size={28} /></span>{t("Guide")}</button>;
+  }}><span className="onboarding-guide-button__face" aria-hidden="true"><Stocky pose="idle" size={28} /></span><span className="onboarding-guide-button__label">{t("Guide")}</span></button>;
 }
 
 /** Shared controller survives route changes; guides never own or save retailer data. */
