@@ -1,5 +1,6 @@
 import { t, useLanguage } from "./i18n/index.ts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { OpeningScreen } from "./components/OpeningScreen.tsx";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
 import { UploadScreen } from "./screens/UploadScreen.tsx";
 import { MappingScreen } from "./screens/MappingScreen.tsx";
@@ -696,7 +697,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     if (snapshot) await executeForecast(snapshot, destination);
   };
 
-  if (openingDataset) return <p role="status">Opening saved dataset…</p>;
+  if (openingDataset) return <OpeningScreen title="Opening your saved dataset…" />;
 
   return (
     <AppShell

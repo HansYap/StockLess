@@ -11,6 +11,7 @@ export function LanguageSwitcher({ compact = false }: { readonly compact?: boole
       <path d="m7 20 5-13 5 13m-8-4h6" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M22 10h9m-5-3v3m-3 3c1 4 4 6 7 8m-1-11c-1 5-3 8-7 11" fill="none" stroke="#347452" strokeWidth="1.7" strokeLinecap="round" />
     </svg>}
+    {compact && <span className="workflow-language__code" aria-hidden="true">{language === "zh" ? "中文" : language === "ms" ? "BM" : "EN"}</span>}
     <select aria-label={t("Language")} value={language} onChange={event => setLanguage(event.target.value as Language)}>
       <option value="en" lang="en">English</option>
       <option value="zh" lang="zh-Hans">中文</option>

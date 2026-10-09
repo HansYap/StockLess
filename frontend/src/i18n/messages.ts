@@ -24,6 +24,10 @@ export const messages: Record<string, readonly [string, string]> = {
     "正在打开工作区…",
     "Membuka ruang kerja anda…"
   ],
+  "Opening your saved dataset…": [
+    "正在打开已保存的数据集…",
+    "Membuka set data anda yang disimpan…"
+  ],
   "Benefits": [
     "优势",
     "Manfaat"

@@ -6,6 +6,7 @@ import { getLocale, useLanguage } from "../i18n/index.ts";
 import { returningMessages } from "../i18n/returning.ts";
 import { clearEverything, listSavedDatasets, removeSavedDataset, type SavedDatasetSummary } from "../storage/saved-datasets.ts";
 import "../components/workflow-shell.css";
+import "../components/phone-header.css";
 import "./returning.css";
 import { StorageExplanation } from "../components/StorageExplanation.tsx";
 import { t } from "../i18n/index.ts";
