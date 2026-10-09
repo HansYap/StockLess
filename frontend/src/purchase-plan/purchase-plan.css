@@ -223,6 +223,9 @@
 .purchase-plan--new .pp-prepare { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0 12px; }
 .purchase-plan--new .pp-prepare p { color: var(--muted); font-size: 14px; }
 .purchase-plan--new .pp-bulk-status { margin-bottom: 12px; padding: 12px 16px; border-radius: 10px; background: var(--teal-tint); color: var(--teal-deep); }
+.purchase-plan--new .pp-estimate-setup { margin: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 0; }
+.purchase-plan--new .pp-estimate-setup>summary { color: var(--teal-deep); font-weight: 700; cursor: pointer; }
+.purchase-plan--new .pp-estimate-setup>p { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .purchase-plan--new .pp-suggestions-dialog { width: min(760px,calc(100% - 32px)); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid var(--line); border-radius: 18px; background: white; color: var(--ink); box-shadow: 0 24px 80px #16313b44; }
 .purchase-plan--new .pp-suggestions-dialog[open] { display: flex; flex-direction: column; }
 .purchase-plan--new .pp-suggestions-dialog::backdrop { background: #16313b66; }

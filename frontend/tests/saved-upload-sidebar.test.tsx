@@ -43,9 +43,12 @@ vi.mock("../src/screens/PurchasePlanScreen.tsx", () => ({ PurchasePlanScreen: (p
   <button onClick={() => props.onDraftChange("A", { plannedOrder: { state: "value", value: 20, source: "input by you" }, incomingStock: { state: "empty" } })}>Edit test order</button>
   <button onClick={() => props.onDraftsChange?.({ B: { plannedOrder: { state: "value", value: 12, source: "input by you" }, incomingStock: { state: "value", value: 7, source: "from your file" } }, C: { plannedOrder: { state: "value", value: 0, source: "input by you" }, incomingStock: { state: "empty" } } })}>Apply test bulk suggestions</button>
   <button onClick={() => props.onSupplierChange?.("A", { caseSize: 6 })}>Edit test supplier</button>
+  <button onClick={() => props.onContextChange?.("A", { evidenceKey:props.snapshot.evidenceKey!,unitCost:0,kgPerUnit:.5 })}>Edit test product detail</button>
+  <button onClick={() => props.onContextsChange?.({ A:{ ...props.contexts?.A,evidenceKey:props.snapshot.evidenceKey!,category:"rice",categoryConfirmed:true,isFood:true }, B:{ evidenceKey:props.snapshot.evidenceKey!,category:"rice",categoryConfirmed:true,isFood:true } })}>Confirm test categories</button>
   <span data-testid="restored-drafts">{JSON.stringify(props.drafts)}</span><span data-testid="restored-suppliers">{JSON.stringify(props.supplierDrafts)}</span>
+  <span data-testid="restored-contexts">{JSON.stringify(props.contexts)}</span>
 </> }));
-vi.mock("../src/screens/ImpactDashboard.tsx", () => ({ ImpactDashboard: (props: ComponentProps<typeof import("../src/screens/ImpactDashboard.tsx").ImpactDashboard>) => <><h1>Saved impact dashboard</h1><span data-testid="impact-drafts">{JSON.stringify(props.drafts)}</span></> }));
+vi.mock("../src/screens/ImpactDashboard.tsx", () => ({ ImpactDashboard: (props: ComponentProps<typeof import("../src/screens/ImpactDashboard.tsx").ImpactDashboard>) => <><h1>Saved impact dashboard</h1><span data-testid="impact-drafts">{JSON.stringify(props.drafts)}</span><span data-testid="impact-contexts">{JSON.stringify(props.contexts)}</span></> }));
 
 function importedEnvelope() {
   const empty = createEmptySession();
@@ -453,6 +456,25 @@ it("saves reviewed bulk drafts together, keeps earlier edits and shares them wit
   expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
   expect(saved.decisions).toEqual([]);
   expect(saved.outcomes).toEqual([]);
+});
+
+it("saves product details and category confirmations together for impact and reopening", async () => {
+  const rendered = render(<App initialDatasetId="existing" />);
+  await screen.findByRole("heading", { name:"Saved purchase plan" });
+  fireEvent.click(screen.getByText("Edit test product detail"));
+  await waitFor(() => expect(saved.cp3Inputs?.A?.unitCost).toBe(0));
+  vi.mocked(saveDatasetWork).mockClear();
+  fireEvent.click(screen.getByText("Confirm test categories"));
+  await waitFor(() => expect(saveDatasetWork).toHaveBeenCalledOnce());
+  expect(saved.cp3Inputs?.A).toMatchObject({ unitCost:0,kgPerUnit:.5,category:"rice",categoryConfirmed:true });
+  expect(saved.cp3Inputs?.B).toMatchObject({ category:"rice",categoryConfirmed:true });
+  fireEvent.click(within(sidebar()).getByRole("button", { name:"Impact dashboard" }));
+  await screen.findByRole("heading", { name:"Saved impact dashboard" });
+  expect(JSON.parse(screen.getByTestId("impact-contexts").textContent!)).toEqual(saved.cp3Inputs);
+  rendered.unmount(); render(<App initialDatasetId="existing" />);
+  await screen.findByRole("heading", { name:"Saved purchase plan" });
+  expect(JSON.parse(screen.getByTestId("restored-contexts").textContent!)).toEqual(saved.cp3Inputs);
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
 });
 
 it("keeps the automatically saved plan available when a reupload is cancelled", async () => {

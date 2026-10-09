@@ -6,6 +6,8 @@ import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } fr
 import { getSavedDataset, savedPurchaseDecisions, savedStockOutcomes, type SavedDataset } from '../storage/saved-datasets.ts';
 import { downloadAnalysisWorkbook, downloadFinalisedOrdersWorkbook, NoFinalisedOrdersError, printAnalysisReport } from '../purchase-plan/analysis-report-export.ts';
 import { PlanningInputsPanel } from '../components/PlanningInputsPanel.tsx';
+import { CategoryConfirmation } from '../components/CategoryConfirmation.tsx';
+import type { PlanningDetail } from '../components/product-estimates.ts';
 import { OutcomePeriodComparison } from '../components/OutcomePeriodComparison.tsx';
 import { DecisionOutcomeControls } from '../components/DecisionOutcomeControls.tsx';
 import { ImpactStory, type ImpactTile } from '../components/ImpactStory.tsx';
@@ -18,6 +20,7 @@ interface Props {
   contexts?: PlanningContexts; datasetId?: string; shopName?: string; datasetName?: string;
   supplierDrafts?: Readonly<Record<string, SupplierOrderTerms | undefined>>;
   onContextChange?: (key:string,value:ProductPlanningContext)=>void;
+  onContextsChange?: (updates:PlanningContexts)=>void;
   onBack:()=>void; onNew?:()=>void;
 }
 type BusinessMeasure = 'planned' | 'excess' | 'scenario' | 'difference';
@@ -30,7 +33,7 @@ export function calculatePotentialExcess(snapshot: ReadinessSnapshot, forecast: 
 }
 
 /** Step 5 in the supplied Impact Dashboard design, filled from the same CP3 engine figures as Step 4. */
-export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXTS,datasetId,shopName,datasetName,supplierDrafts,onContextChange,onBack,onNew}:Props) {
+export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXTS,datasetId,shopName,datasetName,supplierDrafts,onContextChange,onContextsChange,onBack,onNew}:Props) {
   const language=useLanguage(), c=(en:string,zh:string,ms:string)=>language==='zh'?zh:language==='ms'?ms:en;
   const n=(v:number)=>v.toLocaleString(getLocale(),{maximumFractionDigits:3});
   const units=(v:number)=>Math.round(v).toLocaleString(getLocale());
@@ -49,6 +52,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
   const [environmentMeasure,setEnvironmentMeasure]=useState<EnvironmentMeasure>('potential');
   const [selected,setSelected]=useState(products[0]?.key??'');
   const [reviewOpen,setReviewOpen]=useState(false);
+  const [inputFocus,setInputFocus]=useState<{field:PlanningDetail;revision:number}>();
   const review=useRef<HTMLDetailsElement>(null);
   const [analysisOpen,setAnalysisOpen]=useState(false), [excessOpen,setExcessOpen]=useState(false);
   const [businessOpen,setBusinessOpen]=useState(false), [environmentOpen,setEnvironmentOpen]=useState(false);
@@ -87,7 +91,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
   const openEnvironmentProducts=(measure:EnvironmentMeasure)=>{setEnvironmentMeasure(measure);setEnvironmentOpen(true);setLens('environment');setAnalysisOpen(true);requestAnimationFrame(()=>reveal(environmentBreakdown.current));};
   const openExcessProducts=()=>{setExcessOpen(true);requestAnimationFrame(()=>reveal(excessProducts.current));};
   const switchTab=(event:KeyboardEvent<HTMLButtonElement>)=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?'environment':event.key==='End'?'business':lens==='business'?'environment':'business';setLens(next);document.getElementById(`${next}-tab`)?.focus();};
-  const reviewProduct=(key:string)=>{setSelected(key);setReviewOpen(true);requestAnimationFrame(()=>review.current?.scrollIntoView?.({behavior:'smooth',block:'start'}));};
+  const reviewProduct=(key:string,field:PlanningDetail)=>{setSelected(key);setInputFocus(previous=>({field,revision:(previous?.revision??0)+1}));setReviewOpen(true);requestAnimationFrame(()=>review.current?.scrollIntoView?.({behavior:'smooth',block:'start'}));};
   const makeReport=()=>buildAnalysisReport({snapshot,forecast,plans,impact,datasetId:datasetId??'sample-preview',shopName,datasetName,
     decisions:saved?savedPurchaseDecisions(saved):[],outcomes,carbonResults:[...environmental.actualResults,...environmental.potentialResults,...environmental.scenarioResults],
     supplierScenariosByProduct:Object.fromEntries(Object.entries(supplierDrafts??{}).filter((entry):entry is [string,SupplierOrderTerms]=>!!entry[1]).map(([key,terms])=>[key,[{id:'current-terms',name:c('Entered supplier terms','已填写的供应商条件','Terma pembekal dimasukkan'),terms}]]))});
@@ -192,7 +196,7 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
           <p>{c('CP3 v2: agreeing-group mean; otherwise median only within ×2 of every source, labelled estimate. Single-source factors are excluded. No consumer stage. Confirm every category.','CP3 v2：一致来源组取均值；否则，仅当中位数与每个来源均在 ×2 内时显示估算。单一来源不显示。排除消费者阶段，每个类别均需人工确认。','CP3 v2: min kumpulan sumber bersetuju; jika tidak, median hanya apabila dalam ×2 setiap sumber, berlabel anggaran. Faktor satu sumber dan peringkat pengguna dikecualikan. Sahkan setiap kategori.')}</p>
           <p>{c('The scenario compares potential excess under your current order with the restock recommendation. Positive means potentially less excess; negative means more. It is not a measured reduction.','情景比较当前采购与补货建议下的潜在过量。正值表示可能减少，负值表示可能增加，不代表实测减排。','Senario membandingkan lebihan berpotensi pesanan semasa dengan cadangan stok semula. Positif mungkin kurang; negatif lebih. Ia bukan pengurangan diukur.')}</p>
           </details>
-          <details className="cp3-controls ix-more"><summary>{c('Categories to confirm, largest known kg at risk first','待确认类别，按已知风险公斤数排序','Kategori untuk disahkan, kg risiko diketahui terbesar dahulu')}</summary>{queue.length?<ul className="ix-queue">{queue.map(r=><li key={r.productKey}><span>{r.productName??r.productKey} · {r.kgAtRisk===undefined?unavailable:`${n(r.kgAtRisk)} kg`}</span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey)}>{c('Confirm category','确认类别','Sahkan kategori')}</button></li>)}</ul>:<p>{c('No pending category confirmations.','没有待确认类别。','Tiada kategori menunggu pengesahan.')}</p>}</details>
+          <details className="cp3-controls ix-more"><summary>{c('Categories to confirm, largest known kg at risk first','待确认类别，按已知风险公斤数排序','Kategori untuk disahkan, kg risiko diketahui terbesar dahulu')}</summary>{queue.length?<ul className="ix-queue">{queue.map(r=><li key={r.productKey}><span>{r.productName??r.productKey} · {r.kgAtRisk===undefined?unavailable:`${n(r.kgAtRisk)} kg`}</span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey,'category')}>{c('Confirm category','确认类别','Sahkan kategori')}</button></li>)}</ul>:<p>{c('No pending category confirmations.','没有待确认类别。','Tiada kategori menunggu pengesahan.')}</p>}</details>
           <p className="ix-note">{c('Recorded-waste period: all saved outcome dates for this dataset. Forecast period: the next 28 days from the analysis date. Select equal-length history periods below for a before/after comparison.','实际报损期间：本数据集所有已保存的发生日期。预测期间：分析日起未来 28 天。前后期间比较请使用下方等长日期筛选。','Tempoh sisa direkod: semua tarikh hasil tersimpan set data ini. Tempoh ramalan: 28 hari selepas tarikh analisis. Pilih tempoh sejarah sama panjang di bawah untuk perbandingan sebelum/selepas.')}</p>
           <details className="ix-breakdown" id="environment-breakdown" ref={environmentBreakdown} aria-live="polite" open={environmentOpen} onToggle={event=>setEnvironmentOpen(event.currentTarget.open)}><summary>{environmentMeasure==='recorded'?c('Recorded waste by product','各商品实际报损','Sisa direkod mengikut produk'):environmentMeasure==='potential'?c('Why these estimates? Potential excess by product','这些估算如何得出？各商品潜在过量','Mengapa anggaran ini? Lebihan berpotensi mengikut produk'):c('Scenario difference by product','各商品情景差异','Perbezaan senario mengikut produk')}</summary>
             {environmentMeasure==='recorded'&&wasteRecords.length>0&&<ul className="ix-records">{wasteRecords.map(o=><li key={o.id}>{day(o.date)} · {impact.products.find(p=>p.productKey===o.productKey)?.name??o.productKey} · {n(o.quantity)} {o.unit} · {o.kind==='expired'?c('Expired','已过期','Luput'):c('Discarded','已丢弃','Dibuang')}{o.quantity===0&&` · ${c('Recorded zero','已记录为零','Sifar direkodkan')}`}</li>)}</ul>}
@@ -233,8 +237,8 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
             {leftOutRows.length>0&&<details className="ix-left-out" open={!includedRows.length||undefined}><summary>{c(`${leftOutRows.length} products left out of this total, with reasons`,`${leftOutRows.length} 件商品未计入此合计（含原因）`,`${leftOutRows.length} produk dikecualikan daripada jumlah ini, dengan sebab`)}</summary><div className="ix-table"><table>{measureHead}<tbody>{leftOutRows.map(measureRow)}</tbody></table></div></details>}
           </details>
           <details className="cp3-controls ix-more"><summary>{c('Missing purchase costs: first 10 priorities','缺失采购成本：优先补录前 10 项','Kos belian tiada: 10 keutamaan pertama')}</summary><p>{c('Ranked by potential excess × explicitly matched reference retail price. This reference amount is not an estimated purchase cost. Unmatched items remain listed for manual input.','按潜在过量 × 人工确认对应的参考零售价排序。此参考金额不是采购成本估算。未匹配的商品仍列出供人工补录。','Disusun mengikut lebihan berpotensi × harga runcit rujukan dipadankan secara nyata. Amaun rujukan ini bukan kos belian. Item tanpa padanan kekal untuk input manual.')}</p>
-            <ul className="ix-queue">{costQueue.top10.map((r,i)=><li key={r.productKey}><span>{i+1}. {impact.products.find(p=>p.productKey===r.productKey)?.name} · {money(r.referenceRisk)} <small>{r.source}</small></span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey)}>{c('Add cost','补录成本','Tambah kos')}</button></li>)}
-              {costQueue.unranked.map(r=><li key={r.productKey}><span>{impact.products.find(p=>p.productKey===r.productKey)?.name} · {c('Unranked: confirm reference or enter purchase cost','未排序：确认参考商品或补录采购成本','Tidak disusun: sahkan rujukan atau masukkan kos belian')}</span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey)}>{c('Add cost','补录成本','Tambah kos')}</button></li>)}</ul>
+            <ul className="ix-queue">{costQueue.top10.map((r,i)=><li key={r.productKey}><span>{i+1}. {impact.products.find(p=>p.productKey===r.productKey)?.name} · {money(r.referenceRisk)} <small>{r.source}</small></span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey,'cost')}>{c('Add cost','补录成本','Tambah kos')}</button></li>)}
+              {costQueue.unranked.map(r=><li key={r.productKey}><span>{impact.products.find(p=>p.productKey===r.productKey)?.name} · {c('Unranked: confirm reference or enter purchase cost','未排序：确认参考商品或补录采购成本','Tidak disusun: sahkan rujukan atau masukkan kos belian')}</span><button type="button" className="btn btn--ghost btn--small" onClick={()=>reviewProduct(r.productKey,'cost')}>{c('Add cost','补录成本','Tambah kos')}</button></li>)}</ul>
             {costQueue.remaining.length>0&&<p>{costQueue.remaining.length} {c('more ranked products; the next priorities appear as costs are completed.','个后续排序商品；补录成本后自动显示下一批。','produk berkeutamaan lagi; muncul selepas kos dilengkapkan.')}</p>}
             {!costQueue.top10.length&&!costQueue.unranked.length&&<p>{c('No missing costs for entered orders.','已填写订单均有采购成本。','Tiada kos hilang bagi pesanan dimasukkan.')}</p>}</details>
         </div>
@@ -250,8 +254,9 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
 
     <details className="sx-card impact__review" ref={review} open={reviewOpen} onToggle={event=>setReviewOpen(event.currentTarget.open)}>
       <summary><span className="impact__review-title">{c('Review a product: confirm its data or record what happened','核对商品：确认数据或记录实际情况','Semak produk: sahkan data atau rekod apa yang berlaku')}</span><small>{c('Category, cost and weight for CO₂e and money · your purchase decision · discarded or expired stock','用于 CO₂e 和金额的类别、成本与重量 · 采购决定 · 已丢弃或过期的库存','Kategori, kos dan berat untuk CO₂e dan wang · keputusan belian anda · stok dibuang atau luput')}</small></summary>
-      <label className="impact__review-product">{c('Product','商品','Produk')} <select value={selected} onChange={e=>setSelected(e.target.value)}>{products.map(p=><option key={p.key} value={p.key}>{p.title} · {p.sku} · {p.pack}</option>)}</select></label>
-      {products.some(p=>p.key===selected)&&onContextChange&&<PlanningInputsPanel key={`${snapshot.id}-${selected}`} snapshot={snapshot} productKey={selected} value={contexts[selected]} onChange={value=>onContextChange(selected,value)} />}
+      {onContextsChange&&<CategoryConfirmation snapshot={snapshot} products={products} contexts={contexts} onChange={onContextsChange} />}
+      <label className="impact__review-product">{c('Product','商品','Produk')} <select value={selected} onChange={e=>{setSelected(e.target.value);setInputFocus(undefined);}}>{products.map(p=><option key={p.key} value={p.key}>{p.title} · {p.sku} · {p.pack}</option>)}</select></label>
+      {products.some(p=>p.key===selected)&&onContextChange&&<PlanningInputsPanel key={`${snapshot.id}-${selected}`} snapshot={snapshot} productKey={selected} value={contexts[selected]} focus={inputFocus} onChange={value=>onContextChange(selected,value)} />}
       {(()=>{const product=products.find(p=>p.key===selected);return product?<DecisionOutcomeControls key={`decision-${selected}`} datasetId={datasetId} product={product} snapshot={snapshot} plan={plans.find(p=>p.productKey===selected)} onChanged={refresh} />:null;})()}
     </details>
 

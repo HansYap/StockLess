@@ -34,13 +34,14 @@ function Harness({ snapshot, forecast, drafts, initialContexts = {} }: { snapsho
   const [contexts, setContexts] = useState(initialContexts);
   const effective = useMemo(() => applyPlanningContexts(snapshot, contexts), [snapshot, contexts]);
   return <ImpactDashboard snapshot={effective} forecast={forecast} drafts={drafts} contexts={contexts} datasetId="D" shopName="Test shop" datasetName="October"
+    onContextsChange={updates => setContexts(current => ({ ...current, ...updates }))}
     onContextChange={(key, value) => setContexts(current => ({ ...current, [key]: value }))} onBack={() => {}} />;
 }
 function openAnalysis() { const summary = screen.getByText("Detailed estimates"); if (!summary.closest("details")?.open) fireEvent.click(summary); }
 function financialCard(label: string) { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: "Business" })); return screen.getByText(label).parentElement!; }
 function environmentPanel() { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: "Environmental" })); return screen.getByRole("tabpanel", { name: "Environmental" }); }
 function environmentalValue(label: string) { return within(environmentPanel()).getByText(label).parentElement!.querySelector("b")!.textContent; }
-function openInputs() { const review = screen.getByText("Review a product: confirm its data or record what happened"); if (!review.closest("details")?.open) fireEvent.click(review); fireEvent.click(screen.getByText("Confirm category, cost, weight and storage")); }
+function openInputs() { const review = screen.getByText("Review a product: confirm its data or record what happened"); if (!review.closest("details")?.open) fireEvent.click(review); const inputs = screen.getByText("Improve product estimates"); if (!inputs.closest("details")?.open) fireEvent.click(inputs); fireEvent.click(screen.getByRole("button", { name: /^Food category / })); }
 
 it("Step 5 shows the exact same current planned and scenario quantities/costs as Step 4", async () => {
   const input = await evidence();
@@ -66,7 +67,7 @@ it("category selection does not unlock CO2e until explicitly saved; v2 then labe
   openInputs();
   fireEvent.change(screen.getByLabelText("Food category"), { target: { value: "rice" } });
   expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
-  fireEvent.click(screen.getByRole("button", { name: "Confirm and save inputs" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save this detail" }));
   await waitFor(() => expect(environmentalValue("Potential excess: estimated CO₂e")).toMatch(/≈ [\d,.]+ kg CO₂e/));
   expect(environmentalValue("Recorded waste: estimated CO₂e")).toBe("No outcome recorded");
   expect(within(environmentPanel()).getByText("CP3 v2: agreeing-group mean; otherwise median only within ×2 of every source, labelled estimate. Single-source factors are excluded. No consumer stage. Confirm every category.")).toBeTruthy();
@@ -81,9 +82,13 @@ it("manual seller cost and weight recalculate totals, then a changed source inva
   expect(within(financialCard("Planned purchase spend")).getByText("Unavailable")).toBeTruthy();
   openInputs();
   fireEvent.change(screen.getByLabelText("Food category"), { target: { value: "rice" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save this detail" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Purchase cost / }));
   fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), { target: { value: "4" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save this detail" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Weight per sales unit / }));
   fireEvent.change(screen.getByLabelText("Measured kg / sales unit"), { target: { value: ".2" } });
-  fireEvent.click(screen.getByRole("button", { name: "Confirm and save inputs" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save this detail" }));
   await waitFor(() => expect(within(financialCard("Planned purchase spend")).getByText("MYR 400.00")).toBeTruthy());
   fireEvent.click(screen.getByRole("tab", { name: "Environmental" }));
   expect(environmentalValue("Potential excess: estimated CO₂e")).toMatch(/kg CO₂e/);
@@ -93,7 +98,9 @@ it("manual seller cost and weight recalculate totals, then a changed source inva
   await waitFor(() => expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable"));
   openInputs();
   expect((screen.getByLabelText("Food category") as HTMLSelectElement).value).toBe("");
+  fireEvent.click(screen.getByRole("button", { name: /^Purchase cost / }));
   expect((screen.getByLabelText("Your purchase cost / sales unit (MYR)") as HTMLInputElement).value).toBe("");
+  fireEvent.click(screen.getByRole("button", { name: /^Weight per sales unit / }));
   expect((screen.getByLabelText("Measured kg / sales unit") as HTMLInputElement).value).toBe("");
   expect(screen.getByText("Previous inputs belong to different source evidence. Confirm them again.")).toBeTruthy();
   fireEvent.click(screen.getByRole("tab", { name: "Business" }));
@@ -110,4 +117,42 @@ it("actual recorded zero kg appears as zero even when count-only packaging block
   expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
   expect(environmentalValue("Named scenario difference")).toBe("Unavailable");
   expect(within(environmentPanel()).getByText("0 kg · Source-agreement mass / estimated-factor mass: 0 / 0 kg")).toBeTruthy();
+});
+
+it("reviewed category confirmation unlocks impact while preserving an entered zero cost and measured weight", async () => {
+  const input = await evidence();
+  render(<Harness {...input} initialContexts={{ [KEY]:{ evidenceKey:input.snapshot.evidenceKey!,unitCost:0,kgPerUnit:.25,sellingPrice:7 } }} />);
+  expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
+  fireEvent.click(screen.getByText("Review a product: confirm its data or record what happened"));
+  fireEvent.click(screen.getByRole("button", { name:"Review suggested categories (1)" }));
+  const modal = within(screen.getByRole("dialog", { name:"Confirm suggested categories" }));
+  expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
+  fireEvent.click(modal.getByRole("button", { name:"Confirm 1 category" }));
+  expect(environmentalValue("Potential excess: estimated CO₂e")).toMatch(/kg CO₂e/);
+  expect(within(financialCard("Planned purchase spend")).getByText("MYR 0.00")).toBeTruthy();
+  const panel = screen.getByText("Improve product estimates"); fireEvent.click(panel);
+  expect(screen.getByText("0.2500 kg · Your weight")).toBeTruthy();
+});
+
+it("impact priorities open only the requested detail and skipping leaves category confirmation pending", async () => {
+  const input = await evidence({ cost:"" });
+  render(<Harness {...input} />);
+  const environment = environmentPanel();
+  fireEvent.click(within(environment).getByText("Categories to confirm, largest known kg at risk first"));
+  fireEvent.click(within(environment).getByRole("button", { name:"Confirm category" }));
+  await waitFor(() => expect(screen.getByLabelText("Food category")).toBeTruthy());
+  expect(screen.getByText("Improve product estimates").closest("details")?.open).toBe(true);
+  expect(screen.queryByLabelText("Your purchase cost / sales unit (MYR)")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name:"Skip for now" }));
+  expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
+  fireEvent.click(screen.getByRole("tab", { name:"Business" }));
+  fireEvent.click(screen.getByText("Missing purchase costs: first 10 priorities"));
+  fireEvent.click(screen.getByRole("button", { name:"Add cost" }));
+  await waitFor(() => expect(screen.getByLabelText("Your purchase cost / sales unit (MYR)")).toBeTruthy());
+  expect(screen.queryByLabelText("Food category")).toBeNull();
+  expect(screen.queryByLabelText("Measured kg / sales unit")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Your purchase cost / sales unit (MYR)"), { target:{ value:"4" } });
+  fireEvent.click(screen.getByRole("button", { name:"Save this detail" }));
+  expect(within(financialCard("Planned purchase spend")).getByText("MYR 400.00")).toBeTruthy();
+  expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
 });

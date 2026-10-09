@@ -122,8 +122,10 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const mounted = useRef(true);
   const latestDrafts = useRef(purchaseDrafts);
   const latestSupplierDrafts = useRef(supplierOrderDrafts);
+  const latestContexts = useRef(cp3Inputs);
   latestDrafts.current = purchaseDrafts;
   latestSupplierDrafts.current = supplierOrderDrafts;
+  latestContexts.current = cp3Inputs;
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; retrySaves.current.clear(); };
@@ -185,6 +187,11 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     };
     await flush();
   }, []);
+  const updateContexts = (updates: PlanningContexts) => {
+    const next = { ...latestContexts.current, ...updates };
+    latestContexts.current = next; setCp3Inputs(next);
+    if (activeSavedId) void persistWork(activeSavedId, { cp3Inputs: next });
+  };
 
   useEffect(() => {
     if (!saveError || retrySaves.current.size === 0) return;
@@ -789,7 +796,8 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           shopName={workspaceDataset.shopName}
           datasetName={workspaceDataset.datasetName}
           supplierDrafts={supplierOrderDrafts}
-          onContextChange={(key, value) => { const next = { ...cp3Inputs, [key]: value }; setCp3Inputs(next); if (activeSavedId) void persistWork(activeSavedId, { cp3Inputs: next }); }}
+          onContextChange={(key, value) => updateContexts({ [key]: value })}
+          onContextsChange={updateContexts}
           forecast={forecast}
           drafts={purchaseDrafts}
           onBack={() => setShowImpact(false)}
@@ -803,7 +811,8 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           snapshot={effectiveReadiness!}
           contexts={cp3Inputs}
           datasetId={activeSavedId ?? undefined}
-          onContextChange={(key, value) => { const next = { ...cp3Inputs, [key]: value }; setCp3Inputs(next); if (activeSavedId) void persistWork(activeSavedId, { cp3Inputs: next }); }}
+          onContextChange={(key, value) => updateContexts({ [key]: value })}
+          onContextsChange={updateContexts}
           forecast={forecast}
           drafts={purchaseDrafts}
           onDraftChange={(key, inputs) => {
