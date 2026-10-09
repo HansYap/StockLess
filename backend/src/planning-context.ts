@@ -20,6 +20,14 @@ export interface ProductPlanningContext {
   readonly storageSelection?: StorageWindowSelection;
   /** Explicit reference-item choice; a shop SKU is never treated as a PriceCatcher code. */
   readonly priceCatcherItemCode?: string;
+  /** Guided product checks: the retailer confirmed the cost or weight StockLess found. */
+  readonly costConfirmed?: boolean;
+  readonly weightConfirmed?: boolean;
+  /** Retailer's answer for when current stock expires, used when the file has no checked expiry date. */
+  readonly expiryDate?: string;
+  readonly noExpiry?: boolean;
+  /** The optional supplier-terms check was answered or skipped. */
+  readonly supplierChecked?: boolean;
 }
 export type PlanningContexts = Readonly<Record<string, ProductPlanningContext | undefined>>;
 export function activePlanningContext(snapshot: ReadinessSnapshot, context: ProductPlanningContext | undefined) {
