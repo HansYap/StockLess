@@ -94,18 +94,28 @@ export function StepGround({ step, done }: { step: GardenStep; done: boolean }) 
 }
 
 const VINE = <>
-  <path d="M30 560 C 26 440 44 330 34 220 S 46 80 58 20" fill="none" stroke="#8FC9B0" strokeWidth="3" strokeLinecap="round" />
-  <path d="M34 470c-18-6-26-20-22-34 16 2 26 16 22 34z" fill="#BFE3D2" /><path d="M36 420c16-8 32-4 40 8-14 10-30 8-40-8z" fill="#D6EEE4" />
-  <path d="M36 330c-18-4-28-18-26-32 16 0 28 14 26 32z" fill="#D6EEE4" /><path d="M38 270c14-10 30-10 40 0-12 12-28 12-40 0z" fill="#BFE3D2" />
-  <path d="M44 160c-16-6-24-20-20-32 14 2 24 14 20 32z" fill="#BFE3D2" /><path d="M50 100c12-10 28-10 36 0-10 12-26 12-36 0z" fill="#D6EEE4" />
-  <g transform="translate(70 360)"><circle r="13" fill="#F2A3A0" /><circle r="13" fill="#E8807B" opacity=".25" cx="3" cy="3" /><path d="M0 -13c1-5 4-8 8-9" stroke="#8B5E34" strokeWidth="2.4" strokeLinecap="round" fill="none" /><path d="M3 -15c4-6 10-6 13-3-4 4-9 5-13 3z" fill="#7BC08F" /></g>
-  <g transform="translate(18 220)"><circle r="11" fill="#F6C77A" /><circle cx="-3" cy="-3" r="3" fill="#FBE2B4" /><path d="M0 -11c2-4 6-5 9-4-2 4-6 5-9 4z" fill="#7BC08F" /></g>
-  <g transform="translate(74 190)"><circle r="7" fill="#FFF1CC" /><circle cx="0" cy="-9" r="5" fill="#FFF1CC" /><circle cx="9" cy="0" r="5" fill="#FFF1CC" /><circle cx="0" cy="9" r="5" fill="#FFF1CC" /><circle cx="-9" cy="0" r="5" fill="#FFF1CC" /><circle r="4" fill="#E9C16B" /></g>
-  <g transform="translate(22 520)"><circle r="6" fill="#FFF1CC" /><circle cx="0" cy="-8" r="4.5" fill="#FFF1CC" /><circle cx="8" cy="0" r="4.5" fill="#FFF1CC" /><circle cx="0" cy="8" r="4.5" fill="#FFF1CC" /><circle cx="-8" cy="0" r="4.5" fill="#FFF1CC" /><circle r="3.5" fill="#E9C16B" /></g>
-  <g transform="translate(62 60)"><path d="M-8 0c0-8 6-12 12-12 4 0 6 2 6 6 0 8-6 14-12 14-4 0-6-4-6-8z" fill="#BFE08A" /><path d="M2 -12c0-4 2-6 4-7" stroke="#8B5E34" strokeWidth="2" strokeLinecap="round" /></g>
+  <path d="M30 900 C 24 780 44 660 34 540 S 24 320 40 200 S 52 70 58 20" fill="none" stroke="#8FC9B0" strokeWidth="3" strokeLinecap="round" />
+  <path d="M34 860c-18-6-26-20-22-34 16 2 26 16 22 34z" fill="#BFE3D2" />
+  <path d="M36 780c16-8 32-4 40 8-14 10-30 8-40-8z" fill="#D6EEE4" />
+  <path d="M34 700c-18-6-26-20-22-34 16 2 26 16 22 34z" fill="#BFE3D2" />
+  <path d="M36 620c16-8 32-4 40 8-14 10-30 8-40-8z" fill="#D6EEE4" />
+  <path d="M34 540c-18-6-26-20-22-34 16 2 26 16 22 34z" fill="#BFE3D2" />
+  <path d="M36 460c16-8 32-4 40 8-14 10-30 8-40-8z" fill="#D6EEE4" />
+  <path d="M34 380c-18-6-26-20-22-34 16 2 26 16 22 34z" fill="#BFE3D2" />
+  <path d="M36 300c16-8 32-4 40 8-14 10-30 8-40-8z" fill="#D6EEE4" />
+  <path d="M34 220c-18-6-26-20-22-34 16 2 26 16 22 34z" fill="#BFE3D2" />
+  <path d="M36 140c16-8 32-4 40 8-14 10-30 8-40-8z" fill="#D6EEE4" />
+  <g transform="translate(70 800)"><circle r="6" fill="#FFF1CC" /><circle cx="0" cy="-8" r="4.5" fill="#FFF1CC" /><circle cx="8" cy="0" r="4.5" fill="#FFF1CC" /><circle cx="0" cy="8" r="4.5" fill="#FFF1CC" /><circle cx="-8" cy="0" r="4.5" fill="#FFF1CC" /><circle r="3.5" fill="#E9C16B" /></g>
+  <g transform="translate(72 690)"><circle r="13" fill="#F2A3A0" /><circle r="13" fill="#E8807B" opacity=".25" cx="3" cy="3" /><path d="M0 -13c1-5 4-8 8-9" stroke="#8B5E34" strokeWidth="2.4" strokeLinecap="round" fill="none" /><path d="M3 -15c4-6 10-6 13-3-4 4-9 5-13 3z" fill="#7BC08F" /></g>
+  <g transform="translate(16 590)"><circle r="6" fill="#FFF1CC" /><circle cx="0" cy="-8" r="4.5" fill="#FFF1CC" /><circle cx="8" cy="0" r="4.5" fill="#FFF1CC" /><circle cx="0" cy="8" r="4.5" fill="#FFF1CC" /><circle cx="-8" cy="0" r="4.5" fill="#FFF1CC" /><circle r="3.5" fill="#E9C16B" /></g>
+  <g transform="translate(18 480)"><circle r="11" fill="#F6C77A" /><circle cx="-3" cy="-3" r="3" fill="#FBE2B4" /><path d="M0 -11c2-4 6-5 9-4-2 4-6 5-9 4z" fill="#7BC08F" /></g>
+  <g transform="translate(72 380)"><circle r="6" fill="#FFF1CC" /><circle cx="0" cy="-8" r="4.5" fill="#FFF1CC" /><circle cx="8" cy="0" r="4.5" fill="#FFF1CC" /><circle cx="0" cy="8" r="4.5" fill="#FFF1CC" /><circle cx="-8" cy="0" r="4.5" fill="#FFF1CC" /><circle r="3.5" fill="#E9C16B" /></g>
+  <g transform="translate(70 270)"><circle r="13" fill="#F2A3A0" /><circle r="13" fill="#E8807B" opacity=".25" cx="3" cy="3" /><path d="M0 -13c1-5 4-8 8-9" stroke="#8B5E34" strokeWidth="2.4" strokeLinecap="round" fill="none" /><path d="M3 -15c4-6 10-6 13-3-4 4-9 5-13 3z" fill="#7BC08F" /></g>
+  <g transform="translate(18 190)"><circle r="6" fill="#FFF1CC" /><circle cx="0" cy="-8" r="4.5" fill="#FFF1CC" /><circle cx="8" cy="0" r="4.5" fill="#FFF1CC" /><circle cx="0" cy="8" r="4.5" fill="#FFF1CC" /><circle cx="-8" cy="0" r="4.5" fill="#FFF1CC" /><circle r="3.5" fill="#E9C16B" /></g>
+  <g transform="translate(62 90)"><path d="M-8 0c0-8 6-12 12-12 4 0 6 2 6 6 0 8-6 14-12 14-4 0-6-4-6-8z" fill="#BFE08A" /><path d="M2 -12c0-4 2-6 4-7" stroke="#8B5E34" strokeWidth="2" strokeLinecap="round" /></g>
 </>;
 
-/** Leafy vine with fruit and flowers for the page gutters. */
+/** Leafy vine with fruit and flowers that grows up from the bottom of the page gutters. */
 export function GardenVine() {
-  return <svg className="garden-vine" viewBox="0 0 110 560" focusable="false">{VINE}</svg>;
+  return <svg className="garden-vine" viewBox="0 0 110 900" preserveAspectRatio="xMidYMax meet" focusable="false">{VINE}</svg>;
 }
