@@ -3,6 +3,7 @@ import { t, useLanguage } from "../i18n/index.ts";
 import type { ReactNode } from "react";
 import type { SourceMode } from "../engine.ts";
 import { WorkspaceDecor } from "./WorkspaceDecor.tsx";
+import { StepGround } from "./StepGarden.tsx";
 import { Logo } from "./Logo.tsx";
 import { GrowthIcon, STEP_GROWTH } from "./GrowthIcon.tsx";
 import { SavedWorkspaceSidebar, type SavedWorkspaceSidebarProps } from "./SavedWorkspaceSidebar.tsx";
@@ -33,6 +34,8 @@ interface AppShellProps {
   readonly i3Typography?: boolean;
   readonly onGuide?: () => Promise<void>;
   readonly onReturnToPlan?: () => void;
+  /** The current step's work is finished, so its plant has grown. */
+  readonly stepDone?: boolean;
 }
 
 /** Shares the header and preparation progress, with navigation for saved uploads. */
@@ -50,6 +53,7 @@ export function AppShell({
   i3Typography,
   onGuide,
   onReturnToPlan,
+  stepDone,
 }: AppShellProps) {
   useLanguage();
   const workflow = workflowStyle ?? current <= 3;
@@ -82,6 +86,7 @@ export function AppShell({
         {notice && <p className="notice notice--info" role="status">{t(notice)}</p>}
         {children}
       </div>
+      <StepGround step={current} done={current === 4 || current < reached || Boolean(stepDone)} />
     </>;
   return (
     <div className={`frame${i3Typography ? " frame--i3" : ""}${workflow ? " frame--workflow" : ""}${impactShell ? " frame--impact" : ""}${workspaceSidebar ? " frame--saved-workspace" : ""}`}>
