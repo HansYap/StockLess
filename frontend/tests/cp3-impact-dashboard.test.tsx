@@ -41,7 +41,7 @@ function openAnalysis() { const summary = screen.getByText("Detailed estimates")
 function financialCard(label: string) { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: "Business" })); return screen.getByText(label).parentElement!; }
 function environmentPanel() { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: "Environmental" })); return screen.getByRole("tabpanel", { name: "Environmental" }); }
 function environmentalValue(label: string) { return within(environmentPanel()).getByText(label).parentElement!.querySelector("b")!.textContent; }
-function openInputs() { const review = screen.getByText("Review a product: confirm its data or record what happened"); if (!review.closest("details")?.open) fireEvent.click(review); const inputs = screen.getByText("Improve product estimates"); if (!inputs.closest("details")?.open) fireEvent.click(inputs); fireEvent.click(screen.getByRole("button", { name: /^Food category / })); }
+function openInputs() { const review = screen.getByText("Improve the data behind these estimates"); if (!review.closest("details")?.open) fireEvent.click(review); const inputs = screen.getByText("Improve product estimates"); if (!inputs.closest("details")?.open) fireEvent.click(inputs); fireEvent.click(screen.getByRole("button", { name: /^Food category / })); }
 
 it("Step 5 shows the exact same current planned and scenario quantities/costs as Step 4", async () => {
   const input = await evidence();
@@ -123,7 +123,7 @@ it("reviewed category confirmation unlocks impact while preserving an entered ze
   const input = await evidence();
   render(<Harness {...input} initialContexts={{ [KEY]:{ evidenceKey:input.snapshot.evidenceKey!,unitCost:0,kgPerUnit:.25,sellingPrice:7 } }} />);
   expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
-  fireEvent.click(screen.getByText("Review a product: confirm its data or record what happened"));
+  fireEvent.click(screen.getByText("Improve the data behind these estimates"));
   fireEvent.click(screen.getByRole("button", { name:"Review suggested categories (1)" }));
   const modal = within(screen.getByRole("dialog", { name:"Confirm suggested categories" }));
   expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");

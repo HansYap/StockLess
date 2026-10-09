@@ -21,8 +21,12 @@ interface Props {
   supplierDrafts?: Readonly<Record<string, SupplierOrderTerms | undefined>>;
   onContextChange?: (key:string,value:ProductPlanningContext)=>void;
   onContextsChange?: (updates:PlanningContexts)=>void;
+  selectedKey?: string | null; onSelect?: (key:string)=>void;
+  focus?: { section: ImpactSection; revision: number };
+  onPurchaseDecision?: (key:string)=>void;
   onBack:()=>void; onNew?:()=>void;
 }
+export type ImpactSection = 'outcomes' | 'downloads';
 type BusinessMeasure = 'planned' | 'excess' | 'scenario' | 'difference';
 type EnvironmentMeasure = 'recorded' | 'potential' | 'scenario';
 const EMPTY_CONTEXTS: PlanningContexts = Object.freeze({});
@@ -33,7 +37,7 @@ export function calculatePotentialExcess(snapshot: ReadinessSnapshot, forecast: 
 }
 
 /** Step 5 in the supplied Impact Dashboard design, filled from the same CP3 engine figures as Step 4. */
-export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXTS,datasetId,shopName,datasetName,supplierDrafts,onContextChange,onContextsChange,onBack,onNew}:Props) {
+export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXTS,datasetId,shopName,datasetName,supplierDrafts,onContextChange,onContextsChange,selectedKey,onSelect,focus,onPurchaseDecision,onBack,onNew}:Props) {
   const language=useLanguage(), c=(en:string,zh:string,ms:string)=>language==='zh'?zh:language==='ms'?ms:en;
   const n=(v:number)=>v.toLocaleString(getLocale(),{maximumFractionDigits:3});
   const units=(v:number)=>Math.round(v).toLocaleString(getLocale());
@@ -46,19 +50,25 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
   const impact=useMemo(()=>buildImpactReview(snapshot,forecast,drafts,undefined,contexts),[snapshot,forecast,drafts,contexts]);
   const costQueue=useMemo(()=>buildMissingCostQueue(snapshot,impact,contexts),[snapshot,impact,contexts]);
   const [saved,setSaved]=useState<SavedDataset>();
+  const historyRequest=useRef(0);
   const [revision,setRevision]=useState(0), [error,setError]=useState(''), [noOrders,setNoOrders]=useState(false), [busy,setBusy]=useState(false);
   const [lens,setLens]=useState<'business'|'environment'>('environment');
   const [businessMeasure,setBusinessMeasure]=useState<BusinessMeasure>('planned');
   const [environmentMeasure,setEnvironmentMeasure]=useState<EnvironmentMeasure>('potential');
-  const [selected,setSelected]=useState(products[0]?.key??'');
+  const [localSelected,setLocalSelected]=useState(products[0]?.key??'');
+  const selected=selectedKey === undefined ? localSelected : selectedKey ?? products[0]?.key ?? '';
+  const setSelected=(key:string)=>{if(selectedKey === undefined)setLocalSelected(key);onSelect?.(key);};
   const [reviewOpen,setReviewOpen]=useState(false);
   const [inputFocus,setInputFocus]=useState<{field:PlanningDetail;revision:number}>();
   const review=useRef<HTMLDetailsElement>(null);
+  const [outcomesOpen,setOutcomesOpen]=useState(false), [downloadsOpen,setDownloadsOpen]=useState(false);
+  const records=useRef<HTMLDetailsElement>(null), downloads=useRef<HTMLDetailsElement>(null);
   const [analysisOpen,setAnalysisOpen]=useState(false), [excessOpen,setExcessOpen]=useState(false);
   const [businessOpen,setBusinessOpen]=useState(false), [environmentOpen,setEnvironmentOpen]=useState(false);
   const excessProducts=useRef<HTMLDetailsElement>(null), businessBreakdown=useRef<HTMLDetailsElement>(null), environmentBreakdown=useRef<HTMLDetailsElement>(null);
   useEffect(()=>{if(!products.some(p=>p.key===selected))setSelected(products[0]?.key??'');},[products,selected]);
-  useEffect(()=>{let cancelled=false;setSaved(undefined); if(datasetId)void getSavedDataset(datasetId).then(value=>{if(!cancelled)setSaved(value);}).catch(()=>{if(!cancelled)setError(c('Saved history could not be read.','无法读取已保存记录。','Sejarah tersimpan tidak dapat dibaca.'));});return()=>{cancelled=true;};},[datasetId,revision]);
+  useEffect(()=>{if(focus){const target=focus.section==='outcomes'?records:downloads;if(focus.section==='outcomes')setOutcomesOpen(true);else setDownloadsOpen(true);requestAnimationFrame(()=>{target.current?.scrollIntoView?.({behavior:'smooth',block:'start'});target.current?.querySelector('summary')?.focus({preventScroll:true});});}},[focus]);
+  useEffect(()=>{let cancelled=false;const request=++historyRequest.current;setSaved(undefined); if(datasetId)void getSavedDataset(datasetId).then(value=>{if(!cancelled&&request===historyRequest.current)setSaved(value);}).catch(()=>{if(!cancelled&&request===historyRequest.current)setError(c('Saved history could not be read.','无法读取已保存记录。','Sejarah tersimpan tidak dapat dibaca.'));});return()=>{cancelled=true;};},[datasetId,revision]);
   const outcomes=useMemo(()=>saved?savedStockOutcomes(saved):[],[saved]);
   const environmental=useMemo(()=>buildEnvironmentalImpact(snapshot,impact,contexts,outcomes,{datasetId}),[snapshot,impact,contexts,outcomes,datasetId]);
   const monetary=(total:MonetaryTotal|MonetaryFigure)=>total.state==='estimated'?money(total.amount):total.state==='not_entered'?notEntered:unavailable;
@@ -92,12 +102,15 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
   const openExcessProducts=()=>{setExcessOpen(true);requestAnimationFrame(()=>reveal(excessProducts.current));};
   const switchTab=(event:KeyboardEvent<HTMLButtonElement>)=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?'environment':event.key==='End'?'business':lens==='business'?'environment':'business';setLens(next);document.getElementById(`${next}-tab`)?.focus();};
   const reviewProduct=(key:string,field:PlanningDetail)=>{setSelected(key);setInputFocus(previous=>({field,revision:(previous?.revision??0)+1}));setReviewOpen(true);requestAnimationFrame(()=>review.current?.scrollIntoView?.({behavior:'smooth',block:'start'}));};
-  const makeReport=()=>buildAnalysisReport({snapshot,forecast,plans,impact,datasetId:datasetId??'sample-preview',shopName,datasetName,
-    decisions:saved?savedPurchaseDecisions(saved):[],outcomes,carbonResults:[...environmental.actualResults,...environmental.potentialResults,...environmental.scenarioResults],
-    supplierScenariosByProduct:Object.fromEntries(Object.entries(supplierDrafts??{}).filter((entry):entry is [string,SupplierOrderTerms]=>!!entry[1]).map(([key,terms])=>[key,[{id:'current-terms',name:c('Entered supplier terms','已填写的供应商条件','Terma pembekal dimasukkan'),terms}]]))});
+  const makeReport=(history=saved)=>{const reportOutcomes=history?savedStockOutcomes(history):[];
+    const reportEnvironment=history===saved?environmental:buildEnvironmentalImpact(snapshot,impact,contexts,reportOutcomes,{datasetId});
+    return buildAnalysisReport({snapshot,forecast,plans,impact,datasetId:datasetId??'sample-preview',shopName,datasetName,
+    decisions:history?savedPurchaseDecisions(history):[],outcomes:reportOutcomes,carbonResults:[...reportEnvironment.actualResults,...reportEnvironment.potentialResults,...reportEnvironment.scenarioResults],
+    supplierScenariosByProduct:Object.fromEntries(Object.entries(supplierDrafts??{}).filter((entry):entry is [string,SupplierOrderTerms]=>!!entry[1]).map(([key,terms])=>[key,[{id:'current-terms',name:c('Entered supplier terms','已填写的供应商条件','Terma pembekal dimasukkan'),terms}]]))});};
+  const currentReport=async()=>{const request=++historyRequest.current, history=datasetId?await getSavedDataset(datasetId):undefined;if(datasetId&&!history)throw new Error(c('Saved records could not be read. Reopen this dataset and try again.','无法读取已保存的记录。请重新打开此数据集后重试。','Rekod disimpan tidak dapat dibaca. Buka semula set data ini dan cuba lagi.'));if(history&&request===historyRequest.current)setSaved(history);return makeReport(history);};
   const fail=(e:unknown)=>{setNoOrders(e instanceof NoFinalisedOrdersError);setError(e instanceof NoFinalisedOrdersError?c('No finalised orders. Save a positive final quantity in purchase planning first.','没有已确定的订单。请先在采购计划中保存大于零的最终数量。','Tiada pesanan dimuktamadkan. Simpan kuantiti akhir positif dalam perancangan belian dahulu.'):e instanceof Error?t(e.message):unavailable);};
-  const download=async(finalOnly=false)=>{setError('');setNoOrders(false);setBusy(true);try{const report=makeReport();if(finalOnly)await downloadFinalisedOrdersWorkbook(report);else await downloadAnalysisWorkbook(report);}catch(e){fail(e);}finally{setBusy(false);}};
-  const pdf=async()=>{setError('');setNoOrders(false);setBusy(true);try{const {downloadAnalysisPdf}=await import('../purchase-plan/analysis-report-pdf.ts');await downloadAnalysisPdf(makeReport());}catch(e){fail(e);}finally{setBusy(false);}};
+  const download=async(finalOnly=false)=>{setError('');setNoOrders(false);setBusy(true);try{const report=await currentReport();if(finalOnly)await downloadFinalisedOrdersWorkbook(report);else await downloadAnalysisWorkbook(report);}catch(e){fail(e);}finally{setBusy(false);}};
+  const pdf=async()=>{setError('');setNoOrders(false);setBusy(true);try{const {downloadAnalysisPdf}=await import('../purchase-plan/analysis-report-pdf.ts');await downloadAnalysisPdf(await currentReport());}catch(e){fail(e);}finally{setBusy(false);}};
   const baselineOf=(kind:CarbonImpactKind)=>kind==='potential_excess'?c('the top of the expected four-week demand range','预期四周需求区间的上限','had atas julat permintaan empat minggu dijangka'):kind==='recorded_waste'?c('none — recorded waste is reported as you entered it','无——实际报损按您的记录呈现','tiada — sisa direkod dilaporkan seperti dimasukkan'):'';
   const explain=(result:CarbonImpactResult,index:number)=><details className="cp3-controls ix-explain" key={`${result.kind}-${result.productKey}-${index}`}><summary>{result.productName??result.productKey} · {result.state==='estimated'?`${n(result.kgCO2e)} kg CO₂e`:result.state==='no_record'?c('No outcome recorded','尚无实际结果记录','Tiada hasil direkodkan'):unavailable}</summary>
     {result.state==='estimated'?<><p>{result.factor.label==='sources_agree'?c('Sources agree','来源一致','Sumber bersetuju'):c('Estimate; sources disagree, bounded within ×2','估算；来源不一致，但均在 ×2 内','Anggaran; sumber berbeza, dalam julat ×2')}</p><p>{n(result.quantity??0)} {result.quantityUnit} → {n(result.massKg)} kg · {c('Mass basis','重量依据','Asas jisim')}: {c(result.massBasis, result.massBasis==='measured'?'实测':result.massBasis==='estimated'?'估算换算':'已知重量换算',result.massBasis==='measured'?'diukur':result.massBasis==='estimated'?'penukaran anggaran':'penukaran diketahui')}</p><p>{c('Compared with','比较基线','Dibandingkan dengan')}: {result.baseline??baselineOf(result.kind)}</p><p>{result.calculation}</p><p>{result.conversionSource}</p><p>{c('Source range','全部来源范围','Julat semua sumber')}: {n(result.factor.sourceRange!.low)}–{n(result.factor.sourceRange!.high)} kg CO₂e/kg · {c('Calculated range','计算范围','Julat pengiraan')}: {n(result.kgCO2eRange.low)}–{n(result.kgCO2eRange.high)} kg CO₂e</p><ul>{result.factor.sources.map(s=><li key={s.id}>{s.name} ({result.factor.selectedSources.includes(s.id)?c('used in factor','计入因子','digunakan dalam faktor'):c('shown for range only','仅用于来源范围','julat sumber sahaja')}): {n(s.value)} kg CO₂e/kg · {s.version} · {s.boundary}</li>)}</ul><p>{result.factor.explanation} {result.limitation}</p></>:<p>{t(result.reason)} {t(result.correctiveAction)}</p>}
@@ -166,15 +179,16 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
 
   return <main className="impact" aria-labelledby="impact-title">
     <ImpactStory head={head} lines={lines} totalProducts={impact.products.length} business={businessTile} emissions={emissionsTile} onBack={onBack} onExcess={openExcessProducts} onBusiness={()=>openBusinessProducts('excess')} onEmissions={()=>openEnvironmentProducts('potential')} />
-    <details className="sx-card impact__disclosure impact__downloads"><summary><span>{c('Download your results','下载结果','Muat turun hasil anda')}</span><small>{c('Analysis or final orders · Excel, PDF or print','分析或最终订单 · Excel、PDF 或打印','Analisis atau pesanan akhir · Excel, PDF atau cetak')}</small></summary>
+    <details className="sx-card impact__disclosure impact__downloads" ref={downloads} open={downloadsOpen} onToggle={event=>setDownloadsOpen(event.currentTarget.open)}><summary><span>{c('Download your results','下载结果','Muat turun hasil anda')}</span><small>{c('Analysis or saved final orders · Excel, PDF or print','分析或已保存的最终订单 · Excel、PDF 或打印','Analisis atau pesanan akhir disimpan · Excel, PDF atau cetak')}</small></summary>
+    <section className="impact__download-section"><h3>{c('Plan analysis','计划分析','Analisis pelan')}</h3><p>{c('Estimates use your current draft. Recorded decisions and actual outcomes are included separately.','估算使用当前草稿。已记录的决定与实际结果单独列出。','Anggaran menggunakan draf semasa. Keputusan dan hasil sebenar direkod disertakan berasingan.')}</p>
     <div className="impact__toolbar" role="group" aria-label={c('Download your results','下载结果','Muat turun hasil anda')}>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download()}>{c('Download analysis Excel','下载分析 Excel','Muat turun Excel analisis')}</button>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void pdf()}>{c('Download analysis PDF','下载分析 PDF','Muat turun PDF analisis')}</button>
-      <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download(true)}>{c('Download final orders Excel','下载最终订单 Excel','Muat turun Excel pesanan akhir')}</button>
-      <button type="button" className="btn btn--ghost btn--small" onClick={()=>{setError('');setNoOrders(false);try{printAnalysisReport(makeReport());}catch(e){fail(e);}}}>{c('Print / Save PDF','打印／保存 PDF','Cetak / Simpan PDF')}</button>
+      <button type="button" className="btn btn--ghost btn--small" disabled={busy || (!!datasetId && !saved)} onClick={()=>{setError('');setNoOrders(false);try{printAnalysisReport(makeReport());}catch(e){fail(e);}}}>{c('Print / Save PDF','打印／保存 PDF','Cetak / Simpan PDF')}</button>
     </div>
+    </section><section className="impact__download-section"><h3>{c('Saved final orders','已保存的最终订单','Pesanan akhir disimpan')}</h3><p>{c('Only positive quantities from saved final choices appear here. Later draft edits do not change a saved choice.','这里只包含已保存最终选择中的正数数量。后续草稿修改不会改变已保存的选择。','Hanya kuantiti positif daripada pilihan akhir disimpan dipaparkan di sini. Suntingan draf kemudian tidak mengubah pilihan disimpan.')}</p><div className="impact__toolbar"><button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download(true)}>{c('Download final orders Excel','下载最终订单 Excel','Muat turun Excel pesanan akhir')}</button>{onPurchaseDecision && selected && <button type="button" className="btn btn--ghost btn--small" onClick={()=>onPurchaseDecision(selected)}>{c('Review final choices in Purchase plan','在采购计划中核对最终选择','Semak pilihan akhir dalam Pelan belian')} →</button>}</div></section>
     </details>
-    {error&&<div className="notice notice--error impact__error" role="alert"><span>{error}</span>{noOrders&&<button type="button" className="btn btn--ghost btn--small" onClick={onBack}>{c('Return to purchase planning','返回采购计划','Kembali ke perancangan belian')}</button>}</div>}
+    {error&&<div className="notice notice--error impact__error" role="alert"><span>{error}</span>{noOrders&&<button type="button" className="btn btn--ghost btn--small" onClick={()=>onPurchaseDecision&&selected?onPurchaseDecision(selected):onBack()}>{c('Save a final choice in Purchase plan','在采购计划中保存最终选择','Simpan pilihan akhir dalam Pelan belian')} →</button>}</div>}
 
     <details className="sx-card impact__disclosure impact__analysis" open={analysisOpen} onToggle={event=>setAnalysisOpen(event.currentTarget.open)}><summary><span>{c('Detailed estimates','详细估算','Anggaran terperinci')}</span><small>{c('Purchase spending, recorded waste and alternative orders','采购支出、实际报损与其他订购方案','Belanja belian, sisa direkod dan pesanan alternatif')}</small></summary>
     <div className="sx-lens">
@@ -253,11 +267,16 @@ export function ImpactDashboard({snapshot,forecast,drafts,contexts=EMPTY_CONTEXT
     </details>
 
     <details className="sx-card impact__review" ref={review} open={reviewOpen} onToggle={event=>setReviewOpen(event.currentTarget.open)}>
-      <summary><span className="impact__review-title">{c('Review a product: confirm its data or record what happened','核对商品：确认数据或记录实际情况','Semak produk: sahkan data atau rekod apa yang berlaku')}</span><small>{c('Category, cost and weight for CO₂e and money · your purchase decision · discarded or expired stock','用于 CO₂e 和金额的类别、成本与重量 · 采购决定 · 已丢弃或过期的库存','Kategori, kos dan berat untuk CO₂e dan wang · keputusan belian anda · stok dibuang atau luput')}</small></summary>
+      <summary><span className="impact__review-title">{c('Improve the data behind these estimates','完善这些估算所用的数据','Perbaiki data di sebalik anggaran ini')}</span><small>{c('Category, cost, weight and optional storage guidance','类别、成本、重量及可选储存指导','Kategori, kos, berat dan panduan penyimpanan pilihan')}</small></summary>
       {onContextsChange&&<CategoryConfirmation snapshot={snapshot} products={products} contexts={contexts} onChange={onContextsChange} />}
       <label className="impact__review-product">{c('Product','商品','Produk')} <select value={selected} onChange={e=>{setSelected(e.target.value);setInputFocus(undefined);}}>{products.map(p=><option key={p.key} value={p.key}>{p.title} · {p.sku} · {p.pack}</option>)}</select></label>
       {products.some(p=>p.key===selected)&&onContextChange&&<PlanningInputsPanel key={`${snapshot.id}-${selected}`} snapshot={snapshot} productKey={selected} value={contexts[selected]} focus={inputFocus} onChange={value=>onContextChange(selected,value)} />}
-      {(()=>{const product=products.find(p=>p.key===selected);return product?<DecisionOutcomeControls key={`decision-${selected}`} datasetId={datasetId} product={product} snapshot={snapshot} plan={plans.find(p=>p.productKey===selected)} onChanged={refresh} />:null;})()}
+    </details>
+
+    <details className="sx-card impact__review impact__records" ref={records} open={outcomesOpen} onToggle={event=>setOutcomesOpen(event.currentTarget.open)}><summary><span className="impact__review-title">{c('Record what happened','记录实际情况','Rekod apa yang berlaku')}</span><small>{c('Discarded or expired stock, actual sales and stock counts','已丢弃或过期的库存、实际销量与库存盘点','Stok dibuang atau luput, jualan sebenar dan kiraan stok')}</small></summary>
+      <label className="impact__review-product">{c('Product for actual records','实际记录的商品','Produk untuk rekod sebenar')} <select value={selected} onChange={event=>{setSelected(event.target.value);setInputFocus(undefined);}}>{products.map(product=><option key={product.key} value={product.key}>{product.title} · {product.sku} · {product.pack}</option>)}</select></label>
+      {outcomesOpen && (()=>{const product=products.find(p=>p.key===selected);return product?<DecisionOutcomeControls mode="outcomes" key={`outcomes-${selected}`} datasetId={datasetId} product={product} snapshot={snapshot} plan={plans.find(p=>p.productKey===selected)} onChanged={refresh} />:null;})()}
+      {onPurchaseDecision && selected && <button type="button" className="btn btn--ghost" onClick={()=>onPurchaseDecision(selected)}>{c("Review this product's final choice", '核对该商品的最终选择', 'Semak pilihan akhir produk ini')} →</button>}
     </details>
 
     <details className="sx-card impact__review impact__history">

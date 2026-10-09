@@ -287,6 +287,10 @@
 .impact .impact__disclosure>summary:focus-visible{outline:3px solid var(--teal);outline-offset:4px;border-radius:8px}
 .impact .impact__disclosure[open]{padding-bottom:20px}
 .impact .impact__downloads .impact__toolbar{margin:0;padding:0;border:0;box-shadow:none}
+.impact .impact__download-section { padding:16px 0; border-top:1px solid var(--line); }
+.impact .impact__download-section h3 { margin:0 0 8px; font-size:18px; }
+.impact .impact__download-section p { margin:0 0 12px; color:var(--muted); font-size:14px; line-height:1.6; }
+.impact .impact__records>.decision-outcomes { padding:0; border:0; }
 .impact .impact__analysis .sx-lens{margin:0;padding:0;border-radius:0}
 .impact .impact__review{margin-top:16px;scroll-margin-top:90px}
 .impact .impact__learn>.sx-sec:first-of-type{margin-top:8px}

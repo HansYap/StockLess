@@ -15,7 +15,7 @@ function Harness({ data, evaluate = evaluateProductPurchasePlan }: { data?: Retu
 }
 const open = (sku = "000101") => fireEvent.click(screen.getByRole("button", { name: new RegExp(`Open purchase plan.*${sku}`) }));
 const detail = () => within(screen.getByRole("region", { name: "Same product name" }));
-const openDetails = () => fireEvent.click(screen.getByText("Product details and records"));
+const openDetails = () => fireEvent.click(screen.getByText("More product details"));
 
 describe("purchase planning", () => {
   it("routes both impact actions to the existing dashboard callback", () => {
@@ -100,11 +100,11 @@ describe("purchase planning", () => {
     expect(evaluate.mock.calls.length).toBe(count + 1);
     fireEvent.change(screen.getByLabelText("Incoming stock"), { target: { value: "40" } });
     expect(evaluate.mock.calls.length).toBe(count + 2);
-    expect(screen.getByText("Product details and records").closest("details")?.open).toBe(false);
+    expect(screen.getByText("More product details").closest("details")?.open).toBe(false);
     expect(screen.getByRole("region", { name: "Estimated purchase spending" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Done, next product →" })).toBeTruthy();
     openDetails();
-    expect(screen.getByText("Product details and records").closest("details")?.open).toBe(true);
+    expect(screen.getByText("More product details").closest("details")?.open).toBe(true);
     expect(screen.getByRole("img", { name: /Recorded sales/ })).toBeTruthy();
     expect((screen.getByLabelText("Exact planned order quantity") as HTMLInputElement).value).toBe("23");
     expect((screen.getByLabelText("Incoming stock") as HTMLInputElement).value).toBe("40");

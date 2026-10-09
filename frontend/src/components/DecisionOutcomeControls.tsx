@@ -11,6 +11,8 @@ interface Props {
   readonly product: { readonly key: string; readonly title: string; readonly sku?: string; readonly pack?: string };
   readonly snapshot: ReadinessSnapshot;
   readonly plan?: ProductPurchasePlan;
+  readonly mode?: 'decisions' | 'outcomes' | 'all';
+  readonly plannedQuantity?: number;
   readonly onChanged?: () => void;
 }
 
@@ -21,16 +23,18 @@ export function malaysiaToday(now = new Date()): string {
 }
 
 /** Explicit choices and measured outcomes are separate from autosaved recommendation previews. */
-export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, onChanged }: Props) {
+export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, mode = 'all', plannedQuantity, onChanged }: Props) {
   const language = useLanguage();
   const copy = (en: string, zh: string, ms: string) => language === "zh" ? zh : language === "ms" ? ms : en;
   const today = malaysiaToday();
+  const recommendation = plan?.estimatedRestock.state === "available" ? plan.estimatedRestock.quantity.value : undefined;
+  const draftResponse = plannedQuantity !== undefined && plannedQuantity !== recommendation ? 'Changed' : 'Followed';
   const [decisions, setDecisions] = useState<readonly PurchaseDecision[]>([]);
   const [historyFrom, setHistoryFrom] = useState("");
   const [historyTo, setHistoryTo] = useState("");
   const [outcomes, setOutcomes] = useState<readonly RecordedStockOutcome[]>([]);
-  const [response, setResponse] = useState<DecisionResponse>("Followed");
-  const [finalQuantity, setFinalQuantity] = useState("");
+  const [response, setResponse] = useState<DecisionResponse>(draftResponse);
+  const [finalQuantity, setFinalQuantity] = useState(String(plannedQuantity ?? recommendation ?? ''));
   const [decisionDate, setDecisionDate] = useState(today);
   const [restockDate, setRestockDate] = useState("");
   const [reason, setReason] = useState("");
@@ -46,7 +50,6 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, on
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
-  const recommendation = plan?.estimatedRestock.state === "available" ? plan.estimatedRestock.quantity.value : undefined;
   const expiryBlocked = plan?.estimatedRestock && "afterUnavailableReason" in plan.estimatedRestock && Boolean(plan.estimatedRestock.afterUnavailableReason);
   const sample = snapshot.sourceMode === "sample";
   const visibleDecisions = decisions.filter(item => (!historyFrom || item.decisionDate >= historyFrom) && (!historyTo || item.decisionDate <= historyTo));
@@ -59,9 +62,9 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, on
   }, [datasetId, product.key]);
   useEffect(() => { void load().catch(() => setError(copy("Saved history could not be read. Try again.", "无法读取已保存的历史，请重试。", "Sejarah tersimpan tidak dapat dibaca. Cuba lagi."))); }, [load, language]);
   useEffect(() => {
-    setFinalQuantity(recommendation === undefined ? "" : String(recommendation));
+    setFinalQuantity(String(plannedQuantity ?? recommendation ?? ''));
     setEditingDecision(undefined); setEditingOutcome(undefined); setDeleteTarget(undefined);
-    setResponse("Followed"); setReason(""); setSupplier(""); setRestockDate(""); setQuantity(""); setRelatedDecision(""); setError(undefined); setMessage(undefined);
+    setResponse(draftResponse); setReason(""); setSupplier(""); setRestockDate(""); setQuantity(""); setRelatedDecision(""); setError(undefined); setMessage(undefined);
   }, [product.key, datasetId]);
   useEffect(() => { if (!editingDecision && response === "Followed") setFinalQuantity(recommendation === undefined ? "" : String(recommendation)); }, [recommendation, editingDecision, response]);
 
@@ -81,7 +84,7 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, on
     catch (failure) { setError(describeError(failure)); return false; }
     finally { setBusy(false); }
   };
-  const resetDecision = () => { setEditingDecision(undefined); setResponse("Followed"); setFinalQuantity(recommendation === undefined ? "" : String(recommendation)); setDecisionDate(today); setRestockDate(""); setReason(""); setSupplier(""); };
+  const resetDecision = () => { setEditingDecision(undefined); setResponse(draftResponse); setFinalQuantity(String(plannedQuantity ?? recommendation ?? '')); setDecisionDate(today); setRestockDate(""); setReason(""); setSupplier(""); };
   const saveDecision = async () => {
     if (!datasetId || (!editingDecision && (recommendation === undefined || expiryBlocked))) return;
     const edit = { response, finalQuantity, decisionDate, restockDate, reason, supplier, referenceDate: today };
@@ -99,10 +102,13 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, on
   const kindName = (value: StockOutcomeKind) => value === "discarded" ? copy("Discarded", "已丢弃", "Dibuang") : value === "expired" ? copy("Expired", "已过期", "Luput") : value === "sales" ? copy("Recorded sales", "实际销售", "Jualan direkodkan") : copy("Stock count", "库存盘点", "Kiraan stok");
   const unitName = (value: OutcomeUnit) => value === "pieces" ? copy("pieces", "件", "unit") : value === "kg" ? copy("kg", "公斤", "kg") : copy("litres", "升", "liter");
 
-  return <section className="decision-outcomes" aria-label={copy("Purchase decisions and actual outcomes", "采购决定与实际结果", "Keputusan pembelian dan hasil sebenar")}>
+  return <section className="decision-outcomes" aria-label={mode === 'decisions' ? copy('Saved purchase choices', '已保存的采购选择', 'Pilihan belian disimpan') : mode === 'outcomes' ? copy('Actual stock records', '实际库存记录', 'Rekod stok sebenar') : copy("Purchase decisions and actual outcomes", "采购决定与实际结果", "Keputusan pembelian dan hasil sebenar")}>
+    {mode !== 'outcomes' && <>
     <h3>{copy("Record your purchase decision", "记录您的采购决定", "Rekod keputusan pembelian anda")}</h3>
     <p>{product.title}{product.sku && <> · {product.sku}</>}{product.pack && <> · {product.pack}</>}</p>
     {!canSave && <p className="decision-outcomes__note">{sample ? copy("Sample choices are illustrative and are excluded from business outcome history.", "示例选择仅供演示，不会计入实际经营结果历史。", "Pilihan sampel adalah ilustrasi dan tidak dimasukkan dalam sejarah hasil perniagaan.") : copy("Save this dataset before recording decisions or outcomes.", "请先保存此数据集，再记录决定或实际结果。", "Simpan set data ini sebelum merekod keputusan atau hasil.")}</p>}
+    <p>{copy('Draft changes save automatically. Save this choice only when you have decided what to buy; it is kept as a separate record.', '草稿修改会自动保存。确定采购量后才保存最终选择；它会单独记录。', 'Perubahan draf disimpan secara automatik. Simpan pilihan ini apabila anda sudah memutuskan belian; ia menjadi rekod berasingan.')}</p>
+    {plannedQuantity !== undefined && <p>{copy('Current draft order', '当前草稿订单', 'Pesanan draf semasa')}: <strong>{plannedQuantity} {unitName('pieces')}</strong></p>}
     {recommendation === undefined || expiryBlocked ? <p>{copy("A usable purchase recommendation is required before saving a new decision. Return to readiness or correct planning evidence.", "保存新决定前需要可用的采购建议，请返回数据检查或修正计划依据。", "Cadangan pembelian yang boleh digunakan diperlukan sebelum keputusan baharu disimpan. Kembali ke kesediaan atau betulkan bukti perancangan.")}</p> : <p>{copy("Current recommendation", "当前建议", "Cadangan semasa")}: <strong>{recommendation} {unitName("pieces")}</strong></p>}
     <form onSubmit={event => { event.preventDefault(); void saveDecision(); }}>
       <fieldset disabled={!canSave || busy}>
@@ -111,14 +117,13 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, on
           <label>{copy("Response", "回应", "Tindakan")}<select value={response} onChange={event => { const next = event.target.value as DecisionResponse; setResponse(next); if (next === "Followed") { const original = decisions.find(item => item.id === editingDecision)?.recommendation.recommendedQuantity ?? recommendation; setFinalQuantity(original === undefined ? "" : String(original)); } }}>{(["Followed", "Changed", "Ignored"] as const).map(value => <option key={value} value={value}>{responseName(value)}</option>)}</select></label>
           <label>{copy("Final quantity", "最终数量", "Kuantiti akhir")}<input inputMode="numeric" value={finalQuantity} readOnly={response === "Followed"} onChange={event => setFinalQuantity(event.target.value)} /></label>
           <label>{copy("Decision date", "决定日期", "Tarikh keputusan")}<input type="date" value={decisionDate} max={today} onChange={event => setDecisionDate(event.target.value)} /></label>
-          <label>{copy("Restock date (optional)", "补货日期（可选）", "Tarikh tambah stok (pilihan)")}<input type="date" value={restockDate} onChange={event => setRestockDate(event.target.value)} /></label>
-          <label>{copy("Supplier (optional)", "供应商（可选）", "Pembekal (pilihan)")}<input value={supplier} onChange={event => setSupplier(event.target.value)} /></label>
-          <label className="decision-outcomes__wide">{copy("Reason (optional)", "原因（可选）", "Sebab (pilihan)")}<input value={reason} onChange={event => setReason(event.target.value)} /></label>
+          <label className="decision-outcomes__wide">{response === 'Changed' ? copy('Reason for changing the order', '修改订单的原因', 'Sebab mengubah pesanan') : copy("Reason (optional)", "原因（可选）", "Sebab (pilihan)")}<input required={response === 'Changed'} value={reason} onChange={event => setReason(event.target.value)} /></label>
         </div>
+        <details className="decision-outcomes__optional"><summary>{copy('Optional supplier and restock details', '可选的供应商与补货详情', 'Butiran pembekal dan tambah stok pilihan')}</summary><div className="decision-outcomes__grid"><label>{copy("Restock date (optional)", "补货日期（可选）", "Tarikh tambah stok (pilihan)")}<input type="date" value={restockDate} onChange={event => setRestockDate(event.target.value)} /></label><label>{copy("Supplier (optional)", "供应商（可选）", "Pembekal (pilihan)")}<input value={supplier} onChange={event => setSupplier(event.target.value)} /></label></div></details>
         <div className="decision-outcomes__actions"><button className="btn btn--primary" type="submit" disabled={!editingDecision && (recommendation === undefined || !!expiryBlocked)}>{copy("Save decision", "保存决定", "Simpan keputusan")}</button>{editingDecision && <button className="btn btn--ghost" type="button" onClick={resetDecision}>{copy("Cancel edit", "取消修改", "Batal suntingan")}</button>}</div>
       </fieldset>
     </form>
-    <h4>{copy("Recorded decisions", "已记录的决定", "Keputusan direkodkan")}</h4>
+    <details className="decision-outcomes__records"><summary>{copy(`Saved purchase decisions (${decisions.length})`, `已保存的采购决定（${decisions.length}）`, `Keputusan belian disimpan (${decisions.length})`)}</summary>
     <div className="decision-outcomes__grid"><label>{copy("History from", "历史开始日期", "Sejarah dari")}<input type="date" value={historyFrom} onChange={event => setHistoryFrom(event.target.value)} /></label><label>{copy("History to", "历史结束日期", "Sejarah hingga")}<input type="date" value={historyTo} onChange={event => setHistoryTo(event.target.value)} /></label></div>
     {(historyFrom || historyTo) && <button type="button" onClick={() => { setHistoryFrom(""); setHistoryTo(""); }}>{copy("Clear history filter", "清除历史筛选", "Kosongkan penapis sejarah")}</button>}
     {visibleDecisions.length === 0 ? <p>{copy("No purchase decision recorded for this product and period.", "此商品与所选期间尚未记录采购决定。", "Tiada keputusan pembelian direkodkan untuk produk dan tempoh ini.")}</p> : <ul className="decision-outcomes__history">{visibleDecisions.map(item => <li key={item.id}>
@@ -127,7 +132,10 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, on
       {item.reason && <p>{item.reason}</p>}{item.restockDate && <p>{copy("Restock date", "补货日期", "Tarikh tambah stok")}: {item.restockDate}</p>}
       <div className="decision-outcomes__actions"><button type="button" disabled={busy} onClick={() => { setEditingDecision(item.id); setResponse(item.response); setFinalQuantity(String(item.finalQuantity)); setDecisionDate(item.decisionDate); setRestockDate(item.restockDate ?? ""); setReason(item.reason ?? ""); setSupplier(item.supplier ?? ""); }}>{copy("Edit decision", "修改决定", "Sunting keputusan")}</button><button type="button" disabled={busy} onClick={() => setDeleteTarget({ kind: "decision", id: item.id })}>{copy("Delete decision", "删除决定", "Padam keputusan")}</button></div>
     </li>)}</ul>}
+    </details></>}
+    {mode !== 'decisions' && <>
     <h3>{copy("Record actual stock outcomes", "记录实际库存结果", "Rekod hasil stok sebenar")}</h3>
+    {mode === 'outcomes' && <><p>{product.title}{product.sku && <> · {product.sku}</>}{product.pack && <> · {product.pack}</>}</p>{!canSave && <p className="decision-outcomes__note">{sample ? copy('Sample records are for practice and do not enter your saved history.', '示例记录仅供练习，不会进入已保存的历史。', 'Rekod contoh untuk latihan dan tidak masuk sejarah disimpan.') : copy('Save this dataset before recording outcomes.', '请先保存此数据集，再记录实际结果。', 'Simpan set data ini sebelum merekod hasil.')}</p>}</>}
     <p>{copy("Recorded waste is separate from predicted excess. No record is different from a recorded zero.", "实际浪费与预测的过量库存分开记录。没有记录与记录为零不同。", "Sisa direkodkan berasingan daripada lebihan ramalan. Tiada rekod berbeza daripada sifar direkodkan.")}</p>
     <form onSubmit={event => { event.preventDefault(); if (!datasetId) return; void (async () => {
       const existing = outcomes.find(item => item.id === editingOutcome);
@@ -149,7 +157,7 @@ export function DecisionOutcomeControls({ datasetId, product, snapshot, plan, on
         <div className="decision-outcomes__actions"><button className="btn btn--primary" type="submit">{copy("Save actual outcome", "保存实际结果", "Simpan hasil sebenar")}</button>{editingOutcome && <button type="button" onClick={() => { setEditingOutcome(undefined); setQuantity(""); }}>{copy("Cancel edit", "取消修改", "Batal suntingan")}</button>}</div>
       </fieldset>
     </form>
-    {outcomes.length === 0 ? <p>{copy("No outcome recorded.", "尚无实际结果记录。", "Tiada hasil direkodkan.")}</p> : <ul className="decision-outcomes__history">{outcomes.map(item => <li key={item.id}><strong>{kindName(item.kind)} · {item.quantity} {unitName(item.unit)}</strong> · {item.date}{item.quantity === 0 && <p>{copy("Recorded zero", "已记录为零", "Sifar direkodkan")}</p>}<div className="decision-outcomes__actions"><button type="button" disabled={busy} onClick={() => { setEditingOutcome(item.id); setKind(item.kind); setOutcomeDate(item.date); setQuantity(String(item.quantity)); setUnit(item.unit); setRelatedDecision(item.decisionId ?? ""); }}>{copy("Edit outcome", "修改实际结果", "Sunting hasil")}</button><button type="button" disabled={busy} onClick={() => setDeleteTarget({ kind: "outcome", id: item.id })}>{copy("Delete outcome", "删除实际结果", "Padam hasil")}</button></div></li>)}</ul>}
+    <details className="decision-outcomes__records"><summary>{copy(`Saved actual records (${outcomes.length})`, `已保存的实际记录（${outcomes.length}）`, `Rekod sebenar disimpan (${outcomes.length})`)}</summary>{outcomes.length === 0 ? <p>{copy("No outcome recorded.", "尚无实际结果记录。", "Tiada hasil direkodkan.")}</p> : <ul className="decision-outcomes__history">{outcomes.map(item => <li key={item.id}><strong>{kindName(item.kind)} · {item.quantity} {unitName(item.unit)}</strong> · {item.date}{item.quantity === 0 && <p>{copy("Recorded zero", "已记录为零", "Sifar direkodkan")}</p>}<div className="decision-outcomes__actions"><button type="button" disabled={busy} onClick={() => { setEditingOutcome(item.id); setKind(item.kind); setOutcomeDate(item.date); setQuantity(String(item.quantity)); setUnit(item.unit); setRelatedDecision(item.decisionId ?? ""); }}>{copy("Edit outcome", "修改实际结果", "Sunting hasil")}</button><button type="button" disabled={busy} onClick={() => setDeleteTarget({ kind: "outcome", id: item.id })}>{copy("Delete outcome", "删除实际结果", "Padam hasil")}</button></div></li>)}</ul>}</details></>}
     {deleteTarget && <div role="alertdialog" aria-label={copy("Confirm deletion", "确认删除", "Sahkan pemadaman")}><p>{deleteTarget.kind === "decision" ? copy("Delete this decision? Actual outcomes remain recorded.", "删除此决定？实际结果记录会保留。", "Padam keputusan ini? Hasil sebenar kekal direkodkan.") : copy("Delete this actual outcome?", "删除此实际结果记录？", "Padam hasil sebenar ini?")}</p><div className="decision-outcomes__actions"><button type="button" disabled={busy} onClick={() => { if (!datasetId) return; void act(() => deleteTarget.kind === "decision" ? removeSavedDecision(datasetId, deleteTarget.id) : removeSavedOutcome(datasetId, deleteTarget.id), copy("Record deleted.", "记录已删除。", "Rekod dipadam.")).then(success => { if (success) setDeleteTarget(undefined); }); }}>{copy("Confirm delete", "确认删除", "Sahkan padam")}</button><button type="button" onClick={() => setDeleteTarget(undefined)}>{copy("Cancel", "取消", "Batal")}</button></div></div>}
     {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
   </section>;

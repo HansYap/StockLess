@@ -15,10 +15,12 @@ interface Props {
   analysisDate: string; terms: SupplierOrderTerms; onTermsChange: (terms: SupplierOrderTerms) => void;
   onChange: (inputs: ProductPurchaseInputs) => void; onReviewData: () => void;
   datasetId?: string; onPlanningChange?: (context: ProductPlanningContext) => void;
+  decisionFocus?: { productKey: string; revision: number };
+  onOutcomes?: () => void; onDownloads?: () => void;
   position?: number; total: number; onPrevious?: () => void; onNext?: () => void; onDone: () => void;
 }
 
-export function ProductPurchasePanel({ product, plan, inputs, analysisDate, terms, onTermsChange, onChange, onReviewData, datasetId, onPlanningChange, position, total, onPrevious, onNext, onDone }: Props) {
+export function ProductPurchasePanel({ product, plan, inputs, analysisDate, terms, onTermsChange, onChange, onReviewData, datasetId, onPlanningChange, decisionFocus, onOutcomes, onDownloads, position, total, onPrevious, onNext, onDone }: Props) {
   const language = useLanguage();
   const copy = (en:string,zh:string,ms:string) => language === "zh" ? zh : language === "ms" ? ms : en;
   const [showEvidence, setShowEvidence] = useState(true);
@@ -27,6 +29,9 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
   const [errors, setErrors] = useState<Partial<Record<keyof ProductPurchaseInputs, string>>>({});
   const [supplierRaw, setSupplierRaw] = useState<Partial<Record<keyof SupplierOrderTerms, string>>>({});
   const [supplierErrors, setSupplierErrors] = useState<Partial<Record<keyof SupplierOrderTerms, string>>>({});
+  const [decisionOpen, setDecisionOpen] = useState(false);
+  const decision = useRef<HTMLDetailsElement>(null);
+  useEffect(() => { if (decisionFocus?.productKey === product.key) { setDecisionOpen(true); requestAnimationFrame(() => { decision.current?.scrollIntoView?.({behavior:'smooth',block:'start'}); decision.current?.querySelector('summary')?.focus({preventScroll:true}); }); } }, [decisionFocus, product.key]);
   // A reviewed bulk change must also replace any local text for the old order.
   useEffect(() => {
     setTyped(previous => {
@@ -113,7 +118,8 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
     <section className="pp-spending" aria-label={t("Estimated purchase spending")}><div className="pp-spending-total"><h3>{t("Estimated purchase spending")}</h3><b className="num">{spending?.state === "estimated" && !invalidQuantity ? `MYR ${spending.amount.toFixed(2)}` : t(spending?.state === "not_entered" && !invalidQuantity ? "Not entered" : "Unavailable")}</b></div>{spending?.state === "estimated" && !invalidQuantity ? <small>{spending.quantity} × MYR {spending.unitCost} · {t("Estimated")}</small> : <p className="pp-small-note">{t(invalidQuantity ? "Correct the quantity." : spending?.state !== "estimated" ? spending?.reason : "No validated unit cost.")} {spending?.state !== "estimated" && !invalidQuantity && t(spending?.correctiveAction)}</p>}</section>
     {plan?.expiryRisk?.state === "estimated" && plan.expiryRisk.quantity > 0 && <p className="pp-expiry-warning" role="status">{copy(`${numberText(plan.expiryRisk.quantity)} units may reach expiry before selling. Review expiry information below.`, `${numberText(plan.expiryRisk.quantity)} 件库存可能在售出前到期。请查看下方到期信息。`, `${numberText(plan.expiryRisk.quantity)} unit mungkin luput sebelum dijual. Semak maklumat luput di bawah.`)}</p>}
     <footer className="pp-detail-footer"><button type="button" className="btn btn--primary" onClick={onDone}>{t("Done, next product →")}</button></footer>
-    <details className="pp-product-details"><summary>{copy("Product details and records", "商品详情与记录", "Butiran dan rekod produk")}<small>{copy("Sales history, expiry, suppliers and saved records", "销售记录、到期、供应商与已保存记录", "Sejarah jualan, luput, pembekal dan rekod disimpan")}</small></summary><div className="pp-product-details-body">
+    {product.readinessSnapshot && <details className="cp3-controls pp-final-choice" ref={decision} open={decisionOpen} onToggle={event=>setDecisionOpen(event.currentTarget.open)}><summary>{copy('Save your final choice', '保存最终选择', 'Simpan pilihan akhir anda')}<small>{copy('Optional · decide what to buy after reviewing your draft', '可选 · 核对草稿后确定采购量', 'Pilihan · putuskan belian selepas menyemak draf')}</small></summary>{decisionOpen && <DecisionOutcomeControls mode="decisions" datasetId={datasetId} product={product} snapshot={product.readinessSnapshot} plan={plan} plannedQuantity={inputs.plannedOrder.state === 'value' ? inputs.plannedOrder.value : undefined} />}{decisionOpen && (onOutcomes || onDownloads) && <div className="cp3-actions">{onDownloads && <button type="button" className="btn btn--ghost" onClick={onDownloads}>{copy('Download saved final orders', '下载已保存的最终订单', 'Muat turun pesanan akhir disimpan')} →</button>}{onOutcomes && <button type="button" className="btn btn--ghost" onClick={onOutcomes}>{copy('Record what happened in Impact', '在影响页记录实际情况', 'Rekod apa yang berlaku dalam Impak')} →</button>}</div>}</details>}
+    <details className="pp-product-details"><summary>{copy("More product details", "更多商品详情", "Butiran produk lanjut")}<small>{copy("Sales history, expiry and supplier options", "销售记录、到期与供应商选项", "Sejarah jualan, luput dan pilihan pembekal")}</small></summary><div className="pp-product-details-body">
     {plannable && <section className="pp-demand"><div className="pp-demand-head"><h3>{t("Demand and stock")}</h3><button type="button" className="pp-link-button" aria-expanded={showEvidence} aria-controls="purchase-demand-evidence" onClick={() => setShowEvidence(!showEvidence)}>{t(showEvidence ? "Hide evidence" : "Show evidence")}</button></div>
       {showEvidence && <div className="pp-demand-body" id="purchase-demand-evidence"><div className="pp-demand-main"><p className="pp-small-note">{t("Expected sales in the next 4 weeks")}</p><p className="pp-demand-range"><b>{demandRangeText(range.low, range.high)} {t("units")}</b><span>{purchaseDate(analysisDate)} – {purchaseDate(addCalendarDays(analysisDate, 27))}</span></p>
         <PurchaseDemandChart weeks={product.evidence?.timeline.weeks ?? []} range={range} name={product.title} analysisDate={analysisDate} />
@@ -140,7 +146,6 @@ export function ProductPurchasePanel({ product, plan, inputs, analysisDate, term
     </details>}
     {plan?.expiryRisk && <details className="cp3-controls"><summary>{copy("Stock at expiry risk", "可能到期的库存", "Stok berisiko luput")}</summary><p>{plan.expiryRisk.state === 'estimated' ? `${plan.expiryRisk.quantity} ${copy('units, estimated; range','件（估算）；范围','unit, anggaran; julat')} ${plan.expiryRisk.low}–${plan.expiryRisk.high} · FEFO` : t(plan.expiryRisk.reason)}</p>{plan.expiryRisk.state === 'estimated' && <p>{copy("Expiry risk is rounded up to whole sales units; usable stock cannot fall below zero.", "到期风险向上取整为完整销售单位；可用库存最低为零。", "Risiko luput dibundarkan ke atas kepada unit jualan penuh; stok boleh guna tidak kurang daripada sifar.")}</p>}{plan?.restockAge && <p>{plan.restockAge.state === 'entered' ? `${copy('Last restock','最近补货','Stok semula terakhir')}: ${purchaseDate(plan.restockAge.date, true)} · ${copy('Days since restock','补货后天数','Hari sejak stok semula')}: ${plan.restockAge.elapsedDays} · ${copy('your date','您填写的日期','tarikh anda')}` : t(plan.restockAge.reason)}</p>}</details>}
     {product.readinessSnapshot && onPlanningChange && <PlanningInputsPanel snapshot={product.readinessSnapshot} productKey={product.key} value={product.planningContext} onChange={onPlanningChange} />}
-    {product.readinessSnapshot && datasetId && <details className="cp3-controls"><summary>{copy("Decisions and actual outcomes", "决策与实际结果", "Keputusan dan hasil sebenar")}</summary><DecisionOutcomeControls datasetId={datasetId} product={product} snapshot={product.readinessSnapshot} plan={plan} /></details>}
     <SupplierComparison estimate={product.issue ? undefined : restock} analysisDate={analysisDate} sample={product.readinessSnapshot?.sourceMode === "sample"} onAdopt={adopt} disabled={invalidQuantity || Boolean(product.issue)} />
     </div></details>
   </section>;

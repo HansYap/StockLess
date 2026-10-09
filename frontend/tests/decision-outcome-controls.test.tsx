@@ -27,7 +27,8 @@ it("only saves an explicit choice and supplies frozen source, labels and policy 
   const input = props(); render(<DecisionOutcomeControls {...input} />);
   fireEvent.change(screen.getByLabelText("Response"), { target: { value: "Changed" } });
   fireEvent.change(screen.getByLabelText("Final quantity"), { target: { value: "6" } });
-  fireEvent.change(screen.getByLabelText("Reason (optional)"), { target: { value: "Shelf space" } });
+  fireEvent.change(screen.getByLabelText("Reason for changing the order"), { target: { value: "Shelf space" } });
+  fireEvent.click(screen.getByText('Optional supplier and restock details'));
   fireEvent.change(screen.getByLabelText("Supplier (optional)"), { target: { value: "Local supplier" } });
   fireEvent.click(screen.getByRole("button", { name: "Save decision" }));
   await waitFor(() => expect(savePurchaseDecision).toHaveBeenCalledOnce());
@@ -51,7 +52,8 @@ it("records actual zero separately and requires confirmation before deleting a d
   vi.mocked(getSavedDataset).mockResolvedValue({ decisions: [{ id: "saved", purchaseDecision: decision }], outcomes: [] } as never);
   vi.mocked(saveStockOutcome).mockResolvedValue(undefined as never);
   render(<DecisionOutcomeControls {...input} />);
-  await screen.findByRole("button", { name: "Delete decision" });
+  await screen.findByText('Saved purchase decisions (1)');
+  fireEvent.click(screen.getByText('Saved purchase decisions (1)'));
   fireEvent.change(screen.getByLabelText("Recorded quantity"), { target: { value: "0" } });
   fireEvent.click(screen.getByRole("button", { name: "Save actual outcome" }));
   await waitFor(() => expect(saveStockOutcome).toHaveBeenCalledWith("dataset-1", expect.objectContaining({ quantity: "0", kind: "discarded", unit: "pieces", productKey: "A" })));
@@ -59,4 +61,32 @@ it("records actual zero separately and requires confirmation before deleting a d
   expect(removeSavedDecision).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(removeSavedDecision).not.toHaveBeenCalled();
+});
+
+it('starts a final choice from the entered draft without automatically recording it', async () => {
+  const input = props(); render(<DecisionOutcomeControls {...input} mode="decisions" plannedQuantity={0} />);
+  expect((screen.getByLabelText('Response') as HTMLSelectElement).value).toBe('Changed');
+  expect((screen.getByLabelText('Final quantity') as HTMLInputElement).value).toBe('0');
+  expect(screen.queryByLabelText('Recorded quantity')).toBeNull();
+  expect(screen.getByText('Optional supplier and restock details').closest('details')?.open).toBe(false);
+  expect(screen.getByText('Saved purchase decisions (0)').closest('details')?.open).toBe(false);
+  expect(savePurchaseDecision).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Reason for changing the order'), {target:{value:'Enough stock'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save decision'}));
+  await waitFor(()=>expect(savePurchaseDecision).toHaveBeenCalledWith('dataset-1',expect.objectContaining({response:'Changed',finalQuantity:'0',reason:'Enough stock',recommendation:expect.objectContaining({recommendedQuantity:input.plan.estimatedRestock.state==='available'?input.plan.estimatedRestock.quantity.value:undefined})})));
+  expect(saveStockOutcome).not.toHaveBeenCalled();
+});
+
+it('records actual outcomes in their own view while retaining links to purchase decisions', async () => {
+  const input=props(), decision=createPurchaseDecision({id:'choice',datasetId:'dataset-1',response:'Followed',referenceDate:'2026-10-08',recordedAt:'2026-10-08T10:00:00Z',recommendation:{productKey:'A',productName:'Tea',sourceName:'sales.csv',sourceSha256:'hash',sourceMode:'user',analysisDate:'2026-09-14',policyVersion:'cp3-v2',recommendedQuantity:12,quantityUnit:'pieces'}});
+  vi.mocked(getSavedDataset).mockResolvedValue({decisions:[{id:decision.id,purchaseDecision:decision}],outcomes:[]} as never);
+  render(<DecisionOutcomeControls {...input} mode="outcomes" />);
+  await screen.findByRole('option',{name:/Followed · 12/});
+  expect(screen.queryByLabelText('Response')).toBeNull();
+  expect(screen.queryByRole('button',{name:'Save decision'})).toBeNull();
+  fireEvent.change(screen.getByLabelText('Related decision (optional)'),{target:{value:'choice'}});
+  fireEvent.change(screen.getByLabelText('Recorded quantity'),{target:{value:'0'}});
+  fireEvent.click(screen.getByRole('button',{name:'Save actual outcome'}));
+  await waitFor(()=>expect(saveStockOutcome).toHaveBeenCalledWith('dataset-1',expect.objectContaining({decisionId:'choice',quantity:'0',kind:'discarded',productKey:'A'})));
+  expect(savePurchaseDecision).not.toHaveBeenCalled();
 });
