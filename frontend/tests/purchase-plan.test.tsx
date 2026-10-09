@@ -15,6 +15,7 @@ function Harness({ data, evaluate = evaluateProductPurchasePlan }: { data?: Retu
 }
 const open = (sku = "000101") => fireEvent.click(screen.getByRole("button", { name: new RegExp(`Open purchase plan.*${sku}`) }));
 const detail = () => within(screen.getByRole("region", { name: "Same product name" }));
+const openDetails = () => fireEvent.click(screen.getByText("Product details and records"));
 
 describe("purchase planning", () => {
   it("routes both impact actions to the existing dashboard callback", () => {
@@ -60,6 +61,9 @@ describe("purchase planning", () => {
     fireEvent.change(screen.getByLabelText("Exact planned order quantity"), { target: { value: "0" } });
     expect(screen.queryByText("No plan entered; stock after ordering and shortage are not assessed.")).toBeNull();
     expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("0 units");
+    expect(screen.getByText("Why this purchase check?").closest("details")?.open).toBe(false);
+    fireEvent.click(screen.getByText("Why this purchase check?"));
+    expect(screen.getByText("Why this purchase check?").closest("details")?.open).toBe(true);
     expect(screen.getByRole("img", { name: /^Stock after order:/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Clear planned order" }));
     expect(screen.getByText("No plan entered; stock after ordering and shortage are not assessed.")).toBeTruthy();
@@ -88,7 +92,7 @@ describe("purchase planning", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.getAllByRole("row")).toHaveLength(4);
   });
-  it("updates only the edited product and does not reevaluate plans when toggling evidence", () => {
+  it("keeps ordering available with details closed and retains quantities without recalculating when details are opened", () => {
     const evaluate = vi.fn(evaluateProductPurchasePlan);
     render(<Harness evaluate={evaluate} />); open();
     const count = evaluate.mock.calls.length;
@@ -96,6 +100,14 @@ describe("purchase planning", () => {
     expect(evaluate.mock.calls.length).toBe(count + 1);
     fireEvent.change(screen.getByLabelText("Incoming stock"), { target: { value: "40" } });
     expect(evaluate.mock.calls.length).toBe(count + 2);
+    expect(screen.getByText("Product details and records").closest("details")?.open).toBe(false);
+    expect(screen.getByRole("region", { name: "Estimated purchase spending" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Done, next product →" })).toBeTruthy();
+    openDetails();
+    expect(screen.getByText("Product details and records").closest("details")?.open).toBe(true);
+    expect(screen.getByRole("img", { name: /Recorded sales/ })).toBeTruthy();
+    expect((screen.getByLabelText("Exact planned order quantity") as HTMLInputElement).value).toBe("23");
+    expect((screen.getByLabelText("Incoming stock") as HTMLInputElement).value).toBe("40");
     fireEvent.click(screen.getByRole("button", { name: "Hide evidence" }));
     expect(screen.queryByRole("img", { name: /Recorded sales/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Show evidence" }));
@@ -122,6 +134,7 @@ describe("purchase planning", () => {
     expect((screen.getByLabelText("Planned order") as HTMLInputElement).value).toBe("20");
     expect((screen.getByLabelText("Incoming stock") as HTMLInputElement).value).toBe("3");
     expect(detail().getAllByText("from your file").length).toBeGreaterThan(1);
+    openDetails();
     fireEvent.click(screen.getByRole("button", { name: /Expiry information/ }));
     expect(detail().getByText(/Expires in 6 days/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "21" } });
@@ -149,6 +162,7 @@ describe("purchase planning", () => {
   it("keeps supplier terms per product and applies rounded cases only on request", () => {
     render(<Harness />); open();
     const initial = (screen.getByLabelText("Planned order") as HTMLInputElement).value;
+    openDetails();
     fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
     fireEvent.change(screen.getByLabelText("Case size"), { target: { value: "12" } });
     fireEvent.change(screen.getByLabelText("Minimum order"), { target: { value: "36" } });
@@ -161,9 +175,9 @@ describe("purchase planning", () => {
     fireEvent.change(screen.getByLabelText("Case size"), { target: { value: "0" } });
     expect(screen.queryByRole("button", { name: /^Use supplier quantity/ })).toBeNull();
     expect(screen.getByRole("alert").textContent).toContain("whole case size");
-    open("000202"); fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
+    open("000202"); openDetails(); fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
     expect((screen.getByLabelText("Case size") as HTMLInputElement).value).toBe("");
-    open(); fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
+    open(); openDetails(); fireEvent.click(screen.getByRole("button", { name: /Supplier terms/ }));
     expect((screen.getByLabelText("Case size") as HTMLInputElement).value).toBe("12");
     const product = joinPurchaseEvidence(makeEvidence().snapshot, makeEvidence().forecast)[0];
     const plan = evaluateProductPurchasePlan(product.demand!, { analysisDate: "2026-09-14", stock: product.stock });
