@@ -697,6 +697,9 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
 
   if (openingDataset) return <OpeningScreen title="Opening your saved dataset…" />;
 
+  const replacementId = guidedImport ? returnPlanId : updateTargetId ?? pendingUploadTarget.current ?? activeSavedId;
+  const replacementSummary = savedDatasets.find(item => item.id === replacementId) ?? uploadTarget;
+
   return (
     <AppShell
       onGuide={async () => {
@@ -735,6 +738,12 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           onSource={handleSource}
           onCancel={workspaceActive ? () => setSessionNotice(null) : handleClearSession}
           updating={workspaceActive}
+          hasSavedPlan={Boolean(replacementId)}
+          currentFileName={replacementId ? replacementSummary?.datasetName ?? t("Your current plan") : dataset?.sourceName}
+          onKeepCurrentPlan={replacementId ? () => {
+            onboarding.stop();
+            window.location.hash = `#dataset/${encodeURIComponent(replacementId)}`;
+          } : dataset ? () => goTo(2) : undefined}
         />
       ))}
 
@@ -752,6 +761,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           onSelectIdentity={handleSelectIdentity}
           onBack={() => workspaceActive ? beginReupload() : setStep(1)}
           checking={readinessLoading || mappingSubmitting}
+          replacingCurrentPlan={dataset.sourceMode === "user" && Boolean(pendingUploadTarget.current)}
           onConfirmAllAndContinue={() => void handleConfirmAllAndContinue()}
         />
       ))}

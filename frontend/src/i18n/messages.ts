@@ -3,6 +3,7 @@ import { purchaseMessages } from "./purchase-refresh.ts";
 import { savedWorkspaceMessages } from "./saved-workspace.ts";
 import { onboardingMessages } from "./onboarding.ts";
 import { i3CompletionMessages } from "./i3-completion.ts";
+import { uploadMessages } from "./upload.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
 export const messages: Record<string, readonly [string, string]> = {
   "Suggested drafts are calculated automatically. Adjust the quantity if needed; zero is a valid order.": ["建议草稿会自动计算。需要时可调整数量；零也是有效订单。", "Draf cadangan dikira secara automatik. Laraskan kuantiti jika perlu; sifar ialah pesanan sah."],
@@ -3694,6 +3695,7 @@ Object.assign(messages, savedWorkspaceMessages);
 Object.assign(messages, epic123Messages);
 Object.assign(messages, onboardingMessages);
 Object.assign(messages, i3CompletionMessages);
+Object.assign(messages, uploadMessages);
 Object.assign(messages, {
   "Readiness view": ["检查结果视图", "Paparan kesediaan"],
   "Products": ["商品", "Produk"],

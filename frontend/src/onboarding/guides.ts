@@ -11,17 +11,17 @@ export interface GuideStep {
 /** Only stable screens have guides. Readiness, Purchase Plan and Impact are reserved. */
 export const guides: Record<GuidePage, readonly GuideStep[]> = {
   upload: [
-    { target: '[data-guide="upload-actions"]', title: "Start with your sales file", body: "Choose a file from your device. Just trying things out? Use the sample file to follow along.", action: "file:ready", hint: "Choose a highlighted button" },
+    { target: '[data-guide="upload-actions"]', title: "Start with your sales file", body: "Choose one file containing the full sales period you want to analyse. Later uploads replace the plan’s sales data; they do not add to it. Use the sample file to practise.", action: "file:ready", hint: "Choose a highlighted button" },
     { target: '[data-guide="upload-continue"]', title: "Your file is ready", body: "Next, check that we’ve understood your column names. Click Continue to matching when you’re ready.", action: "import:complete", hint: "Click the highlighted button" },
   ],
   mapping: [
     { target: '[data-guide="mapping-required"]', title: "Check these three matches", body: "Make sure the date, product and quantity point to the right columns. You can change a match while this tip is showing." },
     { target: '[data-guide="mapping-optional"]', title: "Check any optional columns", body: "Stock, expiry dates and costs add more detail to your results. Check the columns you have, or choose Not in this file for anything missing." },
-    { target: '[data-guide="mapping-confirm"]', mobileTarget: '[data-guide="mapping-confirm-inline"]', title: "Happy with the matches?", body: "Use the highlighted confirmation button to check your data and continue. Your original file stays as it is.", action: "mapping:complete", hint: "Click the highlighted button" },
+    { target: '[data-guide="mapping-confirm"]', mobileTarget: '[data-guide="mapping-confirm-inline"]', title: "Happy with the matches?", body: "Confirm to check this file and continue. Your plan uses this file’s sales data; previous uploads are not combined. Your original file on your device stays as it is.", action: "mapping:complete", hint: "Click the highlighted button" },
   ],
   sidebar: [
     { target: '[data-guide="sidebar-navigation"], [data-guide="sidebar-menu"]', title: "Find your way around", body: "Use this navigation to return to your purchase plan or view your impact. On a small screen, open the menu to see these options." },
-    { target: '[data-guide="sidebar-reupload"], [data-guide="sidebar-menu"]', title: "Ready for a newer sales file?", body: "Reupload starts a new import. Your saved plan stays available until the new purchase plan is ready." },
+    { target: '[data-guide="sidebar-reupload"], [data-guide="sidebar-menu"]', title: "Ready for a newer sales file?", body: "Reupload replaces the sales data used by your plan; it does not add previous uploads together. Include the full sales period in one file. Your saved plan stays available until the new plan is ready." },
     { target: '[data-guide="sidebar-history"], [data-guide="sidebar-menu"]', title: "Your past uploads are here", body: "Open Upload history to see files you’ve used before. There’s room for your latest 12 uploads.", action: "history:opened", hint: "Open Upload history when you’re ready" },
   ],
   history: [

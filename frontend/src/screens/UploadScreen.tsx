@@ -7,6 +7,7 @@ import "./upload.css";
 import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
 import { BrandIcon } from "../components/BrandIcon.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { UploadBehaviorNotice } from "../components/UploadBehaviorNotice.tsx";
 import {
   CsvImportError,
   PRIVACY_NOTICE,
@@ -33,6 +34,9 @@ interface UploadScreenProps {
   ) => Promise<void>;
   readonly onCancel: () => void;
   readonly updating?: boolean;
+  readonly currentFileName?: string;
+  readonly hasSavedPlan?: boolean;
+  readonly onKeepCurrentPlan?: () => void;
 }
 
 interface ImportFailure {
@@ -109,10 +113,15 @@ export function UploadScreen({
   onSource,
   onCancel,
   updating = false,
+  currentFileName,
+  hasSavedPlan = updating,
+  onKeepCurrentPlan,
 }: UploadScreenProps) {
   useLanguage();
   const { emit } = useOnboarding();
   const inputRef = useRef<HTMLInputElement>(null);
+  const replacementDialog = useRef<HTMLDialogElement>(null);
+  const keepPlanButton = useRef<HTMLButtonElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<CsvProgress | null>(null);
@@ -124,6 +133,7 @@ export function UploadScreen({
   const [workbook, setWorkbook] = useState<{ bytes: Uint8Array; sheets: readonly ExcelWorksheet[] } | null>(null);
   const [worksheetName, setWorksheetName] = useState("");
   const chosenSheet = workbook?.sheets.find(sheet => sheet.name === worksheetName);
+  const replacing = Boolean(currentFileName || hasSavedPlan || updating);
   useEffect(() => {
     if (selectedFile && !busy && !failure && (!/\.(xlsx|xls)$/i.test(selectedFile.name) || (chosenSheet && !chosenSheet.problem))) emit("file:ready");
   }, [selectedFile, busy, failure, chosenSheet, emit]);
@@ -219,6 +229,20 @@ export function UploadScreen({
     });
   }
 
+  function continueImport() {
+    if (!selectedFile || busy || (workbook && (!chosenSheet || chosenSheet.problem))) return;
+    if (replacing) {
+      replacementDialog.current?.showModal();
+      keepPlanButton.current?.focus();
+    } else void handleFile(selectedFile);
+  }
+
+  function keepCurrentPlan() {
+    replacementDialog.current?.close();
+    if (onKeepCurrentPlan) onKeepCurrentPlan();
+    else continueRef.current?.focus();
+  }
+
   function cancelImport() {
     abortRef.current?.abort();
     setFailure(null);
@@ -260,7 +284,20 @@ export function UploadScreen({
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
-    const file = event.dataTransfer.files[0];
+    selectFiles(event.dataTransfer.files);
+  }
+
+  function selectFiles(files: FileList) {
+    if (busy || files.length === 0) return;
+    if (files.length > 1) {
+      setSelectedFile(null); setWorkbook(null); setWorksheetName("");
+      setFailure({
+        message: "Choose one file. StockLess doesn’t combine multiple files.",
+        recovery: "Include the full sales period you want to analyse in one CSV or Excel file.",
+      });
+      return;
+    }
+    const file = files[0];
     if (file) void selectFile(file);
   }
 
@@ -276,6 +313,7 @@ export function UploadScreen({
       <main className="upload-wrap upload-main">
         <div className="upload-grid">
           <section className="upload-card upload-drop" aria-label={t("Upload")}>
+            <UploadBehaviorNotice replacing={hasSavedPlan} />
             <div className={"upload-zone" + (dragging ? " upload-zone--active" : "") + (failure ? " upload-zone--error" : "")}
               onDragOver={(event) => { event.preventDefault(); if (!busy) setDragging(true); }}
               onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
@@ -322,8 +360,7 @@ export function UploadScreen({
               <input ref={inputRef} type="file" aria-label={t("Choose CSV or Excel file")}
                 accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 hidden disabled={busy} onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void selectFile(file);
+                  if (event.target.files) selectFiles(event.target.files);
                   event.target.value = "";
                 }} />
             </div>
@@ -331,7 +368,7 @@ export function UploadScreen({
               <span className="upload-picked__icon" aria-hidden="true">{selectedFile.name.split(".").pop()?.toUpperCase()}</span>
               <div className="upload-picked__details"><b>{selectedFile.name}</b><small>{(selectedFile.size / 1024).toFixed(selectedFile.size < 102400 ? 1 : 0)} KB</small></div>
               <span className="upload-tag" role="status">{t("Ready to match")}</span>
-              <button ref={continueRef} data-guide="upload-continue" type="button" className="btn btn--primary" disabled={!!workbook && (!chosenSheet || !!chosenSheet.problem)} onClick={() => void handleFile(selectedFile)}>{t("Continue to matching →")}</button>
+              <button ref={continueRef} data-guide="upload-continue" type="button" className="btn btn--primary" disabled={!!workbook && (!chosenSheet || !!chosenSheet.problem)} onClick={continueImport}>{t("Continue to matching →")}</button>
             </div>}
             {workbook && !busy && <section className="upload-sheet" aria-label={t("Worksheet preview")}>
               <label htmlFor="upload-worksheet">{t("Worksheet")}</label><select id="upload-worksheet" value={worksheetName} onChange={event => setWorksheetName(event.target.value)}><option value="">{t("Choose a worksheet")}</option>{workbook.sheets.map(sheet => <option key={sheet.name} value={sheet.name}>{sheet.name} ({sheet.rowCount})</option>)}</select>
@@ -368,6 +405,26 @@ export function UploadScreen({
           </aside>
         </div>
       </main>
+      {replacing && <dialog ref={replacementDialog} className="upload-replace-dialog" aria-labelledby="upload-replace-title" aria-describedby="upload-replace-description"
+        onCancel={event => { event.preventDefault(); replacementDialog.current?.close(); continueRef.current?.focus(); }}
+        onClose={() => continueRef.current?.focus()}>
+        <h2 id="upload-replace-title">{t("Replace your current sales data?")}</h2>
+        <p id="upload-replace-description">{t(hasSavedPlan
+          ? "This file will replace the sales data used by your current purchase plan and impact results. Previous uploads are not combined."
+          : "This file will replace the file you are currently preparing. The two files will not be combined.")}</p>
+        <dl className="upload-replace-dialog__files">
+          <div><dt>{t("Current file")}</dt><dd>{currentFileName ?? t("Your current plan")}</dd></div>
+          <div><dt>{t("New file")}</dt><dd>{selectedFile?.name}</dd></div>
+        </dl>
+        {hasSavedPlan && <p>{t("Your saved plan stays available until the new plan is ready. The previous file and plan remain separately in Upload history; your latest 12 uploads are kept.")}</p>}
+        <div className="upload-replace-dialog__actions">
+          <button ref={keepPlanButton} type="button" className="btn btn--ghost" onClick={keepCurrentPlan}>{t(hasSavedPlan ? "Keep current plan" : "Keep current file")}</button>
+          <button type="button" className="btn btn--primary" onClick={() => {
+            replacementDialog.current?.close();
+            if (selectedFile && !busy) void handleFile(selectedFile);
+          }}>{t("Replace and continue")}</button>
+        </div>
+      </dialog>}
     </div>
   );
 }

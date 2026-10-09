@@ -99,6 +99,22 @@ beforeEach(() => {
   });
 });
 afterEach(() => { vi.restoreAllMocks(); localStorage.removeItem("stockless.hasUploaded"); });
+
+it.each(["reupload", "guide"] as const)("offers replacement confirmation for an actual file through %s and keeps saved work on decline", async route => {
+  const before = structuredClone(saved);
+  render(route === "guide" ? <App guidedImport guideReturnId="existing" /> : <App updateDatasetId="existing" />);
+  await screen.findByRole("heading", { name: route === "guide" ? "Upload your sales file" : "Reupload your sales file" });
+  const file = new File(["date,sku,quantity\n2026-09-20,A,2"], "October.csv", { type: "text/csv" });
+  fireEvent.change(screen.getByLabelText("Choose CSV or Excel file"), { target: { files: [file] } });
+  fireEvent.click(screen.getByRole("button", { name: "Continue to matching →" }));
+  expect(screen.getByRole("dialog", { name: "Replace your current sales data?" }).textContent).toContain("September sales");
+  expect(replaceSessionSourceInWorker).not.toHaveBeenCalled();
+  expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Keep current plan" }));
+  expect(window.location.hash).toBe("#dataset/existing");
+  expect(saved).toEqual(before);
+  expect(replaceSessionSourceInWorker).not.toHaveBeenCalled();
+});
 it("Guide preparation keeps the sidebar hidden and leaves the saved plan untouched until a real replacement plan is generated", async () => {
   const before = structuredClone(saved);
   render(<App guidedImport guideReturnId="existing" />);

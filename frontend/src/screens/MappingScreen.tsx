@@ -16,6 +16,7 @@ import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
 import { confirmCurrentMapping } from "../mapping-confirmation.ts";
 import "./mapping.css";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { UploadBehaviorNotice } from "../components/UploadBehaviorNotice.tsx";
 
 type IdentityMode = "stable" | "composite";
 interface MappingScreenProps {
@@ -32,6 +33,7 @@ interface MappingScreenProps {
   readonly notice: string | null;
   readonly sessionNotice?: string | null;
   readonly checking?: boolean;
+  readonly replacingCurrentPlan?: boolean;
   readonly children?: ReactNode;
 }
 
@@ -167,6 +169,7 @@ export function MappingScreen(props: MappingScreenProps) {
     <main className="mapping-wrap mapping-main">
       <div className="mapping-grid">
         <div className="mapping-left">
+          {dataset.sourceMode === "user" && <UploadBehaviorNotice replacing={props.replacingCurrentPlan} compact />}
           <div className="mapping-all">
             <div><b>{t("All matches look right?")}</b><p>{t("Confirm all selected columns and continue in one step.")}</p>
               <small>{t("Products will be kept separate using:")} {t(mode === "stable" ? "One code column" : "Product name + pack size")}.</small></div>
