@@ -692,6 +692,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
       }}
       onReturnToPlan={guidedImport && returnPlanId && !activeSavedId && step >= 3 ? () => { onboarding.stop(); window.location.hash = `#dataset/${encodeURIComponent(returnPlanId)}`; } : undefined}
       i3Typography={!showImpact}
+      stepDone={step === 1 ? Boolean(dataset) : step === 2 ? getReadinessBlockers(envelope.session.mapping).length === 0 : step === 3 ? Boolean(readiness) : true}
       current={step}
       reached={reached}
       onNavigate={next => { if (next === 1 && workspaceActive) beginReupload(); else goTo(next); }}
