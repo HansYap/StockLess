@@ -1,0 +1,27 @@
+/* Drawn ground line at the end of each step page. It sits in the page flow
+   (never behind text) and is decorative only. */
+.garden{width:100%;margin-top:auto;pointer-events:none;line-height:0;display:flex;justify-content:center}
+.garden svg{display:block;width:min(1328px,100%);height:auto;overflow:visible;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.garden__narrow{display:none!important}
+.garden__plant{transform-box:fill-box;transform-origin:50% 100%;transition:transform .9s cubic-bezier(.3,1.4,.5,1),opacity .6s}
+.garden__mover{transition:transform .8s ease}
+@keyframes garden-sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+.garden__sway{transform-box:fill-box;transform-origin:50% 100%;animation:garden-sway 5s ease-in-out 4}
+@keyframes garden-drip{0%{opacity:0;transform:translateY(-4px)}20%{opacity:1}100%{opacity:0;transform:translateY(16px)}}
+.garden__drop{animation:garden-drip 1.6s ease-in 12 both}
+@keyframes garden-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+.garden__blink{transform-box:fill-box;transform-origin:center;animation:garden-blink 4s ease-in-out 5}
+@media (max-width:640px){
+  .garden__wide{display:none!important}
+  .garden__narrow{display:block!important;width:100%;max-width:390px}
+}
+@media (prefers-reduced-motion:reduce){
+  .garden__plant,.garden__mover{transition:none}
+  .garden__sway,.garden__blink{animation:none}
+  .garden__drop{animation:none;opacity:0}
+}
+
+/* Leafy vines in the side gutters, replacing the old blurred artwork. */
+.ws-decor .ws-decor__side{mask-image:none;-webkit-mask-image:none;width:calc((100% - var(--shell)) / 2 + 32px)}
+.ws-decor__side .garden-vine{position:absolute;inset:auto;bottom:0;left:50%;transform:translateX(-50%);height:68vh;width:min(110px,calc(100% - 12px))}
