@@ -24,4 +24,4 @@
 
 /* Leafy vines in the side gutters, replacing the old blurred artwork. */
 .ws-decor .ws-decor__side{mask-image:none;-webkit-mask-image:none;width:calc((100% - var(--shell)) / 2 + 32px)}
-.ws-decor__side .garden-vine{position:absolute;inset:auto;top:120px;left:50%;transform:translateX(-50%);width:min(110px,calc(100% - 12px));height:auto}
+.ws-decor__side .garden-vine{position:absolute;inset:auto;bottom:0;left:50%;transform:translateX(-50%);height:68vh;width:min(110px,calc(100% - 12px))}
