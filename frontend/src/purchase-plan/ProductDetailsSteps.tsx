@@ -137,7 +137,7 @@ export const ProductDetailsSteps = forwardRef<ProductStepsHandle, Props>(functio
   const stepBody = () => {
     if (!step || !details && step.key !== "expiry") return null;
     const head = (question: string, why: string) => <><div className="pp-steps__qhead"><span className="pp-steps__qicon"><Icon name={step.key} size={24} /></span><div><span className="pp-steps__count">{c(`Step ${index + 1} of ${steps.length}`, `第 ${index + 1} 步，共 ${steps.length} 步`, `Langkah ${index + 1} daripada ${steps.length}`)} · {stepTitle(step.key, c)}</span><h4 ref={heading} tabIndex={-1}>{question}</h4></div></div>
-      {error ? <Guide pose="magnify" tone="error"><b role="alert">{error}</b> {why}</Guide> : <Guide pose="idle">{why}</Guide>}</>;
+      {error ? <Guide pose="careful" tone="error"><b role="alert">{error}</b> {why}</Guide> : <Guide pose="think">{why}</Guide>}</>;
     const source = (text: string) => <p className="pp-steps__source"><span>{c("Source", "来源", "Sumber")}</span>{text}</p>;
     if (step.key === "cost" || step.key === "weight") {
       const isCost = step.key === "cost", value = step.found ?? step.value;
