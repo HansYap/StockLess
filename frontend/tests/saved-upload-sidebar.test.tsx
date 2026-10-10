@@ -343,7 +343,7 @@ it("ignores the old upload flag when no saved work remains", async () => {
   noSidebar();
 });
 
-it.each(["Skip for now", "Skip guide"])("reopens landing and invites again after %s without an upload or plan", async skip => {
+it.each(["Skip for now", "Skip guide"])("returns to Home without another invitation after %s and a refresh", async skip => {
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
   localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ invited: false, completed: [] }));
   vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([{ width: 200, height: 44 }] as unknown as DOMRectList);
@@ -363,8 +363,8 @@ it.each(["Skip for now", "Skip guide"])("reopens landing and invites again after
   await waitFor(() => expect(window.location.hash).toBe("#home"));
   expect(document.getElementById("home-title")).toBeTruthy();
   await act(async () => { window.location.hash = "#start"; });
-  expect(await screen.findByRole("button", { name: "Skip for now" })).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Upload your sales file" })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "Upload your sales file" })).toBeTruthy();
+  expect(document.querySelector(".onboarding-welcome")?.hasAttribute("open")).toBe(false);
   noSidebar();
   expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
   view.unmount();

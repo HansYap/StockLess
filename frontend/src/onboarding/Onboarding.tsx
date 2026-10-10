@@ -104,8 +104,11 @@ export function OnboardingProvider({ children }: { readonly children: ReactNode 
       }
       if (!journey.current) updateFollowing(false);
     } else if (!next) { current.current = null; activePage.current = null; setScreenPage(null); setPage(null); setActive(false); }
-    // Eligibility comes from saved work. A skip lasts for this visit only until a plan is saved.
-    if (invite && !invitationShown.current) { invitationShown.current = true; rememberInvitation(); setWelcome(true); }
+    // The welcome is an invitation shown once per browser, independent of
+    // whether a sample or retailer plan has been saved.
+    if (invite && !invitationShown.current && !readGuidePreferences().invited) {
+      invitationShown.current = true; rememberInvitation(); setWelcome(true);
+    }
   }, [updateFollowing]);
   const startReplay = useCallback(async (returnId?: string) => {
     let id = returnId ?? datasetIdFromRoute(window.location.hash);
