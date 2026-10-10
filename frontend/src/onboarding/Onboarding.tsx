@@ -199,11 +199,11 @@ function scrollToPageActions(target: HTMLElement): void {
 }
 /** Use the same Stocky companion throughout the setup and optional page guides. */
 const stockyPoses: Record<GuidePage, readonly StockyPose[]> = {
-  upload: ["hello", "great"], mapping: ["magnify", "magnify", "great"],
-  readiness: ["hello", "magnify", "magnify", "great"],
-  purchase: ["hello", "magnify", "idle", "magnify", "magnify", "magnify", "great"],
-  impact: ["hello", "magnify", "great", "magnify", "great"],
-  sidebar: ["hello", "idle"], history: ["hello", "magnify", "idle"],
+  upload: ["point", "great"], mapping: ["check", "magnify", "great"],
+  readiness: ["think", "magnify", "careful", "point"],
+  purchase: ["point", "think", "check", "think", "think", "careful", "great"],
+  impact: ["think", "coins", "great", "magnify", "box"],
+  sidebar: ["point", "check"], history: ["box", "magnify", "careful"],
 };
 function Coachmark({ page, index, onNext, onPrevious, onSkipPage, onStop }: { page: GuidePage; index: number; onNext: () => void; onPrevious: () => void; onSkipPage: () => void; onStop: () => void }) {
   const source = guides[page][index];
