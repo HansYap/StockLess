@@ -40,6 +40,29 @@ const groups: readonly { id: PurchaseGroup; label: string; help: string; icon: s
   { id: "balanced", label: "Looks balanced", help: "Within expected demand", icon: "✓" },
   { id: "need_data", label: "Need more data", help: "Can't be judged yet", icon: "×" },
 ];
+const sk = { fill: "none", strokeWidth: 2.4, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+function DrawnPlanIcon({ group }: { group: PurchaseGroup }) {
+  if (group === "order_needed") return <svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true">
+    <path d="M8 30c-2-14 10-24 25-23 15 1 25 9 24 23-1 15-12 27-27 26C15 55 10 44 8 30z" fill="#E8F3F0" />
+    <g {...sk} stroke="#11655E"><path d="M15 27.5c11-.6 23-.3 34.4.2" /><path d="M17.2 28.3c1.1 6.4 2.1 12.5 3.4 18.6.4 1.6 1.4 2.4 3 2.4 5.6.2 11.3.1 17-.2 1.6-.1 2.5-.9 2.9-2.4 1.4-6 2.6-12.1 3.6-18.1" /><path d="M24.3 27.6c1.6-5.2 3.6-9.5 6.1-13.1" /><path d="M40.1 27.9c-1.2-5-3.3-9.4-6-13.2" /><path d="M27 34.8c.3 3.5.5 6.9.6 10.2" /><path d="M37.1 34.6c-.2 3.6-.5 7-.9 10.3" /></g>
+    <circle cx="49" cy="17" r="8.5" fill="#167D74" /><path d="M49 12.6c.1 2.9.1 5.9-.1 8.8M44.7 17.1c2.9-.2 5.8-.1 8.7.1" {...sk} stroke="#fff" />
+  </svg>;
+  if (group === "check_order") return <svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true">
+    <path d="M10 32C9 18 19 8 33 8c14 .5 23 10 23 24 0 13-10 24-24 24C18 56 11 45 10 32z" fill="#FFF4DF" />
+    <g {...sk} stroke="#8B5C10"><path d="M19.4 16.3c-.6 9.6-.7 19.5-.3 29.4.1 1.3.9 2 2.2 2.1 4.6.2 9.3.2 13.9 0" /><path d="M19.7 16.1c6.4-.4 12.8-.4 19.2 0 1.2.1 1.9.8 2 2.1.2 2.8.2 5.4.1 8" /><path d="M25.3 13.4c3-.3 6.3-.3 9.4.1.3 1.5.3 3-.1 4.4-3 .3-6 .3-9.2 0-.4-1.5-.4-3 .1-4.5z" /><path d="M24.3 25.4c3.3-.2 6.6-.1 9.8.1" /><path d="M24.1 31.6c2.1-.1 4.2 0 6.2.1" /><path d="M42.9 32.2c3.8.2 6.6 3.4 6.4 7.2-.3 3.8-3.5 6.5-7.3 6.3-3.7-.3-6.4-3.4-6.2-7.2.2-3.8 3.3-6.5 7.1-6.3z" /><path d="M47.6 44.7c1.9 1.9 3.7 3.8 5.4 5.8" /></g>
+    <path d="M42.6 35.4c.1 1.3.1 2.5 0 3.7" {...sk} stroke="#D99120" /><circle cx="42.6" cy="42" r="1.4" fill="#D99120" />
+  </svg>;
+  if (group === "balanced") return <svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true">
+    <path d="M9 33C7 19 18 9 32 9c15 0 24 10 23 24-1 14-11 23-25 22C17 54 10 46 9 33z" fill="#E8F3F0" />
+    <g {...sk} stroke="#11655E"><path d="M32.2 15.2c-.3 10.6-.2 21.1.2 31.6" /><path d="M24.6 47.4c5-.4 10.1-.4 15.1.1" /><path d="M15.9 21.9c10.8-.9 21.6-.9 32.4 0" /><path d="M17.6 22.4c-2.2 4.4-4.2 8.8-5.9 13.3" /><path d="M18.2 22.3c2.1 4.5 4 9 5.6 13.6" /><path d="M11.4 35.9c3.9 3.4 8.5 3.4 12.6-.1" /><path d="M46.4 22.3c-2.3 4.4-4.3 8.9-5.9 13.4" /><path d="M46.9 22.4c2 4.5 3.9 9 5.6 13.5" /><path d="M40.2 35.8c4 3.5 8.6 3.5 12.6.1" /></g>
+    <path d="M28.6 13.5c1.2-1.4 2.6-2 3.9-2 1.4.1 2.6.8 3.6 2.1" {...sk} stroke="#167D74" />
+  </svg>;
+  return <svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true">
+    <path d="M9 31c0-14 10-23 24-23 14 1 23 11 22 25-1 13-11 22-24 22C17 55 9 45 9 31z" fill="#EEF1F2" />
+    <g {...sk} stroke="#4D5E64"><path d="M20.3 14.6c-.4 11.5-.3 23.1.2 34.6" /><path d="M20.4 14.7c7.4-.6 14.9-.6 22.3.1 1.1.1 1.7.8 1.8 1.9.4 10.3.4 20.7-.1 31-.1 1.1-.7 1.7-1.8 1.8-7.3.4-14.7.4-22 0" /><path d="M15.8 21.4c1.6 0 3.1 0 4.6.1" /><path d="M15.7 31.6c1.6-.1 3.1 0 4.7 0" /><path d="M15.9 41.8c1.5 0 3 0 4.5.1" /><path d="M28.3 26.9c.4-3.1 2.8-5 5.6-4.8 2.9.2 4.9 2.4 4.6 5.2-.3 2.4-2.4 3.3-4 4.5-.9.7-1.1 1.5-1.1 3" /></g>
+    <circle cx="33.4" cy="40.6" r="1.6" fill="#4D5E64" /><path d="M50 44c.6-1.6 1.2-3.1 1.7-4.7M54.6 47.9c1.5-.4 3-.8 4.6-1.2M47.1 50.5c.2 1.6.4 3.1.5 4.7" fill="none" stroke="#86949A" strokeWidth={2} strokeLinecap="round" />
+  </svg>;
+}
 const rank: Record<PurchaseGroup, number> = { check_order: 0, order_needed: 1, balanced: 2, need_data: 3 };
 
 export function PurchasePlanScreen({ snapshot, forecast, drafts: enteredDrafts, selectedKey, onSelect, initialView, onViewChange, detailsFocus, onDraftChange, onDraftsChange, onBack, onImpact, onReviewProduct, evaluatePurchase = evaluateProductPurchasePlan, expiryByProduct, supplierDrafts, onSupplierChange, contexts, datasetId, onContextChange, onContextsChange }: Props) {
@@ -159,7 +182,7 @@ export function PurchasePlanScreen({ snapshot, forecast, drafts: enteredDrafts, 
     </div><div className="pp-hero-actions" data-guide="purchase-next"><button type="button" className="pp-back" onClick={onBack}>{t("← Back to readiness")}</button><span className="pp-action-spacer" /><button type="button" className="btn btn--ghost" onClick={download}>{copy("↓ Download draft plan", "↓ 下载草稿计划", "↓ Muat turun pelan draf")}</button><button type="button" className="btn btn--primary" disabled={!onImpact} onClick={()=>onImpact?.()}>{t("See your impact →")}</button></div></div></section>
     <div className="pp-wrap pp-main">
       {mismatchCount > 0 && <p className="notice notice--error" role="alert">{t(`Evidence mismatch affects ${mismatchCount} products. Return to readiness and refresh the forecast.`)}</p>}
-      <div className="pp-kpis" role="group" aria-label={t("Filter by what each product needs")}>{groups.map(item => <button key={item.id} type="button" className={`pp-kpi pp-kpi--${item.id}`} aria-pressed={group === item.id} onClick={() => changeFilter(query, group === item.id ? "all" : item.id)}><span className="pp-icon" aria-hidden="true">{item.icon}</span><span><b className="pp-kpi-number num">{counts[item.id]}</b> <b>{t(item.label)}</b><small>{t(item.help)}</small></span></button>)}</div>
+      <div className="pp-kpis" role="group" aria-label={t("Filter by what each product needs")}>{groups.map(item => <button key={item.id} type="button" className={`pp-kpi pp-kpi--${item.id}`} aria-pressed={group === item.id} onClick={() => changeFilter(query, group === item.id ? "all" : item.id)}><span className="pp-icon pp-icon--drawn" aria-hidden="true"><DrawnPlanIcon group={item.id} /></span><span><b className="pp-kpi-number num">{counts[item.id]}</b> <b>{t(item.label)}</b><small>{t(item.help)}</small></span></button>)}</div>
       {onDraftsChange && <div className="pp-prepare"><button ref={prepareButton} type="button" className="btn btn--primary" onClick={prepareOrders}>{copy("Review suggested orders", "查看建议订单", "Semak cadangan pesanan")}</button><p>{copy("Suggested drafts are already shown. Review together to save the quantities you choose.", "建议草稿已显示。一起查看并保存您选定的数量。", "Draf cadangan sudah dipaparkan. Semak bersama untuk menyimpan kuantiti pilihan anda.")}</p></div>}
       {appliedCount > 0 && <p className="pp-bulk-status" role="status">{copy(`${appliedCount} draft ${appliedCount === 1 ? "order" : "orders"} updated. You can still edit each quantity.`, `已更新 ${appliedCount} 个草稿订单。每项数量仍可修改。`, `${appliedCount} pesanan draf dikemas kini. Anda masih boleh mengedit setiap kuantiti.`)}</p>}
       <div className="cp3-actions"><label><input type="checkbox" checked={positiveOnly} onChange={e=>setPositiveOnly(e.target.checked)} /> {t("Only products I am ordering")}</label><label><input type="checkbox" checked={financialSort} onChange={e=>setFinancialSort(e.target.checked)} /> {t("Sort by estimated financial risk")}</label></div>
