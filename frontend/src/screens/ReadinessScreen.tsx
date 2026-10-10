@@ -111,7 +111,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   const excludedRows = new Set(props.snapshot.rows.filter(row => row.useState === "excluded").map(row => row.sourceRow));
   const mustFix = new Set(props.snapshot.issues.filter(issue => issue.issueCode !== "DUPLICATE_CANDIDATE" && issue.issueCode !== "DUPLICATE_CONFIRMED" && excludedRows.has(issue.sourceRow)).map(issue => issue.sourceRow)).size;
   const counts = { ready: 0, review: 0, missing: 0 }; products.forEach(product => counts[product.status]++);
-  const title = products.length === 0 || props.snapshot.reconciliation.rowsUsed === 0 ? "Your data needs corrections" : counts.missing > 0 || counts.review > 0 ? "Your data is mostly ready" : "Your data is ready";
+  const title = products.length === 0 || props.snapshot.reconciliation.rowsUsed === 0 ? "Your data needs corrections" : counts.missing > counts.ready + counts.review ? "Some products need more data" : counts.missing > 0 || counts.review > 0 ? "Your data is mostly ready" : "Your data is ready";
   const unavailable = props.checking || props.forecasting || props.snapshot.reconciliation.rowsUsed === 0;
   const continueButton = <button type="button" data-guide="readiness-continue" className="btn btn--primary" onClick={props.onContinue} disabled={unavailable} aria-busy={props.forecasting}>{t(props.forecasting ? "Estimating demand locally…" : "Continue to purchase planning →")}</button>;
   const viewEvidence = (id: string) => {
@@ -124,7 +124,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   };
   return <div className="readiness-screen">
     <section className={"rd-hero" + (compact ? " rd-hero--compact" : "")}><div className="rd-wrap">
-      <div className="rd-hero__inner" data-guide="readiness-status" data-guide-state={props.snapshot.reconciliation.rowsUsed === 0 ? "blocked" : "usable"}><div><p className="rd-eyebrow"><GrowthIcon stage="potted" size={16} className="growth-icon--inline" /> {t("Step 3 of 3")}</p><h1>{t(title)}</h1><p className="rd-lede">{t("We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.")}</p></div>
+      <div className="rd-hero__inner" data-guide="readiness-status" data-guide-state={props.snapshot.reconciliation.rowsUsed === 0 ? "blocked" : "usable"}><div><p className="rd-eyebrow"><GrowthIcon stage="potted" size={16} className="growth-icon--inline" /> {t("Step 3 of 4")}</p><h1>{t(title)}</h1><p className="rd-lede">{t("We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.")}</p></div>
         <div className="rd-file"><span className="rd-file__icon">{/\.xlsx?$/i.test(props.dataset.sourceName) ? "XLS" : "CSV"}</span><div><b>{props.dataset.sourceName}</b><small><span className={"rd-pill rd-pill--" + (props.dataset.sourceMode === "sample" ? "review" : "ready")}>{t(props.dataset.sourceMode === "sample" ? "Sample" : "Retailer file")}</span>{props.dataset.rows.length.toLocaleString()} {t("rows")} · {props.dataset.columns.length} {t("columns")}</small></div>{props.onClear && <button type="button" className="btn--link" onClick={props.onClear}>{t("Clear session")}</button>}</div>
       </div><div className="rd-actions"><button type="button" className="btn--link" onClick={props.onBack}>{t("← Back to matching")}</button><span className="rd-actions__spacer" /><span className="rd-actions__meta">{mustFix} {t("rows to fix in your file")}</span>{continueButton}</div>
     </div></section>
