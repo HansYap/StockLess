@@ -50,10 +50,10 @@ it("Step 5 shows the exact same current planned and scenario quantities/costs as
   render(<Harness {...input} />);
   const step4Cost = estimatePurchaseCost(input.snapshot, KEY, input.drafts[KEY].plannedOrder.state === "value" ? input.drafts[KEY].plannedOrder.value : undefined);
   expect(step4Cost.state).toBe("estimated");
-  if (step4Cost.state === "estimated") expect(within(financialCard("Planned purchase spend")).getByText(`MYR ${step4Cost.amount.toFixed(2)}`)).toBeTruthy();
+  if (step4Cost.state === "estimated") expect(within(financialCard("Your planned spend")).getByText(`MYR ${step4Cost.amount.toFixed(2)}`)).toBeTruthy();
   expect(impact.products[0].scenarioQuantity).toBe(plans[0].estimatedRestock.state === "available" ? plans[0].estimatedRestock.quantity.value : undefined);
-  expect(within(financialCard("Restock scenario spend")).getByText("MYR 100.00")).toBeTruthy();
-  expect(within(financialCard("Excess-stock cost")).getByText("MYR 150.00")).toBeTruthy();
+  expect(within(financialCard("Spend if you follow our suggestion")).getByText("MYR 100.00")).toBeTruthy();
+  expect(within(financialCard("Cost of excess stock")).getByText("MYR 150.00")).toBeTruthy();
   expect(within(financialCard("Estimated purchase-spend difference")).getByText("MYR 150.00")).toBeTruthy();
   await waitFor(() => expect(getSavedDataset).toHaveBeenCalled());
 });
@@ -72,12 +72,12 @@ it("manual cost and weight still take priority, while replacement evidence disca
   const contexts={ [KEY]:{evidenceKey:input.snapshot.evidenceKey!,category:"rice",categoryConfirmed:true,isFood:true,unitCost:4,kgPerUnit:.2} };
   const props={...input,snapshot:applyPlanningContexts(input.snapshot,contexts),contexts,onBack:()=>{}};
   const {rerender}=render(<ImpactDashboard {...props} />);
-  expect(within(financialCard("Planned purchase spend")).getByText("MYR 400.00")).toBeTruthy();
+  expect(within(financialCard("Your planned spend")).getByText("MYR 400.00")).toBeTruthy();
   expect(environmentalValue("Potential excess: estimated CO₂e")).toMatch(/kg CO₂e/);
   const replacement=await evidence({cost:"",name:"Unknown item"});
   rerender(<ImpactDashboard {...replacement} snapshot={applyPlanningContexts(replacement.snapshot,contexts)} contexts={contexts} onBack={()=>{}} />);
   expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
-  expect(within(financialCard("Planned purchase spend")).getByText("Unavailable")).toBeTruthy();
+  expect(within(financialCard("Your planned spend")).getByText("Unavailable")).toBeTruthy();
 });
 
 it("actual recorded zero kg appears as zero even when count-only packaging blocks potential mass", async () => {
@@ -95,7 +95,7 @@ it("actual recorded zero kg appears as zero even when count-only packaging block
 it("missing cost does not block stock or automatic environmental estimates", async () => {
   const input=await evidence({cost:""});render(<Harness {...input} />);
   expect(environmentalValue("Potential excess: estimated CO₂e")).toMatch(/kg CO₂e/);
-  expect(within(financialCard("Planned purchase spend")).getByText("Unavailable")).toBeTruthy();
+  expect(within(financialCard("Your planned spend")).getByText("Unavailable")).toBeTruthy();
   expect(screen.getByRole("button",{name:/Possible excess stock/}).querySelector('b')?.textContent).toBe("60 units");
   expect(screen.queryByLabelText("Your purchase cost / sales unit (MYR)")).toBeNull();
 });
@@ -105,13 +105,13 @@ it("an unsupported automatic category leaves stock and money available without a
   expect(environmentalValue('Potential excess: estimated CO₂e')).toBe('Unavailable');
   expect(within(environmentPanel()).queryByText(/Confirm categories/)).toBeNull();
   expect(screen.getByRole('button',{name:/Possible excess stock/}).querySelector('b')?.textContent).toBe('60 units');
-  expect(within(financialCard('Planned purchase spend')).getByText('MYR 250.00')).toBeTruthy();
+  expect(within(financialCard('Your planned spend')).getByText('MYR 250.00')).toBeTruthy();
 });
 
 it("optional corrections lead to one product-details home in Purchase plan", async () => {
   const input=await evidence({cost:""}),review=vi.fn();
   render(<ImpactDashboard {...input} onProductDetails={review} onBack={()=>{}} />);
-  financialCard("Planned purchase spend");fireEvent.click(screen.getByText("Missing purchase costs: first 10 priorities"));
+  financialCard("Your planned spend");fireEvent.click(screen.getByText("Add missing costs: top 10 products to fill in"));
   fireEvent.click(screen.getByRole("button",{name:"Add cost"}));expect(review).toHaveBeenCalledWith(KEY);
   expect(screen.queryByLabelText("Your purchase cost / sales unit (MYR)")).toBeNull();
 });
