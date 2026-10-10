@@ -81,7 +81,7 @@ it("cancels an active import and prevents its late rejection from appearing", as
 });
 
 it.each([false, true])("continues directly with sample data even with a saved plan: %s", async hasSavedPlan => {
-  vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, text: async () => "date,sku,qty\n2026-09-15,A1,2" } as Response);
+  vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, text: async () => "date,sku,qty\n2026-10-08,A1,2" } as Response);
   const onSource = vi.fn<ImportSource>(async () => {});
   render(<UploadScreen onSource={onSource} onCancel={() => {}} hasSavedPlan={hasSavedPlan} />);
   expect(screen.getByText(/Sample dates adjust to today/)).toBeTruthy();

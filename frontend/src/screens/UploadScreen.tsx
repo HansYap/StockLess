@@ -16,6 +16,7 @@ import {
   addCalendarDays,
   calendarDaysBetween,
   createCsvImportError,
+  isoWeekStart,
   parseIsoDate,
   type CsvProgress,
   type ImportSourceMetadata,
@@ -67,14 +68,26 @@ function formatFileSize(bytes: number): string {
   return bytes >= 1024 * 1024 ? (bytes / 1024 / 1024).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
 }
 
-// The bundled sample marks 2026-09-15 as its analysis day (SMP-TODAY-001).
-const SAMPLE_REFERENCE_DATE = "2026-09-15";
+// SMP-TODAY-001 marks the bundled sample's analysis day.
+const SAMPLE_REFERENCE_DATE = "2026-10-08";
 
-/** Keeps the built-in example useful without removing its intentional old/future-date cases. */
+/** Aligns complete sales weeks while keeping stock/expiry ages relative to the test day. */
 export function rebaseSampleCsvDates(csv: string, targetAnalysisDate: string): string {
-  const offset = calendarDaysBetween(SAMPLE_REFERENCE_DATE, targetAnalysisDate);
-  return csv.replace(/\b\d{4}-\d{2}-\d{2}\b/g, (value) =>
-    parseIsoDate(value) ? addCalendarDays(value, offset) : value);
+  const sourceWeek = isoWeekStart(SAMPLE_REFERENCE_DATE);
+  const dayOffset = calendarDaysBetween(SAMPLE_REFERENCE_DATE, targetAnalysisDate);
+  const weekOffset = calendarDaysBetween(sourceWeek, isoWeekStart(targetAnalysisDate));
+  const datePattern = /\b\d{4}-\d{2}-\d{2}\b/g;
+  const shift = (value: string, offset: number) => parseIsoDate(value) ? addCalendarDays(value, offset) : value;
+  return csv.replace(/^[^\r\n]+/gm, line => {
+    const separator = line.indexOf(',');
+    if (separator < 0) return line;
+    // The sample's first column is Transaction Date. Complete historical weeks
+    // retain their weekday; the current-week example stays on the test day.
+    const transaction = line.slice(0, separator).replace(datePattern, value =>
+      parseIsoDate(value) ? shift(value, isoWeekStart(value) === sourceWeek ? dayOffset : weekOffset) : value);
+    const remaining = line.slice(separator).replace(datePattern, value => shift(value, dayOffset));
+    return transaction + remaining;
+  });
 }
 
 /** Reads a browser File in cancellable chunks while reporting visible progress. */

@@ -11,10 +11,24 @@ it('generates a real paginated PDF with embedded Chinese font, metadata and long
   ],limitations:['Sample data; no measured reduction claimed.']};
   const fontPath='../public/fonts/NotoSansSC.ttf';
   const font=await readFile(new URL(fontPath, import.meta.url));
-  const bytes=await buildAnalysisPdfBytes(report,Uint8Array.from(font));
+  const mascot=await readFile('public/report/stocky-hello.png');
+  const logo=await readFile('public/report/stockless-logo.png');
+  const bytes=await buildAnalysisPdfBytes(report,Uint8Array.from(font),Uint8Array.from(mascot),Uint8Array.from(logo));
   expect(new TextDecoder().decode(bytes.slice(0,8))).toMatch(/^%PDF-/);
   const doc=await PDFDocument.load(bytes);
   expect(doc.getPageCount()).toBeGreaterThan(2);
   expect(doc.getTitle()).toContain('Sample data');
   expect(doc.getPages().every(p=>Math.abs(p.getWidth()-841.89)<.01)).toBe(true);
 },20000);
+
+it('generates searchable Chinese and Malay PDF metadata with the same report data', async () => {
+  const report: AnalysisReport = { schemaVersion: 1, metadata: { shopName: 'Shop', datasetId: 'D', datasetName: 'October', sourceName: 'sales.csv', sourceSha256: 'abc123', sourceMode: 'sample', sourceLabel: 'Sample data', analysisDate: '2026-10-06', period: { start: '2026-09-01', end: '2026-10-06' }, generatedAt: '2026-10-08T00:00:00Z', snapshotId: 'S', currency: 'MYR' }, tables: [], limitations: [] };
+  const fontPath = '../public/fonts/NotoSansSC.ttf';
+  const font = Uint8Array.from(await readFile(new URL(fontPath, import.meta.url)));
+  for (const [language, expected] of [['zh', '分析报告'], ['ms', 'LAPORAN ANALISIS']] as const) {
+    const bytes = await buildAnalysisPdfBytes(report, font, undefined, undefined, language);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getTitle()).toContain(expected);
+    expect(doc.getPageCount()).toBeGreaterThan(1);
+  }
+}, 30000);

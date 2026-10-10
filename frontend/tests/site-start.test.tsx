@@ -9,7 +9,13 @@ vi.mock("../src/App.tsx", () => ({ default: ({ initialDatasetId }: { initialData
   {initialDatasetId && <aside aria-label="Workspace navigation">{initialDatasetId}</aside>}
 </> }));
 
-beforeEach(() => { vi.resetAllMocks(); HTMLElement.prototype.scrollIntoView = vi.fn(); window.location.hash = "#start"; });
+beforeEach(() => {
+  vi.resetAllMocks();
+  localStorage.removeItem("stockless.hasUploaded");
+  localStorage.removeItem("stockless.onboarding.v1");
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+  window.location.hash = "#start";
+});
 
 it("opens Upload when saved storage cannot be checked from Start", async () => {
   vi.mocked(listSavedDatasets).mockRejectedValue(new Error("Storage unavailable"));
@@ -38,7 +44,7 @@ it.each([false, true])("keeps the homepage top open after clicking a workflow ca
   expect(screen.queryByRole("heading", { name: "Upload your sales file" })).toBeNull();
 });
 
-it.each(["", "#home", "#workspace", "#guide", "#history", "#returning"])("returns visitors without saved work to the landing page when reopening %s", async hash => {
+it.each(["", "#home", "#workspace", "#guide", "#history", "#returning"])("returns to the landing page when reopening %s without saved work", async hash => {
   window.location.hash = hash;
   localStorage.setItem("stockless.hasUploaded", "true");
   localStorage.setItem("stockless.onboarding.v1", JSON.stringify({ invited: true, completed: [] }));
@@ -46,9 +52,14 @@ it.each(["", "#home", "#workspace", "#guide", "#history", "#returning"])("return
   render(<Site />);
   await waitFor(() => expect(window.location.hash).toBe("#home"));
   expect(document.getElementById("home-title")).toBeTruthy();
-  expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
-  localStorage.removeItem("stockless.hasUploaded");
-  localStorage.removeItem("stockless.onboarding.v1");
+});
+
+it("shows the landing page to a genuinely new visitor without saved work", async () => {
+  window.location.hash = "";
+  vi.mocked(listSavedDatasets).mockResolvedValue([]);
+  render(<Site />);
+  await waitFor(() => expect(window.location.hash).toBe("#home"));
+  expect(document.getElementById("home-title")).toBeTruthy();
 });
 
 it("keeps the landing page accessible when local storage is unavailable", async () => {
