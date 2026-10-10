@@ -117,7 +117,7 @@ describe("redesigned homepage", () => {
   it("opens individual FAQs and expands or collapses all FAQs", () => {
     const { container } = render(<HomePage />);
     const faqs = Array.from(container.querySelectorAll("details.hp-faq"));
-    fireEvent.click(screen.getByText("How does StockLess work?"));
+    fireEvent.click(screen.getByText("How does StockLess decide how much to order?"));
     expect(faqs[0].hasAttribute("open")).toBe(true);
     expect(faqs[1].hasAttribute("open")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "View all FAQs →" }));
