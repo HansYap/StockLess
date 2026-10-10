@@ -481,7 +481,7 @@ function WasteContext() {
   );
 }
 
-const GUIDE_POSES: readonly StockyPose[] = ["hello", "magnify", "magnify", "great"];
+const GUIDE_POSES: readonly StockyPose[] = ["point", "check", "magnify", "great"];
 
 function Workflow() {
   const { copy } = useHomeView();
