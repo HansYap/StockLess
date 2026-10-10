@@ -344,3 +344,8 @@
 /* US8.2 AC2: products without a usable excess-stock cost are set apart when sorting by financial risk. */
 .pp-cost-divider td{padding:10px 16px;background:#F7FAF9;border-top:1px dashed var(--border-strong,#B8C8C4);font-size:13px;font-weight:700;color:var(--muted,#66767D)}
 .pp-check-inputs{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink-2,#243238)}
+
+/* Hand-drawn status icons on the plan summary */
+.purchase-plan--new .pp-kpi .pp-icon--drawn { width: 48px; height: 48px; border-radius: 0; background: none; }
+.purchase-plan--new .pp-kpi .pp-icon--drawn svg { display: block; }
+.purchase-plan--new .pp-kpi--check_order { border-color: #F1DDB0; background: #FFFCF6; }

@@ -129,14 +129,14 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
       : spendDifference.amount>0
         ? c('Suggested orders would cost less','建议订单预计花费更少','Pesanan dicadangkan akan menelan belanja lebih rendah')
         : c('Suggested orders would cost the same','建议订单预计花费相同','Pesanan dicadangkan akan menelan belanja yang sama');
-  const businessCard=(id:BusinessMeasure,title:string,total:MonetaryTotal)=><div className={`ix-card${businessOpen&&businessMeasure===id?' ix-card--on':''}`} key={id}>
+  const businessCard=(id:BusinessMeasure,title:string,total:MonetaryTotal)=><div className={`ix-card ix-card--${id}${businessOpen&&businessMeasure===id?' ix-card--on':''}`} key={id}>
     <span className="ix-card__k">{title}</span><b>{id==='difference'&&total.state==='estimated'?money(Math.abs(total.amount)):monetary(total)}</b><small>{id==='difference'&&total.state==='estimated'
       ? c(`Compared with your plan · same ${total.includedCount} ${total.includedCount===1?'product':'products'}`, `与当前计划比较 · 相同的 ${total.includedCount} 件商品`, `Berbanding pelan anda · ${total.includedCount} produk yang sama`)
       : `${c('Products included','计入商品','Produk termasuk')}: ${total.includedCount}/${impact.products.length}`}</small>
     {total.state!=='estimated'&&whyUnavailable(total.reason,c('Available stock and demand results are shown separately. Purchase cost is an optional correction in Purchase plan.','库存和需求结果单独显示。采购成本可在采购计划中选填修正。','Hasil stok dan permintaan tersedia ditunjukkan berasingan. Kos belian ialah pembetulan pilihan dalam pelan belian.'))}
     <button type="button" className="ix-card__open" aria-pressed={businessMeasure===id} aria-expanded={businessOpen&&businessMeasure===id} aria-controls="business-breakdown" onClick={()=>openBusinessProducts(id)}>{businessOpen&&businessMeasure===id?c('Showing products ↓','正在显示商品 ↓','Memaparkan produk ↓'):c('See products','查看商品','Lihat produk')}</button>
   </div>;
-  const environmentCard=(id:EnvironmentMeasure,title:string,summary:CarbonImpactSummary,quantity:string)=><div className={`ix-card${environmentOpen&&environmentMeasure===id?' ix-card--on':''}`} key={id}>
+  const environmentCard=(id:EnvironmentMeasure,title:string,summary:CarbonImpactSummary,quantity:string)=><div className={`ix-card ix-card--env-${id}${environmentOpen&&environmentMeasure===id?' ix-card--on':''}`} key={id}>
     <span className="ix-card__k">{title}</span><b>{carbon(summary)}</b><small>{c('Contributing products','计入商品','Produk menyumbang')}: {summary.includedProductCount}/{summary.totalProductCount}</small>
     {summary.massKg!==undefined&&<span className="ix-card__mass">{n(summary.massKg)} kg · {c('Source-agreement mass / estimated-factor mass','来源一致重量／估算因子重量','Jisim sumber bersetuju / faktor anggaran')}: {n(summary.massKgSourcesAgree)} / {n(summary.massKgEstimate)} kg</span>}
     <span className="ix-card__qty">{quantity}</span>
@@ -295,7 +295,7 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
     </section>;
 
   return <main className="impact" aria-labelledby="impact-title">
-    <ImpactStory head={head} aside={about} beforeStory={detailedEstimates} lines={lines} totalProducts={impact.products.length} business={businessTile} emissions={emissionsTile} onBack={onBack} onExcess={openExcessProducts} onBusiness={()=>openBusinessProducts('excess')} onEmissions={()=>openEnvironmentProducts('potential')} />
+    <ImpactStory head={head} aside={about} afterStory={detailedEstimates} lines={lines} totalProducts={impact.products.length} business={businessTile} emissions={emissionsTile} onBack={onBack} onExcess={openExcessProducts} onBusiness={()=>openBusinessProducts('excess')} onEmissions={()=>openEnvironmentProducts('potential')} />
     {missingImpactDetails.length>0 && <details className="impact-sec impact__missing-details">
       <summary>{c('Review products with missing details','查看缺少信息的商品','Semak produk dengan butiran yang belum lengkap')} ({missingImpactDetails.length})</summary>
       <p>{c('Some products are not included in the money or carbon estimates yet. Add their missing details to include them where supported. You can keep planning without filling these in.','部分商品尚未计入资金或碳排放估算。补充缺少的信息后，支持的商品即可计入。您也可以不填写并继续规划采购。','Sesetengah produk belum dikira dalam anggaran wang atau karbon. Tambah butiran yang belum lengkap untuk memasukkannya jika disokong. Anda boleh terus merancang tanpa mengisinya.')}</p>
