@@ -237,7 +237,7 @@ export function UploadScreen({
 
   async function handleSample() {
     const sampleAnalysisDate = malaysiaToday();
-    await run("sample_with_issues.csv", "sample", "text/csv", 0, async (signal) => {
+    await run("sample_shop_sales.csv", "sample", "text/csv", 0, async (signal) => {
       const response = await fetch("/samples/sample_with_issues.csv", { signal, cache: "no-store" });
       if (!response.ok) throw new Error("Sample unavailable");
       const csv = await response.text();
@@ -321,7 +321,7 @@ export function UploadScreen({
     <div className="upload-screen">
       <header className={compactTitle ? "upload-hero upload-hero--compact" : "upload-hero"}>
         <div className="upload-wrap upload-hero__inner">
-          <p className="upload-hero__eyebrow"><GrowthIcon stage="sprout" size={16} className="growth-icon--inline" /> {t("Step 1 of 3")}</p>
+          <p className="upload-hero__eyebrow"><GrowthIcon stage="sprout" size={16} className="growth-icon--inline" /> {t("Step 1 of 4")}</p>
           <h1>{t(updating ? "Reupload your sales file" : "Upload your sales file")}</h1>
           <p className="upload-hero__lede">{t(updating ? "Upload one CSV or Excel sales file for your store. Your previous file stays in Upload History, up to 12 uploads." : "Use the CSV or Excel export from your POS, marketplace or spreadsheet. Column names don't need to match ours.")}</p>
         </div>
