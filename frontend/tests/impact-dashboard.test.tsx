@@ -15,7 +15,7 @@ function costEvidence() {
 }
 function summary(title: string): HTMLElement { return screen.getByText(title).parentElement!; }
 // The restored design opens the Environmental lens first; business checks open their tab.
-function openAnalysis() { expect(screen.getByRole("heading", { name: "Detailed estimates and how they work" })).toBeTruthy(); }
+function openAnalysis() { expect(screen.getByRole("heading", { name: "Your numbers in detail" })).toBeTruthy(); }
 function businessPanel() { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: /Business/ })); return within(screen.getByRole("tabpanel", { name: "Business" })); }
 
 describe("impact dashboard", () => {
@@ -38,6 +38,11 @@ describe("impact dashboard", () => {
     expect((document.getElementById("environment-breakdown") as HTMLDetailsElement).open).toBe(true);
     expect(screen.getByText("Why these estimates? Potential excess by product")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Download your results" })).toBeTruthy();
+    const estimates = screen.getByRole("heading", { name: "Your numbers in detail" }).closest("section")!;
+    const products = document.getElementById("impact-excess-products")!;
+    const why = screen.getByRole("heading", { name: "Why it matters" }).closest("section")!;
+    expect(estimates.compareDocumentPosition(products) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(products.compareDocumentPosition(why) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
   it("uses checked purchase quantities and excludes products without a usable check", () => {
     const { snapshot, forecast } = makeEvidence();
@@ -60,8 +65,8 @@ describe("impact dashboard", () => {
     openAnalysis();
     expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe(`${lines[0].units} units`);
     const business = businessPanel();
-    expect(business.getByText("Planned purchase spend")).toBeTruthy();
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("Unavailable");
+    expect(business.getByText("Your planned spend")).toBeTruthy();
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("Unavailable");
   });
 
   it("switches impact tabs and expands an explanation", () => {
@@ -82,7 +87,7 @@ describe("impact dashboard", () => {
     expect(business.getAttribute("aria-selected")).toBe("false");
     expect(document.getElementById("environment-impact")?.hidden).toBe(false);
     expect(screen.queryByText("No outcome recorded")).toBeNull();
-    const question = screen.getByText("How CO₂e estimates are calculated");
+    const question = screen.getByText("How we estimate emissions");
     fireEvent.click(question);
     expect(question.closest("details")?.open).toBe(true);
     fireEvent.click(business);
@@ -101,19 +106,19 @@ describe("impact dashboard", () => {
     const excess = lines.reduce((total, line) => total + line.units, 0);
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
     expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe(`${excess} units`);
-    expect(businessPanel().getByText("Planned purchase spend")).toBeTruthy();
+    expect(businessPanel().getByText("Your planned spend")).toBeTruthy();
   });
 
   it("uses validated seller costs, shows real zero and updates current totals after a quantity edit", () => {
     const { snapshot, forecast } = costEvidence();
     const props = { snapshot, forecast, onBack: () => {} };
     const { rerender } = render(<ImpactDashboard {...props} drafts={{ A: entered(100), B: entered(0) }} />);
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 250.00");
-    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 250.00");
+    expect(summary("Your planned spend").querySelector("small")?.textContent).toBe("Products included: 2/3");
     const row = businessPanel().getByText(/000202/).closest("tr")!;
     expect(within(row).getAllByText("MYR 0.00").length).toBeGreaterThan(0);
     rerender(<ImpactDashboard {...props} drafts={{ A: entered(50), B: entered(0) }} />);
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 125.00");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 125.00");
     expect(screen.getByText(/These are estimates, not achieved savings or profit/)).toBeTruthy();
   });
 
@@ -121,12 +126,12 @@ describe("impact dashboard", () => {
     const { snapshot, forecast } = costEvidence();
     const { rerender } = render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{}} onBack={() => {}} />);
     expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 50.00");
-    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 50.00");
+    expect(summary("Your planned spend").querySelector("small")?.textContent).toBe("Products included: 2/3");
     rerender(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{ A: entered(0) }} onBack={() => {}} />);
     expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 20.00");
-    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 20.00");
+    expect(summary("Your planned spend").querySelector("small")?.textContent).toBe("Products included: 2/3");
   });
 
   it("requires confirmed food categories before showing CO2e and exposes actual factor sources", () => {
