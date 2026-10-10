@@ -64,7 +64,7 @@ describe("impact dashboard", () => {
     expect(screen.getByText(`Potential excess: ${lines[0].units} sales units · 2/3 assessed`)).toBeTruthy();
     const business = businessPanel();
     expect(business.getAllByText("No planned order entered.")).toHaveLength(1);
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("Unavailable");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("Unavailable");
   });
 
   it("switches impact tabs and expands an explanation", () => {
@@ -111,12 +111,12 @@ describe("impact dashboard", () => {
     const { snapshot, forecast } = costEvidence();
     const props = { snapshot, forecast, onBack: () => {} };
     const { rerender } = render(<ImpactDashboard {...props} drafts={{ A: entered(100), B: entered(0) }} />);
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 250.00");
-    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 250.00");
+    expect(summary("Your planned spend").querySelector("small")?.textContent).toBe("Products included: 2/3");
     const row = businessPanel().getByText(/000202/).closest("tr")!;
     expect(within(row).getAllByText("MYR 0.00").length).toBeGreaterThan(0);
     rerender(<ImpactDashboard {...props} drafts={{ A: entered(50), B: entered(0) }} />);
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 125.00");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 125.00");
     expect(screen.getByText(/It is not achieved savings, profit or selling-price revenue/)).toBeTruthy();
   });
 
@@ -124,12 +124,12 @@ describe("impact dashboard", () => {
     const { snapshot, forecast } = costEvidence();
     const { rerender } = render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{}} onBack={() => {}} />);
     expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 50.00");
-    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 50.00");
+    expect(summary("Your planned spend").querySelector("small")?.textContent).toBe("Products included: 2/3");
     rerender(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{ A: entered(0) }} onBack={() => {}} />);
     expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
-    expect(summary("Planned purchase spend").querySelector("b")?.textContent).toBe("MYR 20.00");
-    expect(summary("Planned purchase spend").querySelector("small")?.textContent).toBe("Included / total: 2/3");
+    expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 20.00");
+    expect(summary("Your planned spend").querySelector("small")?.textContent).toBe("Products included: 2/3");
   });
 
   it("requires confirmed food categories before showing CO2e and exposes actual factor sources", () => {
