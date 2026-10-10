@@ -52,3 +52,19 @@ it("print summary escapes all supplied text, preserves Unicode, labels source an
   expect(html).toContain("Save as PDF");
   expect(html).toContain("<meta charset=\"utf-8\">");
 });
+
+it("prints weekly bars as SVG shapes while keeping missing weeks and zero sales distinct", () => {
+  const source = report();
+  const history = { id: "history", title: "Weekly Demand History", columns: ["Product name", "Product code", "Pack size", "Product key", "Week start", "Week end", "Positive sales"], rows: [
+    ["Milo 3in1", "MM0002", "15 sticks", "ID|MM0002", "2026-09-14", "2026-09-20", 4],
+    ["Milo 3in1", "MM0002", "15 sticks", "ID|MM0002", "2026-09-21", "2026-09-27", "Missing"],
+    ["Milo 3in1", "MM0002", "15 sticks", "ID|MM0002", "2026-09-28", "2026-10-04", 0],
+  ] };
+  const html = renderAnalysisReportHtml({ ...source, tables: [...source.tables, history] });
+  expect(html).toContain('<svg class="bar-chart"');
+  expect(html).toContain('height="80" fill="#38664d"');
+  expect(html).toContain('height="0" fill="#38664d"');
+  expect(html).toContain('<span>Missing</span>');
+  expect(html).toContain('<span>0</span>');
+  expect(html).not.toContain("<i style=");
+});

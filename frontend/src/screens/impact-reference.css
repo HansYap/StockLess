@@ -1,4 +1,11 @@
 /* StockLess Impact Dashboard reference layout, adapted for live data. */
+.impact__missing-details > summary{cursor:pointer;font:700 18px/1.4 var(--display);color:var(--teal-deep);overflow-wrap:anywhere}
+.impact__missing-details > p{margin:14px 0;line-height:1.5;color:var(--muted)}
+.impact__missing-details > ul{display:grid;gap:12px;list-style:none;padding:0;margin:14px 0 0}
+.impact__missing-details li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px}
+.impact__missing-details li > span{display:flex;flex:1 1 200px;flex-direction:column;gap:4px;min-width:0;overflow-wrap:anywhere}
+.impact__missing-details li small{color:var(--muted)}
+.impact__missing-details li .btn{max-width:100%;white-space:normal}
 /* ===== Impact story (I3 redesign): Before → StockLess → Impact ===== */
 .workspace-home-link + .workspace-home-link{margin-left:8px}
 .sx-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;width:100%}
@@ -9,8 +16,6 @@
 .sx-cap{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .sx-capt{font-family:var(--body);font-size:var(--text-eyebrow);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--teal)}
 #sx-story:not(.is-after) .sx-capt{color:var(--amber)}
-.sx-total{font-family:var(--display);font-size:28px;font-weight:700;color:var(--ink)}
-.sx-total small{font-family:var(--body);font-size:var(--text-body);font-weight:600;color:var(--muted)}
 .t-after{display:none}
 #sx-story.is-after .t-before{display:none}
 #sx-story.is-after .t-after{display:inline}
@@ -35,11 +40,6 @@
   box-shadow:0 0 18px 4px rgba(22,125,116,.35)}
 .sx-scan span{position:absolute;top:4px;left:8px;white-space:nowrap;font:700 12px/1 var(--display);color:#fff;
   background:var(--teal);padding:5px 9px;border-radius:999px}
-.sx-bar{display:flex;align-items:center;gap:14px;font-size:var(--text-description);font-weight:700;color:var(--ink-2)}
-.sx-bar__track{flex:1;height:10px;border-radius:999px;background:var(--line-soft);overflow:hidden}
-.sx-bar__track i{display:block;height:100%;width:77%;border-radius:999px;background:var(--teal);transition:width 1s ease}
-#sx-story.is-after .sx-bar__track i{width:100%}
-.sx-bar b{font-family:var(--data);color:var(--teal-deep)}
 .sx-impactcard{overflow:hidden;padding:24px;display:flex;flex-direction:column;align-items:center;gap:14px}
 .sx-globe{position:relative;width:240px;height:240px}
 .sx-orbit{position:absolute;inset:0;width:100%;height:100%}
@@ -174,7 +174,7 @@
 .impact{width:100%;min-width:0}
 .sx-row__track{min-width:0}
 .sx-row__label b{overflow-wrap:anywhere}
-@media(max-width:520px){.sx-globe{width:min(240px,100%)}.sx-cap{flex-wrap:wrap}.sx-bar{flex-wrap:wrap}.sx-bar__track{min-width:80px}.sx-tile{min-width:0}}
+@media(max-width:520px){.sx-globe{width:min(240px,100%)}.sx-cap{flex-wrap:wrap}.sx-tile{min-width:0}}
 @media(max-width:700px){.frame--impact .topbar{height:auto;padding:8px 16px}}
 @media(max-width:560px){.frame.frame--impact .topbar{min-height:60px;justify-content:space-between;row-gap:0}.frame.frame--impact .topbar .brand{flex:1 1 auto;margin:0}.frame.frame--impact .topbar .workspace-home-link{margin-left:auto}}
 
@@ -204,7 +204,6 @@
 /* ===== Restored design, filled with live CP3 figures =====
    Summaries open their product breakdown in place (US9.1 AC2); every
    unavailable figure carries its reason and next step (US9.1 AC4). */
-.sx-bar__track i{width:var(--ratio,77%)}
 .sx-disc--long{font-size:16px}
 .sx-tile--co2 b.sx-tile__value{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink)}
 .sx-story-more{margin:0;font-size:var(--text-description);color:var(--muted)}
@@ -223,6 +222,7 @@
 .ix-title{margin:26px 0 0;font-family:var(--display);font-size:var(--text-section-head);font-weight:700;color:var(--ink)}
 .ix-sub{margin:6px 0 0;font-size:var(--text-secondary);color:var(--muted)}
 .ix-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.ix-cards--two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ix-cards--four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .ix-card{display:flex;flex-direction:column;gap:5px;min-width:0;padding:16px;border:1px solid var(--line);border-radius:16px;background:#fff;transition:border-color .15s ease,box-shadow .15s ease}
 .ix-card--on{border-color:var(--teal);box-shadow:0 0 0 3px rgba(22,125,116,.12)}
@@ -248,7 +248,6 @@
 .ix-queue{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
 .ix-queue li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line-soft);border-radius:10px;background:#fff;font-size:var(--text-secondary)}
 .ix-queue small{display:block;color:var(--muted)}
-.ix-records{margin:0 0 10px;padding-left:18px;font-size:var(--text-secondary);color:var(--ink-2)}
 .impact__lcost{display:block;font-family:var(--data);font-weight:800;font-size:var(--text-secondary);color:var(--teal-deep)}
 .impact__review{width:100%;margin-top:24px;padding:0 20px}
 .impact__review>summary{display:flex;flex-direction:column;gap:3px;padding:18px 0;cursor:pointer;list-style:none}
@@ -258,10 +257,6 @@
 .impact__review[open] .impact__review-title::after{content:" −"}
 .impact__review>summary small{font-size:var(--text-secondary);color:var(--muted)}
 .impact__review[open]{padding-bottom:20px}
-.impact__review-product{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-weight:700;color:var(--ink)}
-.impact__review-product select{max-width:100%;min-height:40px;padding:6px 10px;border:1px solid var(--border-strong);border-radius:9px;background:#fff;font:600 var(--text-secondary) var(--body);color:var(--ink)}
-.impact__history .decision-outcomes{margin:0;padding:0;border:0}
-.impact__history .decision-outcomes>h2{display:none}
 .sx-shelfcard{justify-content:center}
 .sx-tile b.sx-tile__money{font-size:22px;overflow-wrap:anywhere}
 .ix-excluded{margin-top:12px;padding:12px 14px;border:1px dashed var(--border-strong);border-radius:12px;background:#fff}

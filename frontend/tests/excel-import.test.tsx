@@ -36,7 +36,7 @@ describe("Excel sales import", () => {
       .rejects.toThrow(/No data found/);
   });
 
-  it("sends an uploaded workbook through the existing CSV importer with its original name", async () => {
+  it.each([false, true])("sends only the selected workbook through the CSV importer, replacement: %s", async replacing => {
     const sheet = XLSX.utils.aoa_to_sheet([["Sale date", "Product code", "Quantity sold"], ["2026-09-20", "000101", 3]]);
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, sheet, "Sales");
@@ -47,13 +47,18 @@ describe("Excel sales import", () => {
       const dataset = await parseCsvBytes(converted, { sourceMode: "user", sourceName, mimeType });
       expect(dataset.rows[0].originalValues).toContain("000101");
     });
-    render(<UploadScreen onSource={onSource} onCancel={() => {}} />);
+    render(<UploadScreen onSource={onSource} onCancel={() => {}} updating={replacing} currentFileName={replacing ? "Previous.csv" : undefined} />);
     fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files: [file] } });
     expect(onSource).not.toHaveBeenCalled();
-    expect(await screen.findByText("retailer.xlsx")).toBeTruthy();
+    expect(await screen.findByText("retailer.xlsx", { selector: ".upload-picked b" })).toBeTruthy();
     await screen.findByRole("combobox", { name: "Worksheet" });
     await waitFor(() => expect((screen.getByRole("button", { name: "Continue to matching →" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "Continue to matching →" }));
+    if (replacing) {
+      expect(onSource).not.toHaveBeenCalled();
+      expect(screen.getByRole("dialog", { name: "Replace your current sales data?" })).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Replace and continue" }));
+    }
     await waitFor(() => expect(onSource).toHaveBeenCalledOnce());
     expect(onSource.mock.calls[0][1]).toBe("retailer.xlsx");
     expect(onSource.mock.calls[0][3]).toBe("text/csv;converted-from=excel");

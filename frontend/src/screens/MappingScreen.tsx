@@ -3,9 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   FIELD_REGISTRY,
-  evaluateCapabilities,
-  partitionCapabilities,
-  detectIdentityConflicts,
   getReadinessBlockers,
   type CanonicalField,
   type MappingProposalResult,
@@ -16,6 +13,7 @@ import { WorkflowIcon } from "../components/WorkflowIcon.tsx";
 import { confirmCurrentMapping } from "../mapping-confirmation.ts";
 import "./mapping.css";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { UploadBehaviorNotice } from "../components/UploadBehaviorNotice.tsx";
 
 type IdentityMode = "stable" | "composite";
 interface MappingScreenProps {
@@ -32,6 +30,7 @@ interface MappingScreenProps {
   readonly notice: string | null;
   readonly sessionNotice?: string | null;
   readonly checking?: boolean;
+  readonly replacingCurrentPlan?: boolean;
   readonly children?: ReactNode;
 }
 
@@ -69,9 +68,7 @@ export function MappingScreen(props: MappingScreenProps) {
     }
     return counts;
   }, [mapping]);
-  const conflicts = useMemo(() => detectIdentityConflicts(dataset, mapping), [dataset, mapping]);
   const bulkMapping = useMemo(() => confirmCurrentMapping(mapping), [mapping]);
-  const capabilities = partitionCapabilities(evaluateCapabilities(bulkMapping ?? mapping));
   const blockers = bulkMapping ? getReadinessBlockers(bulkMapping) : ["Resolve columns used more than once"];
   const staleColumns = Object.values(mapping.mappings).some(match => match && !dataset.columns.some(column => column.id === match.sourceColumnId));
   const blocked = blockers.length > 0 || staleColumns;
@@ -167,6 +164,7 @@ export function MappingScreen(props: MappingScreenProps) {
     <main className="mapping-wrap mapping-main">
       <div className="mapping-grid">
         <div className="mapping-left">
+          {dataset.sourceMode === "user" && <UploadBehaviorNotice replacing={props.replacingCurrentPlan} compact />}
           <div className="mapping-all">
             <div><b>{t("All matches look right?")}</b><p>{t("Confirm all selected columns and continue in one step.")}</p>
               <small>{t("Products will be kept separate using:")} {t(mode === "stable" ? "One code column" : "Product name + pack size")}.</small></div>
@@ -234,13 +232,6 @@ export function MappingScreen(props: MappingScreenProps) {
               {selectControl(field)}<span className="mapping-preview">{formatPreview(columnFor(field)?.previewValues ?? [])}</span>
             </div>)}
           </details>}
-          {conflicts.length > 0 && <div className="alert alert--warn" role="alert">
-            <span className="alert__icon alert__icon--warn" aria-hidden="true">!</span><div>
-              <p className="alert__title">{t(conflicts.length === 1 ? "One identity conflict" : `${conflicts.length} identity conflicts`)}</p>
-              <ul className="alert__list">{conflicts.slice(0, 4).map(conflict => <li key={`${conflict.code}-${conflict.productHint}`}>
-                <b>{conflict.productHint}</b> {t(conflict.code === "CODE_TO_MULTIPLE_NAMES" ? "has more than one product name" : conflict.code === "CODE_TO_MULTIPLE_PACKS" ? "covers more than one pack size" : "maps to more than one product code")}: {conflict.values.join(", ")} {t("(rows")} {conflict.sourceRows.slice(0, 6).join(", ")}{conflict.sourceRows.length > 6 ? "…" : ""})
-              </li>)}</ul></div>
-          </div>}
           <div className="mapping-saved-controls">{props.children}</div>
         </div>
         <aside className="mapping-help mapping-card">
@@ -253,7 +244,6 @@ export function MappingScreen(props: MappingScreenProps) {
             <p><b>{t("Stock on hand + Stock count date")}</b><small>{t("Weeks of cover, purchase check, stock freshness")}</small></p>
             <p><b>{t("Expiry date")}</b><small>{t("Expiry-aware note")}</small></p>
           </div>
-          <section aria-label={t("Available analyses")}><h3>{t("Available analyses")}</h3><p>{t("Selected columns support these analyses after Step 3 validation.")}</p><ul>{capabilities.availableNow.map(item => <li key={item.capability}>{t(item.label)}</li>)}</ul><h3>{t("Needs more information")}</h3><ul>{capabilities.needsMoreInformation.map(item => <li key={item.capability}><b>{t(item.label)}</b><small>{item.reasons.map(reason => t(reason.message)).join(" ")}</small></li>)}</ul></section>
           <p className="mapping-privacy"><span aria-hidden="true">🔒</span> {t("Processed in your browser, never uploaded.")}</p>
         </aside>
       </div>

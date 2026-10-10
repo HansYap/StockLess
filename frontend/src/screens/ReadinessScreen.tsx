@@ -73,7 +73,9 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   useEffect(() => { setFilters(EMPTY_FILTERS); setSelectedFindingId(null); setPopover(false); setView("products"); setPendingGroup(null); }, [props.snapshot.id]);
   useEffect(() => { setFilters(current => ({ ...current, type: props.filter ? [CHART_TO_TYPE[props.filter]] : [] })); }, [props.filter]);
   useEffect(() => {
-    const scroll = () => setCompact(previous => window.scrollY > (previous ? 40 : 140));
+    const scroll = () => {
+      if (!document.querySelector(".onboarding-coach")) setCompact(previous => window.scrollY > (previous ? 40 : 140));
+    };
     window.addEventListener("scroll", scroll, { passive: true }); return () => window.removeEventListener("scroll", scroll);
   }, []);
   useEffect(() => {
@@ -111,7 +113,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   const counts = { ready: 0, review: 0, missing: 0 }; products.forEach(product => counts[product.status]++);
   const title = products.length === 0 || props.snapshot.reconciliation.rowsUsed === 0 ? "Your data needs corrections" : counts.missing > 0 || counts.review > 0 ? "Your data is mostly ready" : "Your data is ready";
   const unavailable = props.checking || props.forecasting || props.snapshot.reconciliation.rowsUsed === 0;
-  const continueButton = <button type="button" className="btn btn--primary" onClick={props.onContinue} disabled={unavailable} aria-busy={props.forecasting}>{t(props.forecasting ? "Estimating demand locally…" : "Continue to purchase planning →")}</button>;
+  const continueButton = <button type="button" data-guide="readiness-continue" className="btn btn--primary" onClick={props.onContinue} disabled={unavailable} aria-busy={props.forecasting}>{t(props.forecasting ? "Estimating demand locally…" : "Continue to purchase planning →")}</button>;
   const viewEvidence = (id: string) => {
     setSelectedFindingId(id);
     if (evidenceDetails.current) {
@@ -122,20 +124,20 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   };
   return <div className="readiness-screen">
     <section className={"rd-hero" + (compact ? " rd-hero--compact" : "")}><div className="rd-wrap">
-      <div className="rd-hero__inner"><div><p className="rd-eyebrow"><GrowthIcon stage="potted" size={16} className="growth-icon--inline" /> {t("Step 3 of 3")}</p><h1>{t(title)}</h1><p className="rd-lede">{t("We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.")}</p></div>
+      <div className="rd-hero__inner" data-guide="readiness-status" data-guide-state={props.snapshot.reconciliation.rowsUsed === 0 ? "blocked" : "usable"}><div><p className="rd-eyebrow"><GrowthIcon stage="potted" size={16} className="growth-icon--inline" /> {t("Step 3 of 3")}</p><h1>{t(title)}</h1><p className="rd-lede">{t("We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.")}</p></div>
         <div className="rd-file"><span className="rd-file__icon">{/\.xlsx?$/i.test(props.dataset.sourceName) ? "XLS" : "CSV"}</span><div><b>{props.dataset.sourceName}</b><small><span className={"rd-pill rd-pill--" + (props.dataset.sourceMode === "sample" ? "review" : "ready")}>{t(props.dataset.sourceMode === "sample" ? "Sample" : "Retailer file")}</span>{props.dataset.rows.length.toLocaleString()} {t("rows")} · {props.dataset.columns.length} {t("columns")}</small></div>{props.onClear && <button type="button" className="btn--link" onClick={props.onClear}>{t("Clear session")}</button>}</div>
       </div><div className="rd-actions"><button type="button" className="btn--link" onClick={props.onBack}>{t("← Back to matching")}</button><span className="rd-actions__spacer" /><span className="rd-actions__meta">{mustFix} {t("rows to fix in your file")}</span>{continueButton}</div>
     </div></section>
     <div className="rd-wrap rd-main">
       {props.checking && <p className="notice notice--info" role="status">{t("Refreshing the readiness evidence locally…")}</p>}{props.error && <p className="notice notice--error" role="alert">{t(props.error)}</p>}{props.forecastError && <p className="notice notice--error" role="alert">{t(props.forecastError)}</p>}
-      <div className="rd-view-tabs" role="tablist" aria-label={t("Readiness view")}>{(["products", "rows"] as const).map((item, index) => <button type="button" role="tab" key={item} id={"readiness-view-" + item} aria-controls={"readiness-view-panel-" + item} aria-selected={view === item} tabIndex={view === item ? 0 : -1} onClick={() => setView(item)} onKeyDown={event => {
+      <div className="rd-view-tabs" data-guide="readiness-views" role="tablist" aria-label={t("Readiness view")}>{(["products", "rows"] as const).map((item, index) => <button type="button" role="tab" key={item} id={"readiness-view-" + item} aria-controls={"readiness-view-panel-" + item} aria-selected={view === item} tabIndex={view === item ? 0 : -1} onClick={() => setView(item)} onKeyDown={event => {
         const next = event.key === "ArrowRight" || event.key === "ArrowLeft" ? 1 - index : event.key === "Home" ? 0 : event.key === "End" ? 1 : -1;
         if (next < 0) return; event.preventDefault(); const target = next === 0 ? "products" : "rows"; setView(target); document.getElementById("readiness-view-" + target)?.focus();
       }}><span aria-hidden="true">{item === "products" ? "🛒" : "📄"}</span>{t(item === "products" ? "Products" : "Rows in your file")}<span className="rd-view-count num">{(item === "products" ? products.length : props.snapshot.reconciliation.rowsIn).toLocaleString()}</span></button>)}</div>
       <div id="readiness-view-panel-products" role="tabpanel" aria-labelledby="readiness-view-products" hidden={view !== "products"}><ReadinessOverview snapshot={props.snapshot} timelines={timelines} products={products} initialSearch={props.focusQuery ?? undefined} /></div>
       <div id="readiness-view-panel-rows" role="tabpanel" aria-labelledby="readiness-view-rows" hidden={view !== "rows"}><ReadinessRowsTab key={props.snapshot.id} snapshot={props.snapshot} findings={findings} onShowGroup={showGroup} onDownload={() => downloadText(createCorrectionReport(props.snapshot).csvText, props.reportFilename)} /></div>
       <div className="rd-layout"><section className="rd-card rd-findings" aria-labelledby="readiness-findings-title">
-        <div className="rd-card__head"><span className="rd-group-icon rd-group-icon--search"><ReadinessIcon name="search" /></span><div><h2 id="readiness-findings-title">{t("What we found")}</h2><p>{props.snapshot.reconciliation.rowsExcluded} {t("rows left out of")} {props.snapshot.reconciliation.rowsIn.toLocaleString()} · {t("Your file isn't changed")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={() => downloadText(findingsCsv(shown, props.dataset.sourceName, props.snapshot.analysisDate, props.dataset.worksheetName, props.snapshot.sourceMode, filtered), props.reportFilename.replace(/\.csv$/i, filtered ? "-filtered.csv" : ".csv"))}><ReadinessIcon name="download" />{t("Download list")}</button></div>
+        <div className="rd-card__head" data-guide="readiness-findings"><span className="rd-group-icon rd-group-icon--search"><ReadinessIcon name="search" /></span><div><h2 id="readiness-findings-title">{t("What we found")}</h2><p>{props.snapshot.reconciliation.rowsExcluded} {t("rows left out of")} {props.snapshot.reconciliation.rowsIn.toLocaleString()} · {t("Your file isn't changed")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={() => downloadText(findingsCsv(shown, props.dataset.sourceName, props.snapshot.analysisDate, props.dataset.worksheetName, props.snapshot.sourceMode, filtered), props.reportFilename.replace(/\.csv$/i, filtered ? "-filtered.csv" : ".csv"))}><ReadinessIcon name="download" />{t("Download list")}</button></div>
         <div className="rd-filterbar"><div className="rd-add-filter" ref={popoverContainer}><button type="button" ref={filterButton} className="rd-filter-button" aria-expanded={popover} aria-controls="readiness-filter-menu" onClick={() => { setPopover(!popover); setField(null); setFilterSearch(""); }}><ReadinessIcon name="filter" />{t("Add filter")}</button>
           {popover && <div className="rd-filter-menu" id="readiness-filter-menu" role="dialog" aria-label={t("Add filter")}><input ref={filterInput} type="search" aria-label={t("Search filters")} placeholder={t("Search filters")} value={filterSearch} onChange={event => setFilterSearch(event.currentTarget.value)} />
             {field && <button type="button" onClick={() => { setField(null); setFilterSearch(""); }}>{t("← All filters")}</button>}

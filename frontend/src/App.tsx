@@ -1,4 +1,5 @@
 import { t, useLanguage } from "./i18n/index.ts";
+import { malaysiaToday } from "./malaysia-date.ts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OpeningScreen } from "./components/OpeningScreen.tsx";
 import { AppShell, type StepId } from "./components/AppShell.tsx";
@@ -64,11 +65,6 @@ function seedFromProposals(base: MappingState, proposals: MappingProposalResult)
   return next;
 }
 
-/** Returns the retailer-facing calendar date in the specification's fixed zone. */
-function malaysiaDate(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
-}
-
 interface AppProps {
   readonly initialDatasetId?: string;
   readonly updateDatasetId?: string;
@@ -108,7 +104,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [dateConfirmations, setDateConfirmations] = useState<readonly DateFormatConfirmation[]>([]);
-  const [analysisDate, setAnalysisDate] = useState(malaysiaDate);
+  const [analysisDate, setAnalysisDate] = useState(malaysiaToday);
   const [savedDatasets, setSavedDatasets] = useState<readonly SavedDatasetSummary[]>([]);
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
   const [updateTargetId, setUpdateTargetId] = useState<string | null>(updateDatasetId ?? null);
@@ -142,7 +138,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const forecastAbort = useRef<AbortController | null>(null);
 
   const dataset = envelope.session.dataset;
-  useGuidePage(workspaceActive ? "sidebar" : step === 1 ? "upload" : step === 2 ? "mapping" : null,
+  useGuidePage(openingDataset ? null : step === 1 ? "upload" : step === 2 ? "mapping" : step === 3 && readiness ? "readiness" : step === 4 && readiness && forecast ? showImpact ? "impact" : "purchase" : null,
     historyLoaded && !guidedImport && !workspaceActive && step === 1 && savedDatasets.length === 0);
   const workspaceDataset = (activeSavedId && savedDatasets.find(item => item.id === activeSavedId)) || workspaceInfo || uploadTarget || {
     datasetName: dataset?.sourceName ?? t("New file"), shopName: "", rowCount: dataset?.rows.length ?? 0,
@@ -518,6 +514,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     onProgress: (progress: CsvProgress) => void,
     signal: AbortSignal,
     sourceMetadata?: ImportSourceMetadata,
+    sampleAnalysisDate?: string,
   ) => {
     const previousMode = envelope.session.sourceMode;
     const next = await replaceSessionSourceInWorker(envelope, bytes, {
@@ -551,8 +548,8 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
     lastSavedEnvelope.current = null;
     setMappingError(null);
     setMappingNotice(null);
-    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined);  setImpactFocus(undefined);
-    setAnalysisDate(malaysiaDate());
+    setProductKey(null); setDetailsFocus(undefined); setPurchaseView(undefined); setImpactFocus(undefined);
+    setAnalysisDate(sourceMode === "sample" && sampleAnalysisDate ? sampleAnalysisDate : malaysiaToday());
     setActiveSavedId(null);
     setWorkspaceInfo({ datasetName: parsed.sourceName.replace(/\.[^.]+$/, ""), shopName: target?.shopName ?? "", rowCount: parsed.rows.length });
     setUpdateTargetId(null);
@@ -697,12 +694,15 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
 
   if (openingDataset) return <OpeningScreen title="Opening your saved dataset…" />;
 
+  const replacementId = guidedImport ? returnPlanId : updateTargetId ?? pendingUploadTarget.current ?? activeSavedId;
+  const replacementSummary = savedDatasets.find(item => item.id === replacementId) ?? uploadTarget;
+
   return (
     <AppShell
-      onGuide={async () => {
+      onBeforeSetupGuide={async () => {
         for (const [id, work] of pendingWork.current) await persistWork(id, work);
-        if (pendingWork.current.size > 0) return;
-        await onboarding.startReplay(activeSavedId ?? returnPlanId ?? uploadTarget?.id);
+        if (pendingWork.current.size > 0) throw new Error("Pending changes could not be saved.");
+        return activeSavedId ?? returnPlanId ?? uploadTarget?.id;
       }}
       onReturnToPlan={guidedImport && returnPlanId && !activeSavedId && step >= 3 ? () => { onboarding.stop(); window.location.hash = `#dataset/${encodeURIComponent(returnPlanId)}`; } : undefined}
       i3Typography={!showImpact}
@@ -735,6 +735,12 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           onSource={handleSource}
           onCancel={workspaceActive ? () => setSessionNotice(null) : handleClearSession}
           updating={workspaceActive}
+          hasSavedPlan={Boolean(replacementId)}
+          currentFileName={replacementId ? replacementSummary?.datasetName ?? t("Your current plan") : dataset?.sourceName}
+          onKeepCurrentPlan={replacementId ? () => {
+            onboarding.stop();
+            window.location.hash = `#dataset/${encodeURIComponent(replacementId)}`;
+          } : dataset ? () => goTo(2) : undefined}
         />
       ))}
 
@@ -752,6 +758,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
           onSelectIdentity={handleSelectIdentity}
           onBack={() => workspaceActive ? beginReupload() : setStep(1)}
           checking={readinessLoading || mappingSubmitting}
+          replacingCurrentPlan={dataset.sourceMode === "user" && Boolean(pendingUploadTarget.current)}
           onConfirmAllAndContinue={() => void handleConfirmAllAndContinue()}
         />
       ))}

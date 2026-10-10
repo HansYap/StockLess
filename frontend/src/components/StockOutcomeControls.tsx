@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { OutcomeValidationError, type ReadinessSnapshot, type RecordedStockOutcome, type StockOutcomeKind, type OutcomeUnit } from '../engine.ts';
 import { useLanguage } from '../i18n/index.ts';
 import { getSavedDataset, savedStockOutcomes, saveStockOutcome, updateSavedStockOutcome, removeSavedOutcome } from '../storage/saved-datasets.ts';
+import { malaysiaToday } from '../malaysia-date.ts';
+export { malaysiaToday } from '../malaysia-date.ts';
 import './decision-outcome-controls.css';
 
 interface Props {
@@ -10,12 +12,6 @@ interface Props {
   snapshot: ReadinessSnapshot;
   onChanged?: () => void;
 }
-export function malaysiaToday(now = new Date()): string {
-  const parts = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuala_Lumpur',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
-  const part = (type:string) => parts.find(item=>item.type===type)!.value;
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
-
 /** Observed stock records remain separate from the current planned order. */
 export function StockOutcomeControls({datasetId,product,snapshot,onChanged}:Props) {
   const language=useLanguage(), copy=(en:string,zh:string,ms:string)=>language==='zh'?zh:language==='ms'?ms:en;

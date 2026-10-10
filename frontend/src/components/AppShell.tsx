@@ -33,7 +33,7 @@ interface AppShellProps {
   readonly workflowStyle?: boolean;
   readonly workspaceSidebar?: SavedWorkspaceSidebarProps;
   readonly i3Typography?: boolean;
-  readonly onGuide?: () => Promise<void>;
+  readonly onBeforeSetupGuide?: () => Promise<string | undefined>;
   readonly onReturnToPlan?: () => void;
   /** The current step's work is finished, so its plant has grown. */
   readonly stepDone?: boolean;
@@ -52,7 +52,7 @@ export function AppShell({
   workflowStyle,
   workspaceSidebar,
   i3Typography,
-  onGuide,
+  onBeforeSetupGuide,
   onReturnToPlan,
   stepDone,
 }: AppShellProps) {
@@ -113,7 +113,7 @@ export function AppShell({
           </div>
         ))}
         <a className="workspace-home-link" href="#home" aria-label={t("Homepage")}><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></svg><span>{t("Homepage")}</span></a>
-        <GuideButton onStart={onGuide} />
+        <GuideButton onBeforeSetup={onBeforeSetupGuide} />
         {onReturnToPlan && <button type="button" className="onboarding-guide-button" onClick={onReturnToPlan}>{t("Back to my plan")}</button>}
         <LanguageSwitcher compact={workflow || Boolean(workspaceSidebar)} />
       </header>

@@ -37,31 +37,35 @@ function Harness({ snapshot, forecast, drafts, initialContexts = {} }: { snapsho
     onContextsChange={updates => setContexts(current => ({ ...current, ...updates }))}
     onContextChange={(key, value) => setContexts(current => ({ ...current, [key]: value }))} onBack={() => {}} />;
 }
-function openAnalysis() { const summary = screen.getByText("Detailed estimates"); if (!summary.closest("details")?.open) fireEvent.click(summary); }
+function openAnalysis() { expect(screen.getByRole("heading", { name: "Your numbers in detail" })).toBeTruthy(); }
 function financialCard(label: string) { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: "Business" })); return screen.getByText(label).parentElement!; }
 function environmentPanel() { openAnalysis(); fireEvent.click(screen.getByRole("tab", { name: "Environmental" })); return screen.getByRole("tabpanel", { name: "Environmental" }); }
 function environmentalValue(label: string) { return within(environmentPanel()).getByText(label).parentElement!.querySelector("b")!.textContent; }
-function openInputs() { const review = screen.getByText("Improve the data behind these estimates"); if (!review.closest("details")?.open) fireEvent.click(review); const inputs = screen.getByText("Improve product estimates"); if (!inputs.closest("details")?.open) fireEvent.click(inputs); fireEvent.click(screen.getByRole("button", { name: /^Food category / })); }
 
 it("Step 5 shows the exact same current planned and scenario quantities/costs as Step 4", async () => {
   const input = await evidence();
   const plans = buildPurchasePlanReview(input.snapshot, input.forecast, { inputsByProduct: input.drafts }).products;
   const impact = buildImpactReview(input.snapshot, input.forecast, input.drafts, plans);
-  render(<Harness {...input} />);
+  const view = render(<Harness {...input} />);
   const step4Cost = estimatePurchaseCost(input.snapshot, KEY, input.drafts[KEY].plannedOrder.state === "value" ? input.drafts[KEY].plannedOrder.value : undefined);
   expect(step4Cost.state).toBe("estimated");
   if (step4Cost.state === "estimated") expect(within(financialCard("Your planned spend")).getByText(`MYR ${step4Cost.amount.toFixed(2)}`)).toBeTruthy();
   expect(impact.products[0].scenarioQuantity).toBe(plans[0].estimatedRestock.state === "available" ? plans[0].estimatedRestock.quantity.value : undefined);
   expect(within(financialCard("Spend if you follow our suggestion")).getByText("MYR 100.00")).toBeTruthy();
   expect(within(financialCard("Cost of excess stock")).getByText("MYR 150.00")).toBeTruthy();
-  expect(within(financialCard("Estimated purchase-spend difference")).getByText("MYR 150.00")).toBeTruthy();
+  expect(within(financialCard("Suggested orders would cost less")).getByText("MYR 150.00")).toBeTruthy();
+  expect(within(financialCard("Suggested orders would cost less")).getByText("Compared with your plan · same 1 product")).toBeTruthy();
+  view.rerender(<Harness {...input} drafts={{ [KEY]: { ...input.drafts[KEY], plannedOrder: createPurchaseQuantity(10, "input by you") } }} />);
+  expect(within(financialCard("Suggested orders would cost more")).getByText("MYR 75.00")).toBeTruthy();
+  view.rerender(<Harness {...input} drafts={{ [KEY]: { ...input.drafts[KEY], plannedOrder: createPurchaseQuantity(40, "input by you") } }} />);
+  expect(within(financialCard("Suggested orders would cost the same")).getByText("MYR 0.00")).toBeTruthy();
   await waitFor(() => expect(getSavedDataset).toHaveBeenCalled());
 });
 
 it("automatic category and pack weight produce CO2e without extra inputs", async () => {
   const input=await evidence(); render(<Harness {...input} />);
   expect(environmentalValue("Potential excess: estimated CO₂e")).toMatch(/≈ [\d,.]+ kg CO₂e/);
-  expect(environmentalValue("Recorded waste: estimated CO₂e")).toBe("No outcome recorded");
+  expect(screen.queryByText("Recorded waste: estimated CO₂e")).toBeNull();
   expect(screen.queryByLabelText("Food category")).toBeNull();
   expect(screen.queryByText("Review suggested categories (1)")).toBeNull();
   expect(screen.getAllByText(/AI-assigned food category, not manually confirmed/).length).toBeGreaterThan(0);
@@ -80,16 +84,22 @@ it("manual cost and weight still take priority, while replacement evidence disca
   expect(within(financialCard("Your planned spend")).getByText("Unavailable")).toBeTruthy();
 });
 
-it("actual recorded zero kg appears as zero even when count-only packaging blocks potential mass", async () => {
+it("keeps saved outcomes out of snapshot estimates without deleting those records", async () => {
   const input = await evidence({ pack: "30 biji" });
   const zero = createStockOutcome({ id: "zero-waste", datasetId: "D", productKey: KEY, kind: "discarded", date: DATE, quantity: 0, unit: "kg", referenceDate: DATE, recordedAt: "2026-10-06T00:00:00Z" });
-  vi.mocked(getSavedDataset).mockResolvedValue({ ...input.saved, outcomes: [{ id: zero.id, recordedAt: zero.recordedAt, details: {}, stockOutcome: zero }] });
+  const saved = { ...input.saved, outcomes: [{ id: zero.id, recordedAt: zero.recordedAt, details: {}, stockOutcome: zero }] }, before = JSON.stringify(saved);
+  vi.mocked(getSavedDataset).mockResolvedValue(saved);
   render(<Harness {...input} initialContexts={{ [KEY]: { evidenceKey: input.snapshot.evidenceKey!, category: "rice", categoryConfirmed: true, isFood: true } }} />);
   fireEvent.click(screen.getByRole("tab", { name: "Environmental" }));
-  await waitFor(() => expect(environmentalValue("Recorded waste: estimated CO₂e")).toBe("≈ 0 kg CO₂e"));
+  await waitFor(() => expect(getSavedDataset).toHaveBeenCalledWith("D"));
+  expect(screen.queryByRole("heading", { name: "Record what happened" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Compare recorded history across two periods" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Improve the data behind these estimates" })).toBeNull();
+  expect(screen.queryByText("Recorded waste: estimated CO₂e")).toBeNull();
   expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
   expect(environmentalValue("Named scenario difference")).toBe("Unavailable");
-  expect(within(environmentPanel()).getByText("0 kg · Source-agreement mass / estimated-factor mass: 0 / 0 kg")).toBeTruthy();
+  expect(environmentPanel().querySelectorAll('.ix-card')).toHaveLength(2);
+  expect(JSON.stringify(saved)).toBe(before);
 });
 
 it("missing cost does not block stock or automatic environmental estimates", async () => {
