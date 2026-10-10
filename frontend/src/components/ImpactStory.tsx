@@ -145,7 +145,7 @@ export function ImpactStory({ head, aside, afterStory, lines, totalProducts, bus
           <div className="sx-badge" aria-live="polite"><span className="sx-badge__num" ref={badgeRef}>{lines.length ? number(phase === "play" || phase === "scanned" ? 0 : phase === "fly" ? badge : excess) : "—"}</span><span>{copy("ITEMS", "件", "ITEM")}</span></div>
         </div>
         <h2 className="sx-impact__title">{copy("Potential excess stock", "潜在多余库存", "Stok berlebihan berpotensi")}</h2>
-        {lines.length > 0 ? <p className="sx-globe-note"><b>{number(excess)} {copy("items", "件商品", "item")}</b> {copy("are above the expected demand range. Review these orders to reduce the risk of excess stock.", "高于预期需求区间。请核对这些订单，以降低多余库存的风险。", "melebihi julat permintaan dijangka. Semak pesanan ini untuk mengurangkan risiko stok berlebihan.")}</p>
+        {lines.length > 0 ? <p className="sx-globe-note"><b>{number(excess)} {copy("units", "件", "unit")}</b> {copy("are above the expected demand range. Review these orders to reduce the risk of excess stock.", "高于预期需求区间。请核对这些订单，以降低多余库存的风险。", "melebihi julat permintaan dijangka. Semak pesanan ini untuk mengurangkan risiko stok berlebihan.")}</p>
           : <p className="sx-globe-note">{copy("Enter planned orders in Step 4.", "请在第 4 步填写计划订购量。", "Masukkan pesanan dirancang dalam Langkah 4.")}</p>}
         {lines.length > 0 && onBack && <button type="button" className="btn btn--ghost sx-globe-go" onClick={onBack}>{copy("Lower these orders in the plan →", "在计划中减少这些订单 →", "Kurangkan pesanan ini dalam pelan →")}</button>}
       </div>
