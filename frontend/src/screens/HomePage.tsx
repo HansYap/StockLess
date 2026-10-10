@@ -1465,16 +1465,6 @@ function FAQs() {
             </p>
           </details>
         </div>
-        <div className="hp-lm__foot">
-          <b>
-            <span>
-              {copy("hp.lm.still")}
-            </span>
-          </b>
-          <button type="button" className="hp-link" id="hp-all" aria-expanded={faqOpen.every(Boolean)} onClick={() => setFaqOpen(Array(4).fill(!faqOpen.every(Boolean)))}>
-            {copy(faqOpen.every(Boolean) ? "hp.lm.less" : "hp.lm.all")}
-          </button>
-        </div>
       </div>
     </section>
   );
