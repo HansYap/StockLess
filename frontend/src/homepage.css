@@ -527,3 +527,5 @@ html[lang^="zh"] .sl-home h1,html[lang^="zh"] .sl-home h2,html[lang^="zh"] .sl-h
   .sl-home .hp-pp>.pp2-ev .pp2-facts>div{padding:9px 12px}
   .sl-home .hp-pp>.pp2-ev .pp2-facts b{font-size:17px}
 }
+/* Keep the three trust checks on one row on wider screens */
+@media (min-width:768px){.sl-home .hp-checks{flex-wrap:nowrap}.sl-home .hp-checks li{white-space:nowrap}}
