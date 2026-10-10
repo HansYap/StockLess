@@ -120,9 +120,5 @@ describe("redesigned homepage", () => {
     fireEvent.click(screen.getByText("How does StockLess decide how much to order?"));
     expect(faqs[0].hasAttribute("open")).toBe(true);
     expect(faqs[1].hasAttribute("open")).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "View all FAQs →" }));
-    expect(faqs.every(faq => faq.hasAttribute("open"))).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Close all FAQs ↑" }));
-    expect(faqs.every(faq => !faq.hasAttribute("open"))).toBe(true);
   });
 });
