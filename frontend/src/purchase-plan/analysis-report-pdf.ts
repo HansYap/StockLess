@@ -29,24 +29,27 @@ type Cell = AnalysisReportCell | undefined;
 /** Same-origin assets only: report data never leaves the browser. */
 export async function downloadAnalysisPdf(report: AnalysisReport) {
   const base = import.meta.env.BASE_URL;
-  const [fontResponse, mascotResponse] = await Promise.all([
+  const [fontResponse, mascotResponse, logoResponse] = await Promise.all([
     fetch(base + 'fonts/NotoSansSC.ttf'),
     fetch(base + 'report/stocky-hello.png'),
+    fetch(base + 'report/stockless-logo.png'),
   ]);
   if (!fontResponse.ok) throw new Error('The local PDF font could not be loaded. Keep your results and try again.');
+  if (!logoResponse.ok) throw new Error('The StockLess report logo could not be loaded. Keep your results and try again.');
   const mascotBytes = mascotResponse.ok ? new Uint8Array(await mascotResponse.arrayBuffer()) : undefined;
-  const bytes = await buildAnalysisPdfBytes(report, new Uint8Array(await fontResponse.arrayBuffer()), mascotBytes);
+  const bytes = await buildAnalysisPdfBytes(report, new Uint8Array(await fontResponse.arrayBuffer()), mascotBytes, new Uint8Array(await logoResponse.arrayBuffer()));
   downloadReportBytes(bytes, analysisReportFilename(report, 'analysis', 'pdf'), 'application/pdf');
 }
 
 /** Searchable, paginated report generated from the same immutable contract as Excel. */
-export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: Uint8Array, mascotBytes?: Uint8Array): Promise<Uint8Array> {
+export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: Uint8Array, mascotBytes?: Uint8Array, logoBytes?: Uint8Array): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const unicode = await doc.embedFont(fontBytes, { subset: false });
   const latin = await doc.embedFont(StandardFonts.Helvetica);
   const boldLatin = await doc.embedFont(StandardFonts.HelveticaBold);
   const mascot = mascotBytes ? await doc.embedPng(mascotBytes) : undefined;
+  const logo = logoBytes ? await doc.embedPng(logoBytes) : undefined;
   const latinChars = new Set(latin.getCharacterSet());
   const supported = new Set([...unicode.getCharacterSet(), ...latinChars]);
   const safe = (value: unknown): string => Array.from(String(value ?? '')).map(ch => {
@@ -114,14 +117,7 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   const addPage = (): void => {
     page = doc.addPage([PAGE_W, PAGE_H]);
     y = TOP;
-    roundRect(MARGIN, PAGE_H - 20, 26, 26, 6, color.deep);
-    page.drawRectangle({ x: MARGIN + 7, y: PAGE_H - 37, width: 13, height: 2, color: color.white });
-    page.drawRectangle({ x: MARGIN + 5, y: PAGE_H - 15, width: 4, height: 12, color: color.deep });
-    page.drawRectangle({ x: MARGIN + 11, y: PAGE_H - 14, width: 4, height: 10, color: color.teal });
-    page.drawRectangle({ x: MARGIN + 17, y: PAGE_H - 11, width: 4, height: 7, color: color.mint });
-    page.drawEllipse({ x: MARGIN + 25, y: PAGE_H - 8, xScale: 3, yScale: 3, color: color.amber });
-    draw('Stock', MARGIN + 34, PAGE_H - 36, 13, color.ink, true);
-    draw('Less', MARGIN + 69, PAGE_H - 36, 13, color.deep, true);
+    if (logo) page.drawImage(logo, { x: MARGIN, y: PAGE_H - 45, width: 120, height: 30 });
     const label = 'RETAILER FILE ANALYSIS';
     draw(label, PAGE_W - MARGIN - measure(label, 8), PAGE_H - 34, 8, color.muted);
     page.drawLine({ start: { x: MARGIN, y: PAGE_H - 53 }, end: { x: PAGE_W - MARGIN, y: PAGE_H - 53 }, thickness: .6, color: color.lineSoft });
@@ -233,7 +229,8 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   roundRect(MARGIN, y, CONTENT_W, 136, 18, color.band);
   page.drawEllipse({ x: MARGIN + CONTENT_W - 73, y: y - 70, xScale: 55, yScale: 55, color: rgb(217 / 255, 237 / 255, 230 / 255) });
   roundRect(MARGIN + CONTENT_W - 290, y - 15, 139, 30, 9, color.white);
-  draw('STOCKLESS  /  RETAILER ANALYSIS', MARGIN + 22, y - 26, 8.6, color.deep, true);
+  if (logo) page.drawImage(logo, { x: MARGIN + 22, y: y - 37, width: 124, height: 31 });
+  draw('RETAILER ANALYSIS', MARGIN + 158, y - 26, 8.6, color.deep, true);
   draw('ANALYSIS REPORT', MARGIN + CONTENT_W - 278, y - 26, 7.2, color.deep, true);
   draw(report.metadata.analysisDate, MARGIN + CONTENT_W - 278, y - 37, 7.4, color.muted);
   draw('A clearer view of your', MARGIN + 22, y - 66, 27, color.ink, true);

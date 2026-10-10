@@ -69,5 +69,7 @@ it("prints weekly bars as SVG shapes while keeping missing weeks and zero sales 
   expect(html).toContain('Bars use a separate scale for each product');
   expect(html).toContain('is-latest');
   expect(html).toContain('report/stocky-hello.svg');
+  expect(html).toContain('report/stockless-logo.svg');
+  expect(html).toContain('class="brand-logo"');
   expect(html).not.toContain("<i style=");
 });

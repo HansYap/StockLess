@@ -130,8 +130,8 @@ const PRINT_STYLES = [
   '*{box-sizing:border-box}body{margin:0;background:#fff;color:#16313B;font:12px/1.45 system-ui,-apple-system,sans-serif}',
   'h1,h2,p,figure{margin:0}h2{font-size:23px;line-height:1.18;letter-spacing:-.3px}p{max-width:100ch}',
   '.report-cover{page-break-after:always}.hero{position:relative;min-height:150px;padding:23px 175px 22px 24px;border-radius:18px;background:#EEF6F2;overflow:hidden}',
-  '.eyebrow{color:#11655E;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.hero h1{margin:20px 0 5px;font-size:29px;line-height:1.12;letter-spacing:-.5px}',
-  '.hero .subhead,.report-section .subhead{color:#66767D}.hero img{position:absolute;right:22px;bottom:8px;width:125px;height:auto}',
+  '.eyebrow{color:#11655E;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.hero-brand{display:flex;align-items:center;gap:16px}.hero-brand .brand-logo{display:block;width:136px;height:auto}.hero h1{margin:13px 0 5px;font-size:29px;line-height:1.12;letter-spacing:-.5px}',
+  '.hero .subhead,.report-section .subhead{color:#66767D}.hero .hero-mascot{position:absolute;right:22px;bottom:8px;width:125px;height:auto}',
   '.hero-date{position:absolute;right:156px;top:17px;padding:8px 14px;border-radius:9px;background:#fff;color:#11655E;font-size:10px;font-weight:700}',
   '.meta-strip{display:grid;grid-template-columns:1fr 1.1fr 1.6fr 1.1fr;gap:0;margin-top:12px;padding:15px;border:1px solid #D7E0DD;border-radius:13px}',
   '.meta-strip div{padding:0 12px;border-right:1px solid #E8EEEC;min-width:0;overflow-wrap:anywhere}.meta-strip div:last-child{border:0}.meta-strip small{display:block;color:#66767D;font-size:9px;font-weight:700}.meta-strip b{display:block;margin-top:6px;font-size:11px;font-weight:500}',
@@ -164,8 +164,9 @@ export function renderAnalysisReportHtml(report: AnalysisReport): string {
   const nameIndex = orders?.columns.indexOf('Product name') ?? -1;
   const risks = (orders?.rows ?? []).filter(row => checkIndex >= 0 && row[checkIndex] === 'Overstock risk');
   const asset = new URL((import.meta.env.BASE_URL ?? '/') + 'report/stocky-hello.svg', window.location.href).href;
+  const logo = new URL((import.meta.env.BASE_URL ?? '/') + 'report/stockless-logo.svg', window.location.href).href;
   const metric = (label: string, value: string, detail: string, amber = false) => '<div class="metric' + (amber ? ' is-amber' : '') + '"><small>' + escapeHtml(label) + '</small><b>' + escapeHtml(value) + '</b><span>' + escapeHtml(detail) + '</span></div>';
-  const cover = '<header class="report-cover"><div class="hero"><p class="eyebrow">STOCKLESS / RETAILER ANALYSIS</p><h1>A clearer view of your<br>next purchase decision.</h1><p class="subhead">A practical check before placing the next order</p><div class="hero-date">ANALYSIS REPORT<br>' + escapeHtml(report.metadata.analysisDate) + '</div><img src="' + escapeHtml(asset) + '" alt=""></div>' +
+  const cover = '<header class="report-cover"><div class="hero"><div class="hero-brand"><img class="brand-logo" src="' + escapeHtml(logo) + '" alt="StockLess"><p class="eyebrow">RETAILER ANALYSIS</p></div><h1>A clearer view of your<br>next purchase decision.</h1><p class="subhead">A practical check before placing the next order</p><div class="hero-date">ANALYSIS REPORT<br>' + escapeHtml(report.metadata.analysisDate) + '</div><img class="hero-mascot" src="' + escapeHtml(asset) + '" alt=""></div>' +
     '<div class="meta-strip"><div><small>SHOP</small><b>' + escapeHtml(report.metadata.shopName) + '</b></div><div><small>DATASET</small><b>' + escapeHtml(report.metadata.datasetName) + '</b></div><div><small>RECORDED PERIOD</small><b>' + escapeHtml(report.metadata.period.start) + ' to ' + escapeHtml(report.metadata.period.end) + '</b></div><div><small>SOURCE FILE</small><b>' + escapeHtml(report.metadata.sourceName) + '</b></div></div>' +
     '<div class="metrics">' + metric('PLANNED PURCHASE SPEND', money(findValue('financialtotals', 'Estimated planned purchase spend', 'Estimated amount (MYR)')), 'Current plan · partial total') + metric('POTENTIAL EXCESS COST', money(findValue('financialtotals', 'Estimated excess-stock cost', 'Estimated amount (MYR)')), 'Estimated · partial total', true) + metric('POTENTIAL EXCESS CO2E', typeof carbon === 'number' ? carbon.toFixed(2) + ' kg' : String(carbon ?? 'Unavailable'), 'Estimated · partial coverage') + metric('PLANNED ORDER LINES', String(orders?.rows.length ?? 0), 'Positive quantities only') + '</div>' +
     '<div class="action-panel"><strong>' + risks.length + ' ORDERS TO REVIEW</strong><b>Check these planned orders before placing them</b><p>' + escapeHtml(risks.map(row => nameIndex >= 0 ? row[nameIndex] : '').join(', ') || 'No orders flagged by the current purchase check.') + '</p><small>' + (table('problems')?.rows.length ?? 0) + ' source issues also need review. Forecasts are ranges; unentered values are not zero.</small></div>' +
@@ -186,5 +187,8 @@ export function printAnalysisReport(report: AnalysisReport): void {
   if (!popup) throw new Error("The print window was blocked. Allow this site's print window and try again.");
   popup.opener = null;
   popup.document.open(); popup.document.write(renderAnalysisReportHtml(report)); popup.document.close();
-  popup.focus(); popup.print();
+  void Promise.all(Array.from(popup.document.images, image => image.decode().catch(() => undefined))).then(() => {
+    if (popup.closed) return;
+    popup.focus(); popup.print();
+  });
 }
