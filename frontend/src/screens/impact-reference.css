@@ -296,3 +296,25 @@
 .impact .ix-breakdown{scroll-margin-top:90px}
 .impact .ix-breakdown>summary:focus-visible{outline:3px solid var(--teal);outline-offset:4px;border-radius:4px}
 @media(max-width:640px){.impact .impact__disclosure{padding-left:14px;padding-right:14px}.impact .impact__disclosure>summary>span{font-size:16px}}
+
+/* Estimate cards: calmer labels, tinted key cards */
+.ix-card{gap:8px;padding:18px;border-radius:16px;box-shadow:0 6px 18px rgba(22,49,59,.04)}
+.ix-card__k{font-family:var(--display);font-size:14px;letter-spacing:0;text-transform:none;color:var(--ink)}
+.ix-card b{font-size:28px;font-weight:800;letter-spacing:-.01em}
+.ix-card--excess,.ix-card--env-potential{background:#FFFBF3;border-color:#F1DDB0}
+.ix-card--excess b,.ix-card--env-potential b{color:var(--amber)}
+.ix-card--scenario,.ix-card--env-scenario{background:#F3F9F7;border-color:#CFE5DE}
+.ix-card--scenario b,.ix-card--env-scenario b{color:var(--teal-deep)}
+.ix-card__open{align-self:stretch;margin-top:auto;padding:10px 0 0;border-top:1px solid var(--line-soft);text-align:left;font-family:var(--display);font-size:14px}
+.ix-card__open::after{content:" \2192"}
+.ix-card__open:hover{text-decoration:none;color:var(--teal)}
+/* Dropdowns: chevron, hover and open states */
+.impact details.ix-more,.impact details.ix-breakdown{padding:14px 18px;border:1px solid var(--line);border-radius:14px;background:#fff;transition:border-color .2s ease,box-shadow .2s ease}
+.impact details.ix-more:hover,.impact details.ix-breakdown:hover{border-color:var(--border-strong);box-shadow:0 6px 18px rgba(22,49,59,.06)}
+.impact details.ix-more[open],.impact details.ix-breakdown[open]{border-color:var(--teal);box-shadow:0 8px 24px rgba(22,49,59,.07)}
+.impact details.ix-more>summary,.impact details.ix-breakdown>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:28px;cursor:pointer;font:700 15px/1.4 var(--display);color:var(--ink)}
+.impact details.ix-more>summary::-webkit-details-marker,.impact details.ix-breakdown>summary::-webkit-details-marker{display:none}
+.impact details.ix-more>summary::after,.impact details.ix-breakdown>summary::after{content:"";flex:none;width:28px;height:28px;border-radius:50%;background:var(--teal-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2311655E' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") center/14px no-repeat;transition:transform .2s ease}
+.impact details.ix-more[open]>summary::after,.impact details.ix-breakdown[open]>summary::after{transform:rotate(180deg)}
+.impact details.ix-more[open]>summary,.impact details.ix-breakdown[open]>summary{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
+@media (prefers-reduced-motion:reduce){.impact details.ix-more>summary::after,.impact details.ix-breakdown>summary::after{transition:none}}
