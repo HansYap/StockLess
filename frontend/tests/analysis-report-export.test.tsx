@@ -62,9 +62,12 @@ it("prints weekly bars as SVG shapes while keeping missing weeks and zero sales 
   ] };
   const html = renderAnalysisReportHtml({ ...source, tables: [...source.tables, history] });
   expect(html).toContain('<svg class="bar-chart"');
-  expect(html).toContain('height="80" fill="#38664d"');
-  expect(html).toContain('height="0" fill="#38664d"');
-  expect(html).toContain('<span>Missing</span>');
-  expect(html).toContain('<span>0</span>');
+  expect(html).toContain('fill="#167D74"');
+  expect(html).toContain('<span class="bar-value">-</span>');
+  expect(html).toContain('<span class="bar-value">0</span>');
+  expect(html).toContain('PEAK 4 · 2/3 WEEKS RECORDED');
+  expect(html).toContain('Bars use a separate scale for each product');
+  expect(html).toContain('is-latest');
+  expect(html).toContain('report/stocky-hello.svg');
   expect(html).not.toContain("<i style=");
 });

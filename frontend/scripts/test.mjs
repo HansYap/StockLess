@@ -17,6 +17,7 @@ try {
     "tsconfig.json",
     "vitest.config.ts",
     "public/fonts",
+    "public/report",
     "public/samples",
   ])
     await cp(path.join(frontend, name), path.join(root, name), {

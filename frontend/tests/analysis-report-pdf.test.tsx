@@ -11,7 +11,8 @@ it('generates a real paginated PDF with embedded Chinese font, metadata and long
   ],limitations:['Sample data; no measured reduction claimed.']};
   const fontPath='../public/fonts/NotoSansSC.ttf';
   const font=await readFile(new URL(fontPath, import.meta.url));
-  const bytes=await buildAnalysisPdfBytes(report,Uint8Array.from(font));
+  const mascot=await readFile('public/report/stocky-hello.png');
+  const bytes=await buildAnalysisPdfBytes(report,Uint8Array.from(font),Uint8Array.from(mascot));
   expect(new TextDecoder().decode(bytes.slice(0,8))).toMatch(/^%PDF-/);
   const doc=await PDFDocument.load(bytes);
   expect(doc.getPageCount()).toBeGreaterThan(2);

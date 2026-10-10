@@ -64,38 +64,125 @@ export function compactSummary(table: AnalysisReportTable): AnalysisReportTable 
   const indices = wanted.map(label => table.columns.indexOf(label)).filter(index => index >= 0);
   return { ...table, columns: indices.map(index => table.columns[index]), rows: table.rows.map(row => indices.map(index => row[index])) };
 }
-function carbonCards(table: AnalysisReportTable): string {
-  if (!table.rows.length) return htmlTable(table);
-  return `<section><h2>${escapeHtml(table.title)}</h2>${table.rows.map(row => `<article class="carbon-card"><dl>${table.columns.map((label, i) => `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(row[i])}</dd>`).join("")}</dl></article>`).join("")}</section>`;
-}
 function htmlTable(table: AnalysisReportTable): string {
-  return `<section><h2>${escapeHtml(table.title)}</h2>${table.rows.length ? `<div class="table-wrap"><table><thead><tr>${table.columns.map(label => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${table.rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : `<p>${table.id === "orders" ? "No planned orders. Enter a positive quantity in Purchase plan." : table.id === "outcomes" ? "No outcome recorded." : "No records available for this section."}</p>`}</section>`;
+  const checkIndex = table.columns.indexOf('Purchase check');
+  const body = table.rows.length
+    ? '<div class="table-wrap"><table><thead><tr>' + table.columns.map(label => '<th>' + escapeHtml(label) + '</th>').join('') + '</tr></thead><tbody>' + table.rows.map(row => {
+      const flagged = checkIndex >= 0 && row[checkIndex] === 'Overstock risk';
+      return '<tr' + (flagged ? ' class="is-risk"' : '') + '>' + row.map(value => '<td>' + escapeHtml(value) + '</td>').join('') + '</tr>';
+    }).join('') + '</tbody></table></div>'
+    : '<p class="empty-row">' + (table.id === 'orders' ? 'No planned orders. Enter a positive quantity in Purchase plan.' : table.id === 'outcomes' ? 'No outcome recorded.' : 'No records available for this section.') + '</p>';
+  return '<section class="report-section"><h2>' + escapeHtml(table.title) + '</h2>' + body + '</section>';
+}
+function carbonOverview(report: AnalysisReport): string {
+  const source = report.tables.find(table => table.id === 'carbon');
+  if (!source) return '';
+  const index = (label: string) => source.columns.indexOf(label);
+  const byKey = new Map<string, Map<string, readonly AnalysisReportCell[]>>();
+  for (const row of source.rows) {
+    const key = String(row[index('Product key')]);
+    const kinds = byKey.get(key) ?? new Map<string, readonly AnalysisReportCell[]>();
+    kinds.set(String(row[index('Measure')]), row);
+    byKey.set(key, kinds);
+  }
+  const state = (row: readonly AnalysisReportCell[] | undefined): string => !row ? 'Unavailable' : typeof row[index('CO2e (kg)')] === 'number'
+    ? Number(row[index('CO2e (kg)')]).toFixed(2) + ' kg · Estimated' : String(row[index('Status')]);
+  const rows = [...byKey.values()].map(kinds => {
+    const first = kinds.values().next().value as readonly AnalysisReportCell[];
+    return [first[index('Product name')], state(kinds.get('recorded_waste')), state(kinds.get('potential_excess')), state(kinds.get('scenario_difference'))];
+  });
+  const overview: AnalysisReportTable = { id: 'carbon-overview', title: 'Potential carbon impact', columns: ['Product', 'Recorded waste', 'Potential excess', 'Scenario difference'], rows };
+  const included = source.rows.filter(row => row[index('Measure')] === 'potential_excess' && row[index('Status')] === 'estimated');
+  const evidence: AnalysisReportTable = { id: 'carbon-evidence', title: 'Evidence behind included estimates', columns: ['Product', 'Mass (kg)', 'CO2e (kg)', 'Factor', 'Source names'], rows: included.map(row => [
+    row[index('Product name')], row[index('Mass (kg)')], row[index('CO2e (kg)')], row[index('Factor label')], row[index('Source names')],
+  ]) };
+  return htmlTable(overview) + (included.length ? htmlTable(evidence) : '');
 }
 function demandCharts(report: AnalysisReport): string {
-  const history = report.tables.find(table => table.id === "history");
-  if (!history) return "";
+  const history = report.tables.find(table => table.id === 'history');
+  if (!history) return '';
   const grouped = new Map<string, (readonly AnalysisReportCell[])[]>();
-  for (const row of history.rows) { const key = String(row[3]); const rows = grouped.get(key) ?? []; rows.push(row); grouped.set(key, rows); }
-  return `<section><h2>Recorded weekly positive sales</h2><p>Returns stay separate. A missing week is labelled missing; a recorded zero remains zero.</p>${[...grouped.values()].slice(0, 12).map(rows => {
-    const recent = rows.slice(-8), max = Math.max(1, ...recent.flatMap(row => typeof row[6] === "number" ? [row[6]] : []));
-    return `<figure><figcaption>${escapeHtml(rows[0][0])} · ${escapeHtml(rows[0][1])} · ${escapeHtml(rows[0][2])}</figcaption><div class="bars">${recent.map(row => {
-      const height = typeof row[6] === "number" ? Math.max(0, row[6] / max * 80) : 0;
-      return `<div class="bar-item"><span>${escapeHtml(row[6])}</span><svg class="bar-chart" viewBox="0 0 100 80" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="79.5" x2="100" y2="79.5" stroke="#cad3cc"/><rect x="0" y="${80 - height}" width="100" height="${height}" fill="#38664d"/></svg><small>${escapeHtml(row[4])}</small></div>`;
-    }).join("")}</div></figure>`;
-  }).join("")}${grouped.size > 12 ? "<p>Charts show the first 12 products; the Excel workbook contains every product's complete sales and weekly history.</p>" : ""}</section>`;
+  for (const row of history.rows) {
+    const key = String(row[3]);
+    grouped.set(key, [...(grouped.get(key) ?? []), row]);
+  }
+  const charts = [...grouped.values()].slice(0, 12).map(rows => {
+    const recent = rows.slice(-8);
+    const values = recent.map(row => typeof row[6] === 'number' ? row[6] : undefined);
+    const peak = Math.max(1, ...values.map(value => value ?? 0));
+    const recorded = values.filter(value => value !== undefined).length;
+    const bars = recent.map((row, index) => {
+      const amount = values[index];
+      const barHeight = amount && amount > 0 ? Math.max(2, amount / peak * 42) : 0;
+      const label = amount === undefined ? '-' : String(amount);
+      return '<div class="bar-item' + (index === recent.length - 1 ? ' is-latest' : '') + '"><span class="bar-value">' + escapeHtml(label) + '</span>' +
+        '<svg class="bar-chart" viewBox="0 0 60 46" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="45.5" x2="60" y2="45.5" stroke="#E8EEEC"/><rect x="10" y="' + (46 - barHeight) + '" width="40" height="' + barHeight + '" fill="#167D74"/></svg>' +
+        '<small>' + escapeHtml(String(row[4]).slice(5)) + '</small></div>';
+    }).join('');
+    return '<figure class="trend-row"><figcaption><b>' + escapeHtml(rows[0][0]) + '</b><small>' + escapeHtml(rows[0][1]) + ' · ' + escapeHtml(rows[0][2]) + '</small><em>PEAK ' + peak + ' · ' + recorded + '/' + recent.length + ' WEEKS RECORDED</em></figcaption><div class="bars">' + bars + '</div></figure>';
+  }).join('');
+  return '<section class="report-section trend-section"><p class="eyebrow">02 / RETAILER ANALYSIS</p><h2>Recent sales pattern</h2><p class="subhead">Recorded positive sales by week for the first 12 products; returns remain separate.</p><aside class="report-note"><b>How to read these charts</b><span>Bars use a separate scale for each product; compare printed values across products. Dash = unavailable, 0 = recorded zero, shade = latest week.</span></aside>' +
+    (charts || '<p class="empty-row">No recent weekly sales values are available.</p>') +
+    (grouped.size > 12 ? '<p class="source-note">Charts show the first 12 products. The Excel workbook contains complete weekly history.</p>' : '') + '</section>';
 }
+const PRINT_STYLES = [
+  '@page{size:A4 landscape;margin:12mm}',
+  '*{box-sizing:border-box}body{margin:0;background:#fff;color:#16313B;font:12px/1.45 system-ui,-apple-system,sans-serif}',
+  'h1,h2,p,figure{margin:0}h2{font-size:23px;line-height:1.18;letter-spacing:-.3px}p{max-width:100ch}',
+  '.report-cover{page-break-after:always}.hero{position:relative;min-height:150px;padding:23px 175px 22px 24px;border-radius:18px;background:#EEF6F2;overflow:hidden}',
+  '.eyebrow{color:#11655E;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.hero h1{margin:20px 0 5px;font-size:29px;line-height:1.12;letter-spacing:-.5px}',
+  '.hero .subhead,.report-section .subhead{color:#66767D}.hero img{position:absolute;right:22px;bottom:8px;width:125px;height:auto}',
+  '.hero-date{position:absolute;right:156px;top:17px;padding:8px 14px;border-radius:9px;background:#fff;color:#11655E;font-size:10px;font-weight:700}',
+  '.meta-strip{display:grid;grid-template-columns:1fr 1.1fr 1.6fr 1.1fr;gap:0;margin-top:12px;padding:15px;border:1px solid #D7E0DD;border-radius:13px}',
+  '.meta-strip div{padding:0 12px;border-right:1px solid #E8EEEC;min-width:0;overflow-wrap:anywhere}.meta-strip div:last-child{border:0}.meta-strip small{display:block;color:#66767D;font-size:9px;font-weight:700}.meta-strip b{display:block;margin-top:6px;font-size:11px;font-weight:500}',
+  '.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.metric{padding:14px;border:1px solid #D7E0DD;border-radius:12px;min-height:99px}.metric.is-amber,.report-note.is-amber,.is-risk{background:#FFF4DF}.metric.is-amber{border-color:#EFD9A6}.metric small{display:block;color:#11655E;font-size:9px;font-weight:700}.metric.is-amber small{color:#8B5C10}.metric b{display:block;margin:12px 0 5px;font-size:21px;line-height:1}.metric span{color:#66767D;font-size:9px}',
+  '.action-panel{margin-top:12px;padding:14px 16px;border:1px solid #D7E0DD;border-radius:12px}.action-panel strong{display:inline-block;margin-right:18px;padding:7px 12px;border-radius:9px;background:#FFF4DF;color:#8B5C10;font-size:10px}.action-panel b{font-size:14px}.action-panel p{margin:8px 0;color:#66767D;font-size:10px}.action-panel small{display:block;padding-top:9px;border-top:1px solid #E8EEEC;color:#66767D}',
+  '.report-note{display:flex;flex-direction:column;gap:4px;margin:12px 0;padding:12px 15px;border-left:4px solid #11655E;border-radius:8px;background:#E8F3F0;font-size:10px}.report-note.is-amber{border-left-color:#8B5C10}.report-note b{color:#11655E}.report-note.is-amber b{color:#8B5C10}',
+  '.report-section{margin-top:22px;break-inside:auto}.report-section>h2{margin:0 0 8px}.report-section .eyebrow{margin-bottom:9px}.report-section .subhead{margin-bottom:14px}',
+  '.table-wrap{width:100%;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}thead{display:table-header-group}tr{break-inside:avoid}th{padding:8px 7px;text-align:left;background:#E8F3F0;color:#11655E;font-size:8px}td{padding:7px;border-bottom:1px solid #E8EEEC;vertical-align:top;overflow-wrap:anywhere}tbody tr:nth-child(even):not(.is-risk){background:#F7FAF8}',
+  '.trend-row{display:grid;grid-template-columns:190px 1fr;gap:9px;padding:7px;margin:7px 0;border:1px solid #D7E0DD;border-radius:11px;break-inside:avoid}',
+  '.trend-row figcaption{display:flex;flex-direction:column;justify-content:center;min-height:73px;padding:10px 12px;border-radius:7px;border-left:3px solid #11655E;background:#E8F3F0}.trend-row figcaption b{font-size:11px}.trend-row figcaption small{margin:6px 0;color:#66767D;font-size:8px}.trend-row figcaption em{color:#11655E;font-size:8px;font-style:normal;font-weight:700}',
+  '.bars{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;min-width:0}.bar-item{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;padding:4px 0;border-radius:6px}.bar-item.is-latest{background:#EEF6F2}.bar-value{font-size:9px;font-weight:700}.bar-chart{display:block;width:100%;height:46px}.bar-item small{font-size:8px;color:#66767D;white-space:nowrap}',
+  '.source-note,.empty-row{padding:11px 14px;background:#E8F3F0;color:#66767D}.limits{padding-left:22px}.limits li{margin:5px 0;break-inside:avoid}',
+  '.print-help{margin:12px 0;padding:10px 14px;border-radius:8px;background:#E8F3F0;color:#11655E;font-size:10px}',
+  '@media print{.print-help{display:none}.report-cover{break-after:page}figure,section{orphans:2;widows:2}}',
+].join('');
 
-/** Print-ready Unicode HTML. PDF is produced by the browser's Print / Save as PDF dialog. */
+/** Print-ready HTML using the same brand hierarchy as the downloaded PDF. */
 export function renderAnalysisReportHtml(report: AnalysisReport): string {
-  const summaryTables = report.tables.filter(table => !["metadata", "sales", "history", "evidence", "limitations"].includes(table.id));
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(analysisReportFilename(report, "analysis", "pdf"))}</title><style>
-    body{font:12px/1.45 system-ui,"Arial Unicode MS",sans-serif;color:#14211a;margin:24px}h1{font-size:24px}h2{font-size:17px;margin-top:24px}p,li{max-width:95ch}.source{font-weight:700}.table-wrap{overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;font-size:9px;table-layout:auto}th,td{border:1px solid #cad3cc;padding:5px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#eef5ee}thead{display:table-header-group}tr{break-inside:avoid}figure{display:inline-block;width:46%;margin:12px 2% 12px 0;break-inside:avoid}figcaption{font-weight:600}.bars{display:flex;align-items:flex-end;gap:4px;height:130px}.bar-item{flex:1;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;height:130px}.bar-chart{display:block;width:100%;height:80px;flex:none}.bar-item small{font-size:8px;white-space:nowrap}.print-help{padding:12px;background:#eef5ee}.carbon-card{border:1px solid #cad3cc;padding:8px;margin:8px 0;break-inside:avoid}.carbon-card dl{display:grid;grid-template-columns:150px 1fr;gap:3px 10px;margin:0}.carbon-card dt{font-weight:600}.carbon-card dd{margin:0;overflow-wrap:anywhere}@page{size:A4 landscape;margin:12mm}@media print{body{margin:0}.print-help{display:none}section{break-inside:auto}a{color:inherit;text-decoration:none}}
-    </style></head><body><h1>StockLess analysis report</h1><p class="source">${escapeHtml(report.metadata.sourceLabel)}</p><p>Shop: ${escapeHtml(report.metadata.shopName)} · Dataset: ${escapeHtml(report.metadata.datasetName)}<br>Source: ${escapeHtml(report.metadata.sourceName)}<br>Reporting period: ${escapeHtml(report.metadata.period.start)} to ${escapeHtml(report.metadata.period.end)} · Analysis date: ${escapeHtml(report.metadata.analysisDate)}<br>Generated: ${escapeHtml(report.metadata.generatedAt)}<br>Source SHA-256: ${escapeHtml(report.metadata.sourceSha256)}</p><p class="print-help">Use your browser's Print dialog and select “Save as PDF” to save this summary. The detailed Excel workbook includes complete sales history and current planning evidence.</p>${demandCharts(report)}${summaryTables.map(table => table.id === "carbon" ? carbonCards(table) : htmlTable(compactSummary(table))).join("")}<section><h2>Explanations and limitations</h2><ul>${report.limitations.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section></body></html>`;
+  const table = (id: string) => report.tables.find(item => item.id === id);
+  const findValue = (id: string, measure: string, valueColumn: string): AnalysisReportCell | undefined => {
+    const source = table(id);
+    const measureIndex = source?.columns.indexOf('Measure') ?? -1;
+    const valueIndex = source?.columns.indexOf(valueColumn) ?? -1;
+    return measureIndex < 0 || valueIndex < 0 ? undefined : source?.rows.find(row => row[measureIndex] === measure)?.[valueIndex];
+  };
+  const money = (value: AnalysisReportCell | undefined) => typeof value === 'number' ? 'RM ' + value.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(value ?? 'Unavailable');
+  const carbon = findValue('carbontotals', 'potential_excess', 'Estimated CO2e (kg)');
+  const orders = table('orders');
+  const checkIndex = orders?.columns.indexOf('Purchase check') ?? -1;
+  const nameIndex = orders?.columns.indexOf('Product name') ?? -1;
+  const risks = (orders?.rows ?? []).filter(row => checkIndex >= 0 && row[checkIndex] === 'Overstock risk');
+  const asset = new URL((import.meta.env.BASE_URL ?? '/') + 'report/stocky-hello.svg', window.location.href).href;
+  const metric = (label: string, value: string, detail: string, amber = false) => '<div class="metric' + (amber ? ' is-amber' : '') + '"><small>' + escapeHtml(label) + '</small><b>' + escapeHtml(value) + '</b><span>' + escapeHtml(detail) + '</span></div>';
+  const cover = '<header class="report-cover"><div class="hero"><p class="eyebrow">STOCKLESS / RETAILER ANALYSIS</p><h1>A clearer view of your<br>next purchase decision.</h1><p class="subhead">A practical check before placing the next order</p><div class="hero-date">ANALYSIS REPORT<br>' + escapeHtml(report.metadata.analysisDate) + '</div><img src="' + escapeHtml(asset) + '" alt=""></div>' +
+    '<div class="meta-strip"><div><small>SHOP</small><b>' + escapeHtml(report.metadata.shopName) + '</b></div><div><small>DATASET</small><b>' + escapeHtml(report.metadata.datasetName) + '</b></div><div><small>RECORDED PERIOD</small><b>' + escapeHtml(report.metadata.period.start) + ' to ' + escapeHtml(report.metadata.period.end) + '</b></div><div><small>SOURCE FILE</small><b>' + escapeHtml(report.metadata.sourceName) + '</b></div></div>' +
+    '<div class="metrics">' + metric('PLANNED PURCHASE SPEND', money(findValue('financialtotals', 'Estimated planned purchase spend', 'Estimated amount (MYR)')), 'Current plan · partial total') + metric('POTENTIAL EXCESS COST', money(findValue('financialtotals', 'Estimated excess-stock cost', 'Estimated amount (MYR)')), 'Estimated · partial total', true) + metric('POTENTIAL EXCESS CO2E', typeof carbon === 'number' ? carbon.toFixed(2) + ' kg' : String(carbon ?? 'Unavailable'), 'Estimated · partial coverage') + metric('PLANNED ORDER LINES', String(orders?.rows.length ?? 0), 'Positive quantities only') + '</div>' +
+    '<div class="action-panel"><strong>' + risks.length + ' ORDERS TO REVIEW</strong><b>Check these planned orders before placing them</b><p>' + escapeHtml(risks.map(row => nameIndex >= 0 ? row[nameIndex] : '').join(', ') || 'No orders flagged by the current purchase check.') + '</p><small>' + (table('problems')?.rows.length ?? 0) + ' source issues also need review. Forecasts are ranges; unentered values are not zero.</small></div>' +
+    '<aside class="report-note"><b>Read the numbers with context</b><span>Forecasts, money and CO2e are estimates. Recorded outcomes are separate. Missing values and unentered quantities are not zero.</span></aside></header>';
+  const summary = report.tables.filter(item => !['metadata', 'sales', 'history', 'evidence', 'limitations', 'carbon', 'carbontotals', 'financialtotals'].includes(item.id));
+  const beforeCarbon = summary.filter(item => !['outcomes', 'problems'].includes(item.id));
+  const afterCarbon = summary.filter(item => ['outcomes', 'problems'].includes(item.id));
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml(analysisReportFilename(report, 'analysis', 'pdf')) + '</title><style>' + PRINT_STYLES + '</style></head><body>' + cover +
+    '<p class="print-help">Use your browser\'s Print dialog and select “Save as PDF”. The detailed Excel workbook includes complete sales history and planning evidence.</p>' +
+    demandCharts(report) + beforeCarbon.map(item => htmlTable(compactSummary(item))).join('') + carbonOverview(report) + afterCarbon.map(item => htmlTable(compactSummary(item))).join('') +
+    '<section class="report-section"><h2>Explanations and limitations</h2><ol class="limits">' + report.limitations.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ol></section>' +
+    '<section class="report-section"><h2>Source and provenance</h2><p>' + escapeHtml(report.metadata.sourceLabel) + ' · Generated ' + escapeHtml(report.metadata.generatedAt) + '<br>Source SHA-256: ' + escapeHtml(report.metadata.sourceSha256) + '</p></section></body></html>';
 }
 
 /** Called synchronously from an export button so browser popup policy can allow it. */
 export function printAnalysisReport(report: AnalysisReport): void {
-  const popup = window.open("", "_blank");
+  const popup = window.open('', '_blank');
   if (!popup) throw new Error("The print window was blocked. Allow this site's print window and try again.");
   popup.opener = null;
   popup.document.open(); popup.document.write(renderAnalysisReportHtml(report)); popup.document.close();
