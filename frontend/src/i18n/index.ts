@@ -32,17 +32,18 @@ export function useLanguage() {
 export function getLocale() { return language === "zh" ? "zh-CN" : language === "ms" ? "ms-MY" : "en-GB"; }
 
 /** Translate interface copy at render time; non-string React children pass through unchanged. */
-export function t<T>(value: T): T {
-  if (typeof value !== "string" || language === "en") return value;
+export function translateForLanguage<T>(value: T, target: Language): T {
+  if (typeof value !== "string" || target === "en") return value;
   const key = value.replace(/\s+/g, " ").trim();
   const entry = Object.hasOwn(messages, key) ? messages[key] : undefined;
-  if (entry) return (value.match(/^\s*/)?.[0] + entry[language === "zh" ? 0 : 1] + value.match(/\s*$/)?.[0]) as T;
+  if (entry) return (value.match(/^\s*/)?.[0] + entry[target === "zh" ? 0 : 1] + value.match(/\s*$/)?.[0]) as T;
   for (const template of templates) {
     const match = template.pattern.exec(key);
-    if (match) return template.values[language === "zh" ? 0 : 1].replace(/\{(\d+)\}/g, (_, i) => String(template.translateValues ? t(match[Number(i) + 1]) : match[Number(i) + 1])) as T;
+    if (match) return template.values[target === "zh" ? 0 : 1].replace(/\{(\d+)\}/g, (_, i) => String(template.translateValues ? translateForLanguage(match[Number(i) + 1], target) : match[Number(i) + 1])) as T;
   }
   return value;
 }
+export function t<T>(value: T): T { return translateForLanguage(value, language); }
 const templates = Object.entries(messages).filter(([key]) => /\{\d+\}/.test(key)).sort(([a], [b]) => b.length - a.length).map(([key, values]) => ({
   translateValues: /must be mapped|is mapped but|is visible but|available with Limited|available but one|positive value for|Source column for|has no nonblank value|is not mapped and confirmed|must be a finite|has conflicting nonblank values|^Map \{0\}|^Correct \{0\}/.test(key),
   pattern: new RegExp("^" + key.split(/(\{\d+\})/).map(part => /^\{\d+\}$/.test(part) ? "(.*?)" : part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("") + "$"),

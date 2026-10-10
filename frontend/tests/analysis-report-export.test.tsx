@@ -103,3 +103,36 @@ it("prints weekly bars as SVG shapes while keeping missing weeks and zero sales 
   expect(html).toContain('class="brand-logo"');
   expect(html).not.toContain("<i style=");
 });
+
+it("exports Chinese and Malay workbook copy while preserving source labels and numeric cells", async () => {
+  const source = { ...report(), metadata: { ...report().metadata, shopName: "Shop" } };
+  for (const [language, overviewName, resultsName, header] of [
+    ["zh", "概览", "商品结果", "计划数量"],
+    ["ms", "Gambaran keseluruhan", "Hasil Produk", "Kuantiti dirancang"],
+  ] as const) {
+    const book = XLSX.read(await buildAnalysisWorkbookBytes(source, { language }), { type: "array" });
+    expect(book.SheetNames).toContain(overviewName);
+    expect(book.SheetNames).toContain(resultsName);
+    const results = book.Sheets[resultsName];
+    expect(results.D1.v).toBe(header);
+    expect(results.A2.v).toBe('=HYPERLINK("https://example.invalid")');
+    expect(results.B2.v).toBe("000101");
+    expect(results.D2.t).toBe("n");
+    expect(results.D2.v).toBe(0);
+    expect(book.Sheets[overviewName].B6.v).not.toContain("A clearer view");
+    expect(book.Sheets[overviewName].B15.v).toBe("Shop");
+  }
+});
+
+it("prints in the requested language without changing source-provided names", () => {
+  const source = { ...report(), metadata: { ...report().metadata, shopName: "Shop" }, limitations: ["Missing values and unentered quantities are not replaced by zero. Returns remain separate from positive sales demand."] };
+  const zh = renderAnalysisReportHtml(source, "zh");
+  const ms = renderAnalysisReportHtml(source, "ms");
+  expect(zh).toContain('lang="zh-Hans"');
+  expect(zh).toContain("更清楚地了解您的");
+  expect(zh).toContain("缺失值和未输入数量不会用零代替");
+  expect(zh).toContain("<b>Shop</b>");
+  expect(ms).toContain('lang="ms"');
+  expect(ms).toContain("Gambaran lebih jelas");
+  expect(ms).toContain("<b>Shop</b>");
+});

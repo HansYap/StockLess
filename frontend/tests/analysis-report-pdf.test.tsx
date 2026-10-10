@@ -20,3 +20,15 @@ it('generates a real paginated PDF with embedded Chinese font, metadata and long
   expect(doc.getTitle()).toContain('Sample data');
   expect(doc.getPages().every(p=>Math.abs(p.getWidth()-841.89)<.01)).toBe(true);
 },20000);
+
+it('generates searchable Chinese and Malay PDF metadata with the same report data', async () => {
+  const report: AnalysisReport = { schemaVersion: 1, metadata: { shopName: 'Shop', datasetId: 'D', datasetName: 'October', sourceName: 'sales.csv', sourceSha256: 'abc123', sourceMode: 'sample', sourceLabel: 'Sample data', analysisDate: '2026-10-06', period: { start: '2026-09-01', end: '2026-10-06' }, generatedAt: '2026-10-08T00:00:00Z', snapshotId: 'S', currency: 'MYR' }, tables: [], limitations: [] };
+  const fontPath = '../public/fonts/NotoSansSC.ttf';
+  const font = Uint8Array.from(await readFile(new URL(fontPath, import.meta.url)));
+  for (const [language, expected] of [['zh', '分析报告'], ['ms', 'LAPORAN ANALISIS']] as const) {
+    const bytes = await buildAnalysisPdfBytes(report, font, undefined, undefined, language);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getTitle()).toContain(expected);
+    expect(doc.getPageCount()).toBeGreaterThan(1);
+  }
+}, 30000);

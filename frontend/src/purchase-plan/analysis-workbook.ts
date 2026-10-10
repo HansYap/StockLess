@@ -1,5 +1,7 @@
 import type { Cell, Workbook, Worksheet } from "exceljs";
 import type { AnalysisReport, AnalysisReportCell, AnalysisReportTable } from "../engine.ts";
+import { protectedReportValues, reportLocale, reportText } from "./report-language.ts";
+import type { Language } from "../i18n/index.ts";
 
 const PALETTE = {
   ink: "FF16313B", muted: "FF66767D", teal: "FF167D74", deep: "FF11655E",
@@ -62,8 +64,8 @@ function lastCompleteWeekStarts(analysisDate: string): string[] {
   return Array.from({ length: WEEKS }, (_, index) => new Date(currentMonday - (WEEKS - index) * 7 * DAY).toISOString().slice(0, 10));
 }
 
-function weekLabel(value: string): string {
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+function weekLabel(value: string, language: Language = "en"): string {
+  return new Intl.DateTimeFormat(reportLocale(language), { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
 
 function getColumn(table: AnalysisReportTable | undefined, label: string): number { return table?.columns.indexOf(label) ?? -1; }
@@ -118,7 +120,7 @@ function prepareCanvas(sheet: Worksheet): void {
   sheet.getRow(1).height = 13;
 }
 
-function addOverview(book: Workbook, report: AnalysisReport, rows: readonly WeeklyRow[], weeks: readonly string[], logo?: Uint8Array, mascot?: Uint8Array): void {
+function addOverview(book: Workbook, report: AnalysisReport, rows: readonly WeeklyRow[], weeks: readonly string[], logo?: Uint8Array, mascot?: Uint8Array, language: Language = "en"): void {
   const sheet = book.addWorksheet("Overview", { properties: { tabColor: { argb: PALETTE.deep } } });
   prepareCanvas(sheet);
   band(sheet, 2, 12, 2, 14, PALETTE.pale);
@@ -126,7 +128,7 @@ function addOverview(book: Workbook, report: AnalysisReport, rows: readonly Week
   addPng(book, sheet, mascot, { col: 11.25, row: 3.4 }, 142, 146);
   mergedText(sheet, "B6:K8", "A clearer view of your next purchase decision", { size: 21, bold: true });
   mergedText(sheet, "B9:K9", "StockLess retailer analysis", { size: 11, bold: true, color: PALETTE.deep });
-  mergedText(sheet, "B11:H11", report.metadata.sourceLabel.toUpperCase(), { size: 9, bold: true, color: PALETTE.muted });
+  mergedText(sheet, "B11:H11", reportText(report.metadata.sourceLabel, language).toUpperCase(), { size: 9, bold: true, color: PALETTE.muted });
   band(sheet, 11, 11, 9, 11, PALETTE.white);
   mergedText(sheet, "I11:K11", report.metadata.analysisDate, { size: 9, bold: true, color: PALETTE.deep, align: "center" });
 
@@ -173,7 +175,7 @@ function addOverview(book: Workbook, report: AnalysisReport, rows: readonly Week
   band(sheet, 28, 28, 2, 14, PALETTE.deep);
   sheet.mergeCells("B28:D28");
   text(sheet.getCell("B28"), "Product", { size: 9, color: PALETTE.white, bold: true });
-  weeks.forEach((week, index) => text(sheet.getCell(28, index + 5), weekLabel(week), { size: 9, color: PALETTE.white, bold: true, align: "center" }));
+  weeks.forEach((week, index) => text(sheet.getCell(28, index + 5), weekLabel(week, language), { size: 9, color: PALETTE.white, bold: true, align: "center" }));
   sheet.mergeCells("M28:N28");
   text(sheet.getCell("M28"), "Coverage", { size: 9, color: PALETTE.white, bold: true, align: "center" });
 
@@ -207,7 +209,7 @@ function addOverview(book: Workbook, report: AnalysisReport, rows: readonly Week
   sheet.pageSetup.printArea = "B2:N38";
 }
 
-function addWeeklySales(book: Workbook, rows: readonly WeeklyRow[], weeks: readonly string[]): void {
+function addWeeklySales(book: Workbook, rows: readonly WeeklyRow[], weeks: readonly string[], language: Language = "en"): void {
   const sheet = book.addWorksheet("Weekly sales", { properties: { tabColor: { argb: PALETTE.teal } } });
   sheet.views = [{ state: "frozen", ySplit: 6, xSplit: 4, showGridLines: false }];
   sheet.getColumn(1).width = 3;
@@ -220,7 +222,7 @@ function addWeeklySales(book: Workbook, rows: readonly WeeklyRow[], weeks: reado
   mergedText(sheet, "B2:N2", "Weekly sales history", { size: 16, bold: true });
   mergedText(sheet, "B3:N3", "Missing weeks are not treated as zero. Complete source history remains in Weekly Demand History.", { size: 9, color: PALETTE.muted });
   for (let col = 2; col <= 14; col++) sheet.getCell(4, col).border = { bottom: { style: "medium", color: { argb: PALETTE.teal } } };
-  const headers = ["Product", "SKU", "Pack", ...weeks.map(weekLabel), "Weeks", "Sales status"];
+  const headers = ["Product", "SKU", "Pack", ...weeks.map(week => weekLabel(week, language)), "Weeks", "Sales status"];
   sheet.getRow(6).height = 26;
   headers.forEach((value, index) => {
     const cell = sheet.getCell(6, index + 2);
@@ -249,13 +251,13 @@ function addWeeklySales(book: Workbook, rows: readonly WeeklyRow[], weeks: reado
   sheet.pageSetup = { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
 }
 
-function addOrderSummary(book: Workbook, report: AnalysisReport, logo?: Uint8Array): void {
+function addOrderSummary(book: Workbook, report: AnalysisReport, logo?: Uint8Array, language: Language = "en"): void {
   const sheet = book.addWorksheet("Order summary", { properties: { tabColor: { argb: PALETTE.deep } } });
   prepareCanvas(sheet);
   band(sheet, 2, 10, 2, 14, PALETTE.pale);
   addPng(book, sheet, logo, { col: 1.15, row: 2.15 }, 218, 55);
   mergedText(sheet, "B6:N7", "Current purchase orders", { size: 21, bold: true });
-  mergedText(sheet, "B9:N9", `${report.metadata.shopName}   ·   ${report.metadata.analysisDate}   ·   ${report.metadata.sourceLabel}`, { size: 10, color: PALETTE.deep });
+  mergedText(sheet, "B9:N9", `${report.metadata.shopName}   ·   ${report.metadata.analysisDate}   ·   ${reportText(report.metadata.sourceLabel, language)}`, { size: 10, color: PALETTE.deep });
   const count = report.tables.find(table => table.id === "orders")?.rows.length ?? 0;
   mergedText(sheet, "B13:N14", `${count} planned order lines`, { size: 16, bold: true });
   mergedText(sheet, "B16:N17", "The Purchase Orders sheet contains the complete order list. Quantities are current plan entries; this export does not place an order.", { size: 10, color: PALETTE.muted });
@@ -297,23 +299,51 @@ export async function buildAnalysisWorkbookBytes(report: AnalysisReport, options
   readonly plannedOrdersOnly?: boolean;
   readonly logoPng?: Uint8Array;
   readonly mascotPng?: Uint8Array;
+  readonly language?: Language;
 } = {}): Promise<Uint8Array> {
   const tables = selectedTables(report, options.plannedOrdersOnly ?? false);
   const ExcelJS = (await import("exceljs")).default;
   const book = new ExcelJS.Workbook();
   book.creator = "StockLess";
-  book.title = `StockLess ${report.metadata.sourceLabel} report`;
+  const language = options.language ?? "en";
+  book.title = `StockLess ${reportText(report.metadata.sourceLabel, language)} ${reportText("ANALYSIS REPORT", language)}`;
   book.subject = report.metadata.datasetName;
   book.created = new Date(report.metadata.generatedAt);
   book.properties.date1904 = false;
-  if (options.plannedOrdersOnly) addOrderSummary(book, report, options.logoPng);
+  if (options.plannedOrdersOnly) addOrderSummary(book, report, options.logoPng, language);
   else {
     const weeks = lastCompleteWeekStarts(report.metadata.analysisDate);
     const rows = weeklyRows(report, weeks);
-    addOverview(book, report, rows, weeks, options.logoPng, options.mascotPng);
-    addWeeklySales(book, rows, weeks);
+    addOverview(book, report, rows, weeks, options.logoPng, options.mascotPng, language);
+    addWeeklySales(book, rows, weeks, language);
   }
   tables.forEach(table => addDataSheet(book, table));
+  if (language !== "en") {
+    // Translate only after all lookups, formulas and status styling have used the immutable English contract.
+    const protectedValues = protectedReportValues(report);
+    for (const sheet of book.worksheets) {
+      if (!tables.some(table => table.title.slice(0, 31) === sheet.name)) {
+        sheet.eachRow(row => row.eachCell(cell => { if (typeof cell.value === "string" && !protectedValues.has(cell.value)) cell.value = reportText(cell.value, language); }));
+      }
+    }
+    const rawColumns = new Set(["Product name", "Product code", "Pack size", "Product key", "Supplier", "Supplier ID", "Source column", "Observed value", "Source rows", "Source names", "Source values", "Source boundary", "Factor label", "Description", "Dataset", "Dataset ID", "Source file", "Source SHA-256", "Worksheet", "Snapshot ID"]);
+    for (const table of tables) {
+      const sheet = book.getWorksheet(table.title.slice(0, 31));
+      if (!sheet) continue;
+      table.columns.forEach((label, column) => {
+        sheet.getCell(1, column + 1).value = reportText(label, language);
+        if (rawColumns.has(label) && !(table.id === "scenarios" && label === "Supplier")) return;
+        table.rows.forEach((sourceRow, index) => {
+          const cell = sheet.getCell(index + 2, column + 1);
+          if (table.id === "scenarios" && label === "Supplier" && sourceRow[table.columns.indexOf("Supplier ID")] !== "current-terms") return;
+          if (table.id === "metadata" && label === "Value" && ["Shop", "Dataset", "Dataset ID", "Source file", "Source SHA-256", "Worksheet", "Snapshot ID"].includes(String(sourceRow[0]))) return;
+          if (typeof cell.value === "string" && !protectedValues.has(cell.value)) cell.value = reportText(cell.value, language);
+        });
+      });
+      sheet.name = reportText(table.title, language).slice(0, 31);
+    }
+    for (const sheet of book.worksheets) if (sheet.name === "Overview" || sheet.name === "Weekly sales" || sheet.name === "Order summary") sheet.name = reportText(sheet.name, language).slice(0, 31);
+  }
   return new Uint8Array(await book.xlsx.writeBuffer());
 }
 

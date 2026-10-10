@@ -2,6 +2,8 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf
 import fontkit from '@pdf-lib/fontkit';
 import type { AnalysisReport, AnalysisReportCell, AnalysisReportTable } from '../engine.ts';
 import { analysisReportFilename, downloadReportBytes } from './analysis-report-export.ts';
+import { protectedReportValues, reportLocale, reportText } from './report-language.ts';
+import type { Language } from '../i18n/index.ts';
 
 const PAGE_W = 841.89;
 const PAGE_H = 595.28;
@@ -27,7 +29,7 @@ type PdfColor = ReturnType<typeof rgb>;
 type Cell = AnalysisReportCell | undefined;
 
 /** Same-origin assets only: report data never leaves the browser. */
-export async function downloadAnalysisPdf(report: AnalysisReport) {
+export async function downloadAnalysisPdf(report: AnalysisReport, language: Language = 'en') {
   const base = import.meta.env.BASE_URL;
   const [fontResponse, mascotResponse, logoResponse] = await Promise.all([
     fetch(base + 'fonts/NotoSansSC.ttf'),
@@ -37,12 +39,12 @@ export async function downloadAnalysisPdf(report: AnalysisReport) {
   if (!fontResponse.ok) throw new Error('The local PDF font could not be loaded. Keep your results and try again.');
   if (!logoResponse.ok) throw new Error('The StockLess report logo could not be loaded. Keep your results and try again.');
   const mascotBytes = mascotResponse.ok ? new Uint8Array(await mascotResponse.arrayBuffer()) : undefined;
-  const bytes = await buildAnalysisPdfBytes(report, new Uint8Array(await fontResponse.arrayBuffer()), mascotBytes, new Uint8Array(await logoResponse.arrayBuffer()));
-  downloadReportBytes(bytes, analysisReportFilename(report, 'analysis', 'pdf'), 'application/pdf');
+  const bytes = await buildAnalysisPdfBytes(report, new Uint8Array(await fontResponse.arrayBuffer()), mascotBytes, new Uint8Array(await logoResponse.arrayBuffer()), language);
+  downloadReportBytes(bytes, analysisReportFilename(report, 'analysis', 'pdf', language), 'application/pdf');
 }
 
 /** Searchable, paginated report generated from the same immutable contract as Excel. */
-export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: Uint8Array, mascotBytes?: Uint8Array, logoBytes?: Uint8Array): Promise<Uint8Array> {
+export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: Uint8Array, mascotBytes?: Uint8Array, logoBytes?: Uint8Array, language: Language = 'en'): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const unicode = await doc.embedFont(fontBytes, { subset: false });
@@ -52,7 +54,8 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   const logo = logoBytes ? await doc.embedPng(logoBytes) : undefined;
   const latinChars = new Set(latin.getCharacterSet());
   const supported = new Set([...unicode.getCharacterSet(), ...latinChars]);
-  const safe = (value: unknown): string => Array.from(String(value ?? '')).map(ch => {
+  const protectedValues = protectedReportValues(report);
+  const safe = (value: unknown): string => Array.from(protectedValues.has(String(value ?? '')) ? String(value ?? '') : reportText(String(value ?? ''), language)).map(ch => {
     if (ch === '\n') return ch;
     if (ch === '\t') return ' ';
     const point = ch.codePointAt(0)!;
@@ -119,7 +122,7 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
     y = TOP;
     if (logo) page.drawImage(logo, { x: MARGIN, y: PAGE_H - 45, width: 120, height: 30 });
     const label = 'RETAILER FILE ANALYSIS';
-    draw(label, PAGE_W - MARGIN - measure(label, 8), PAGE_H - 34, 8, color.muted);
+    draw(label, PAGE_W - MARGIN - measure(reportText(label, language), 8), PAGE_H - 34, 8, color.muted);
     page.drawLine({ start: { x: MARGIN, y: PAGE_H - 53 }, end: { x: PAGE_W - MARGIN, y: PAGE_H - 53 }, thickness: .6, color: color.lineSoft });
     page.drawLine({ start: { x: MARGIN, y: 37 }, end: { x: PAGE_W - MARGIN, y: 37 }, thickness: .6, color: color.lineSoft });
     draw(shortened(report.metadata.shopName + '  ·  Analysis date ' + report.metadata.analysisDate + '  ·  Estimates where labelled', CONTENT_W - 45, 7.4), MARGIN, 22, 7.4, color.muted);
@@ -200,8 +203,11 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
     const index = source?.columns.indexOf(column) ?? -1;
     return index < 0 ? undefined : row?.[index];
   };
-  const text = (cell: Cell): string => cell === undefined || cell === null || cell === '' ? 'Unavailable' : String(cell);
-  const format = (cell: Cell, decimals = 0): string => typeof cell === 'number' ? cell.toLocaleString('en-MY', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : text(cell);
+  const text = (cell: Cell): string => {
+    const raw = cell === undefined || cell === null || cell === '' ? 'Unavailable' : String(cell);
+    return protectedValues.has(raw) ? raw : reportText(raw, language);
+  };
+  const format = (cell: Cell, decimals = 0): string => typeof cell === 'number' ? cell.toLocaleString(reportLocale(language), { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : text(cell);
   const money = (cell: Cell): string => typeof cell === 'number' ? 'RM ' + format(cell, 2) : text(cell);
   const identity = (source: AnalysisReportTable | undefined, row: readonly Cell[]): string => {
     const name = text(value(source, row, 'Product name'));
@@ -222,7 +228,7 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   const resultRows = results?.rows ?? [];
   const problems = getTable('problems');
 
-  doc.setTitle('StockLess ' + report.metadata.sourceLabel + ' analysis');
+  doc.setTitle('StockLess ' + reportText(report.metadata.sourceLabel, language) + ' ' + reportText('ANALYSIS REPORT', language));
   doc.setAuthor('StockLess');
   doc.setCreationDate(new Date(report.metadata.generatedAt));
   addPage();

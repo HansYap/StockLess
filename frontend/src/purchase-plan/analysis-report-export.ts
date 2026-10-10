@@ -1,10 +1,13 @@
 import type { AnalysisReport, AnalysisReportCell, AnalysisReportTable } from "../engine.ts";
 import { buildAnalysisWorkbookBytes, loadWorkbookImages } from "./analysis-workbook.ts";
+import { protectedReportValues, reportLocale, reportText } from "./report-language.ts";
+import type { Language } from "../i18n/index.ts";
 export { buildAnalysisWorkbookBytes, NoPlannedOrdersError } from "./analysis-workbook.ts";
 
-export function analysisReportFilename(report: AnalysisReport, kind: "analysis" | "planned-orders", extension: string): string {
+export function analysisReportFilename(report: AnalysisReport, kind: "analysis" | "planned-orders", extension: string, language: Language = "en"): string {
   const source = report.metadata.sourceMode === "sample" ? "-SAMPLE" : "";
-  return `stockless${source}-${kind}-${report.metadata.generatedAt.slice(0, 10)}.${extension}`;
+  const locale = language === "en" ? "" : `-${language}`;
+  return `stockless${source}-${kind}-${report.metadata.generatedAt.slice(0, 10)}${locale}.${extension}`;
 }
 export function downloadReportBytes(bytes: Uint8Array, name: string, mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): void {
   const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer], { type: mime }));
@@ -12,11 +15,11 @@ export function downloadReportBytes(bytes: Uint8Array, name: string, mime = "app
   document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export async function downloadAnalysisWorkbook(report: AnalysisReport): Promise<void> {
-  downloadReportBytes(await buildAnalysisWorkbookBytes(report, await loadWorkbookImages()), analysisReportFilename(report, "analysis", "xlsx"));
+export async function downloadAnalysisWorkbook(report: AnalysisReport, language: Language = "en"): Promise<void> {
+  downloadReportBytes(await buildAnalysisWorkbookBytes(report, { ...await loadWorkbookImages(), language }), analysisReportFilename(report, "analysis", "xlsx", language));
 }
-export async function downloadPlannedOrdersWorkbook(report: AnalysisReport): Promise<void> {
-  downloadReportBytes(await buildAnalysisWorkbookBytes(report, { plannedOrdersOnly: true, ...await loadWorkbookImages(true) }), analysisReportFilename(report, "planned-orders", "xlsx"));
+export async function downloadPlannedOrdersWorkbook(report: AnalysisReport, language: Language = "en"): Promise<void> {
+  downloadReportBytes(await buildAnalysisWorkbookBytes(report, { plannedOrdersOnly: true, ...await loadWorkbookImages(true), language }), analysisReportFilename(report, "planned-orders", "xlsx", language));
 }
 
 const escapeHtml = (value: AnalysisReportCell): string => String(value).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
@@ -118,7 +121,7 @@ const PRINT_STYLES = [
 ].join('');
 
 /** Print-ready HTML using the same brand hierarchy as the downloaded PDF. */
-export function renderAnalysisReportHtml(report: AnalysisReport): string {
+export function renderAnalysisReportHtml(report: AnalysisReport, language: Language = "en"): string {
   const table = (id: string) => report.tables.find(item => item.id === id);
   const findValue = (id: string, measure: string, valueColumn: string): AnalysisReportCell | undefined => {
     const source = table(id);
@@ -126,7 +129,7 @@ export function renderAnalysisReportHtml(report: AnalysisReport): string {
     const valueIndex = source?.columns.indexOf(valueColumn) ?? -1;
     return measureIndex < 0 || valueIndex < 0 ? undefined : source?.rows.find(row => row[measureIndex] === measure)?.[valueIndex];
   };
-  const money = (value: AnalysisReportCell | undefined) => typeof value === 'number' ? 'RM ' + value.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(value ?? 'Unavailable');
+  const money = (value: AnalysisReportCell | undefined) => typeof value === 'number' ? 'RM ' + value.toLocaleString(reportLocale(language), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(value ?? 'Unavailable');
   const carbon = findValue('carbontotals', 'potential_excess', 'Estimated CO2e (kg)');
   const orders = table('orders');
   const checkIndex = orders?.columns.indexOf('Purchase check') ?? -1;
@@ -143,19 +146,30 @@ export function renderAnalysisReportHtml(report: AnalysisReport): string {
   const summary = report.tables.filter(item => !['metadata', 'sales', 'history', 'evidence', 'limitations', 'carbon', 'carbontotals', 'financialtotals'].includes(item.id));
   const beforeCarbon = summary.filter(item => !['outcomes', 'problems'].includes(item.id));
   const afterCarbon = summary.filter(item => ['outcomes', 'problems'].includes(item.id));
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml(analysisReportFilename(report, 'analysis', 'pdf')) + '</title><style>' + PRINT_STYLES + '</style></head><body>' + cover +
+  const markup = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + escapeHtml(analysisReportFilename(report, 'analysis', 'pdf', language)) + '</title><style>' + PRINT_STYLES + '</style></head><body>' + cover +
     '<p class="print-help">Use your browser\'s Print dialog and select “Save as PDF”. The detailed Excel workbook includes complete sales history and planning evidence.</p>' +
     demandCharts(report) + beforeCarbon.map(item => htmlTable(compactSummary(item))).join('') + carbonOverview(report) + afterCarbon.map(item => htmlTable(compactSummary(item))).join('') +
     '<section class="report-section"><h2>Explanations and limitations</h2><ol class="limits">' + report.limitations.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ol></section>' +
     '<section class="report-section"><h2>Source and provenance</h2><p>' + escapeHtml(report.metadata.sourceLabel) + ' · Generated ' + escapeHtml(report.metadata.generatedAt) + '<br>Source SHA-256: ' + escapeHtml(report.metadata.sourceSha256) + '</p></section></body></html>';
+  if (language === "en") return markup;
+  const parsed = new DOMParser().parseFromString(markup, "text/html");
+  parsed.documentElement.lang = language === "zh" ? "zh-Hans" : "ms";
+  const protectedValues = protectedReportValues(report);
+  const walker = parsed.createTreeWalker(parsed.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const original = node.textContent ?? "";
+    const value = protectedValues.has(original) ? original : reportText(original, language);
+    if (value !== original) node.textContent = value;
+  }
+  return "<!doctype html>" + parsed.documentElement.outerHTML;
 }
 
 /** Called synchronously from an export button so browser popup policy can allow it. */
-export function printAnalysisReport(report: AnalysisReport): void {
+export function printAnalysisReport(report: AnalysisReport, language: Language = "en"): void {
   const popup = window.open('', '_blank');
   if (!popup) throw new Error("The print window was blocked. Allow this site's print window and try again.");
   popup.opener = null;
-  popup.document.open(); popup.document.write(renderAnalysisReportHtml(report)); popup.document.close();
+  popup.document.open(); popup.document.write(renderAnalysisReportHtml(report, language)); popup.document.close();
   void Promise.all(Array.from(popup.document.images, image => image.decode().catch(() => undefined))).then(() => {
     if (popup.closed) return;
     popup.focus(); popup.print();
