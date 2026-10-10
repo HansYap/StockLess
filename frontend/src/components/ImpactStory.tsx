@@ -28,7 +28,7 @@ function ShelfRow({ line, copy }: { line: ImpactLine; copy: Translate }) {
 }
 
 /** The Step 5 story from the supplied design: planned shelf → expected demand → potential excess. */
-export function ImpactStory({ head, aside, beforeStory, lines, totalProducts, business, emissions, onBack, onExcess, onBusiness, onEmissions }: { head: ReactNode; aside?: ReactNode; beforeStory?: ReactNode; lines: readonly ImpactLine[]; totalProducts: number; business: ImpactTile; emissions: ImpactTile; onBack?: () => void; onExcess: () => void; onBusiness: () => void; onEmissions: () => void }) {
+export function ImpactStory({ head, aside, afterStory, lines, totalProducts, business, emissions, onBack, onExcess, onBusiness, onEmissions }: { head: ReactNode; aside?: ReactNode; afterStory?: ReactNode; lines: readonly ImpactLine[]; totalProducts: number; business: ImpactTile; emissions: ImpactTile; onBack?: () => void; onExcess: () => void; onBusiness: () => void; onEmissions: () => void }) {
   const language = useLanguage();
   const copy: Translate = (en, zh, ms) => language === "zh" ? zh : language === "ms" ? ms : en;
   const number = (value: number) => Math.round(value).toLocaleString(getLocale());
@@ -115,7 +115,6 @@ export function ImpactStory({ head, aside, beforeStory, lines, totalProducts, bu
       <li><button type="button" className="sx-kpi-button" onClick={onBusiness} aria-controls="business-breakdown"><span className="sx-kpi__ic sx-kpi__ic--amber" aria-hidden="true"><ImpactIcon name="coins" size={24} /></span><span><strong className="sx-kpi-label">{copy("Money tied up in excess", "压在多余库存上的资金", "Wang terikat pada lebihan")}</strong><b>{business.value ?? copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b><em>{business.note}</em><span className="sx-kpi-link">{copy("See costs →", "查看成本 →", "Lihat kos →")}</span></span></button></li>
       <li><button type="button" className="sx-kpi-button" onClick={onEmissions} aria-controls="environment-breakdown"><span className="sx-kpi__ic sx-kpi__ic--blue" aria-hidden="true"><ImpactIcon name="globe" size={24} /></span><span><strong className="sx-kpi-label">{copy("Estimated CO₂e of excess", "多余库存的 CO₂e 估算", "Anggaran CO₂e lebihan")}</strong><b>{emissions.value ?? copy("Not yet available", "暂时无法计算", "Belum tersedia")}</b><em>{emissions.note}</em><span className="sx-kpi-link">{copy("See estimate →", "查看估算 →", "Lihat anggaran →")}</span></span></button></li>
     </ul>
-    {beforeStory}
     <section className="sx-card impact-sec sx-story-details" data-guide="impact-story" data-guide-state={lines.length ? "ready" : "empty"} aria-labelledby="sx-story-title">
     <div className="impact-sec__head">
       <span className="impact-sec__icon" aria-hidden="true"><ImpactIcon name="story" size={24} /></span>
@@ -157,5 +156,6 @@ export function ImpactStory({ head, aside, beforeStory, lines, totalProducts, bu
       <small>{copy("All assessed products · next 4 weeks · quantities in units. Total stock includes current stock, incoming stock and planned orders.", "所有已评估商品 · 未来 4 周 · 数量单位为件。总库存包括现有库存、在途库存和计划订单。", "Semua produk dinilai · 4 minggu akan datang · kuantiti dalam unit. Jumlah stok termasuk stok semasa, stok akan tiba dan pesanan dirancang.")}</small>
     </div>}
     </section>
+    {afterStory}
   </>;
 }
