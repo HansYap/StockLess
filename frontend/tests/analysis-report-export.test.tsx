@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import type { AnalysisReport } from "../src/engine.ts";
 import { buildAnalysisWorkbookBytes, NoPlannedOrdersError, renderAnalysisReportHtml } from "../src/purchase-plan/analysis-report-export.ts";
 
@@ -9,7 +11,12 @@ function report(): AnalysisReport {
     metadata: { shopName: "小店 <script>alert(1)</script>", datasetId: "D", datasetName: "October", sourceName: "sales.csv", sourceSha256: "abc123", sourceMode: "sample", sourceLabel: "Sample data", analysisDate: "2026-10-06", period: { start: "2026-09-01", end: "2026-10-06" }, generatedAt: "2026-10-08T00:00:00.000Z", snapshotId: "S", currency: "MYR" },
     tables: [
       { id: "metadata", title: "Metadata", columns: ["Field", "Value"], rows: [["Data source", "Sample data"]] },
-      { id: "results", title: "Product Results", columns: ["Product name", "Product code", "Pack size", "Planned quantity"], rows: [["=HYPERLINK(\"https://example.invalid\")", "000101", "500 g", 0], ["Roti <img src=x onerror=alert(1)>", "000102", "250 g", "Not entered"]] },
+      { id: "results", title: "Product Results", columns: ["Product name", "Product code", "Pack size", "Planned quantity", "Product key", "Readiness"], rows: [["=HYPERLINK(\"https://example.invalid\")", "000101", "500 g", 0, "ID|000101", "Ready"], ["Roti <img src=x onerror=alert(1)>", "000102", "250 g", "Not entered", "ID|000102", "Limited"]] },
+      { id: "history", title: "Weekly Demand History", columns: ["Product name", "Product code", "Pack size", "Product key", "Week start", "Week end", "Positive sales"], rows: [
+        ["=HYPERLINK(\"https://example.invalid\")", "000101", "500 g", "ID|000101", "2026-09-14", "2026-09-20", 4],
+        ["=HYPERLINK(\"https://example.invalid\")", "000101", "500 g", "ID|000101", "2026-09-21", "2026-09-27", "Missing week"],
+        ["=HYPERLINK(\"https://example.invalid\")", "000101", "500 g", "ID|000101", "2026-09-28", "2026-10-04", 0],
+      ] },
       { id: "outcomes", title: "Recorded Outcomes", columns: ["Quantity"], rows: [[0]] },
       { id: "orders", title: "Purchase Orders", columns: ["Product code", "Planned quantity"], rows: [["000102", 10]] },
     ],
@@ -21,19 +28,42 @@ it("writes an actual XLSX workbook with textual SKU/formula-like cells and numer
   const bytes = await buildAnalysisWorkbookBytes(report());
   expect([...bytes.slice(0, 2)]).toEqual([0x50, 0x4b]);
   const book = XLSX.read(bytes, { type: "array" });
-  expect(book.SheetNames).toEqual(["Metadata", "Product Results", "Recorded Outcomes", "Purchase Orders"]);
+  expect(book.SheetNames).toEqual(["Overview", "Weekly sales", "Metadata", "Product Results", "Weekly Demand History", "Recorded Outcomes", "Purchase Orders"]);
   const sheet = book.Sheets["Product Results"];
   expect(sheet.A2.t).toBe("s"); expect(sheet.A2.f).toBeUndefined();
   expect(sheet.A2.v).toBe('=HYPERLINK("https://example.invalid")');
   expect(sheet.B2.t).toBe("s"); expect(sheet.B2.v).toBe("000101");
   expect(sheet.D2.t).toBe("n"); expect(sheet.D2.v).toBe(0);
   expect(sheet.D3.v).toBe("Not entered");
+  expect(book.Sheets["Weekly sales"].J7.v).toBe(4);
+  expect(book.Sheets["Weekly sales"].K7.v).toBe("—");
+  expect(book.Sheets["Weekly sales"].L7.v).toBe(0);
+  expect(book.Sheets["Overview"].B6.v).toContain("A clearer view");
+  for (const table of report().tables) {
+    expect(XLSX.utils.sheet_to_json(book.Sheets[table.title], { header: 1, raw: true })).toEqual([table.columns, ...table.rows]);
+  }
+});
+
+it("embeds the website logo and Stocky, and keeps missing and zero weeks visually distinct", async () => {
+  const logoPng = readFileSync("public/report/stockless-logo.png");
+  const mascotPng = readFileSync("public/report/stocky-hello.png");
+  const bytes = await buildAnalysisWorkbookBytes(report(), { logoPng, mascotPng });
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(bytes);
+  const overview = book.getWorksheet("Overview")!;
+  const sales = book.getWorksheet("Weekly sales")!;
+  expect(overview.getImages()).toHaveLength(2);
+  expect(sales.getCell("K7").value).toBe("—");
+  expect(sales.getCell("L7").value).toBe(0);
+  expect(sales.getCell("K7").fill).not.toEqual(sales.getCell("L7").fill);
+  expect(sales.autoFilter).toBeDefined();
+  expect(book.getWorksheet("Weekly Demand History")!.getCell("G4").value).toBe(0);
 });
 
 it("exports only metadata and the current order table; empty planned orders show an actionable error", async () => {
   const bytes = await buildAnalysisWorkbookBytes(report(), { plannedOrdersOnly: true });
   const book = XLSX.read(bytes, { type: "array" });
-  expect(book.SheetNames).toEqual(["Metadata", "Purchase Orders"]);
+  expect(book.SheetNames).toEqual(["Order summary", "Metadata", "Purchase Orders"]);
   const source = report();
   const empty = { ...source, tables: source.tables.map(table => table.id === "orders" ? { ...table, rows: [] } : table) };
   await expect(buildAnalysisWorkbookBytes(empty, { plannedOrdersOnly: true })).rejects.toBeInstanceOf(NoPlannedOrdersError);

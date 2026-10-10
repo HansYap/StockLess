@@ -1,41 +1,10 @@
 import type { AnalysisReport, AnalysisReportCell, AnalysisReportTable } from "../engine.ts";
+import { buildAnalysisWorkbookBytes, loadWorkbookImages } from "./analysis-workbook.ts";
+export { buildAnalysisWorkbookBytes, NoPlannedOrdersError } from "./analysis-workbook.ts";
 
 export function analysisReportFilename(report: AnalysisReport, kind: "analysis" | "planned-orders", extension: string): string {
   const source = report.metadata.sourceMode === "sample" ? "-SAMPLE" : "";
   return `stockless${source}-${kind}-${report.metadata.generatedAt.slice(0, 10)}.${extension}`;
-}
-export class NoPlannedOrdersError extends Error {
-  constructor() { super("No planned orders. Enter a positive quantity in Purchase plan."); this.name = "NoPlannedOrdersError"; }
-}
-function selectedTables(report: AnalysisReport, plannedOrdersOnly: boolean): readonly AnalysisReportTable[] {
-  if (!plannedOrdersOnly) return report.tables;
-  const orders = report.tables.find(table => table.id === "orders");
-  if (!orders?.rows.length) throw new NoPlannedOrdersError();
-  return report.tables.filter(table => ["metadata", "orders", "limitations"].includes(table.id));
-}
-
-/** Explicit string cells prevent formulas and preserve codes such as 000101 verbatim. */
-export async function buildAnalysisWorkbookBytes(report: AnalysisReport, options: { readonly plannedOrdersOnly?: boolean } = {}): Promise<Uint8Array> {
-  const XLSX = await import("xlsx");
-  const book = XLSX.utils.book_new();
-  for (const table of selectedTables(report, options.plannedOrdersOnly ?? false)) {
-    const sheet: import("xlsx").WorkSheet = {};
-    const rows: readonly (readonly AnalysisReportCell[])[] = [table.columns, ...table.rows];
-    for (let r = 0; r < rows.length; r++) for (let c = 0; c < rows[r].length; c++) {
-      const value = rows[r][c];
-      if (typeof value === "number" && !Number.isFinite(value)) throw new Error("Report contains an unsupported numeric value.");
-      if (typeof value === "string" && value.length > 32767) throw new Error("A report cell is too long for Excel. Reduce conflicting source labels and try again.");
-      sheet[XLSX.utils.encode_cell({ r, c })] = typeof value === "number" ? { t: "n", v: value }
-        : typeof value === "boolean" ? { t: "b", v: value } : { t: "s", v: value, z: "@" };
-    }
-    sheet["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, rows.length - 1), c: table.columns.length - 1 } });
-    sheet["!cols"] = table.columns.map((label, index) => ({ wch: Math.min(60, Math.max(16, label.length + 2, ...table.rows.slice(0, 50).map(row => String(row[index]).length))) }));
-    if (table.rows.length) sheet["!autofilter"] = { ref: sheet["!ref"]! };
-    XLSX.utils.book_append_sheet(book, sheet, table.title.slice(0, 31));
-  }
-  book.Props = { Title: `StockLess ${report.metadata.sourceLabel} report`, Subject: report.metadata.datasetName,
-    Author: "StockLess", Comments: report.limitations.join("\n"), CreatedDate: new Date(report.metadata.generatedAt) };
-  return new Uint8Array(XLSX.write(book, { type: "array", bookType: "xlsx", compression: true }));
 }
 export function downloadReportBytes(bytes: Uint8Array, name: string, mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): void {
   const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer], { type: mime }));
@@ -44,10 +13,10 @@ export function downloadReportBytes(bytes: Uint8Array, name: string, mime = "app
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 export async function downloadAnalysisWorkbook(report: AnalysisReport): Promise<void> {
-  downloadReportBytes(await buildAnalysisWorkbookBytes(report), analysisReportFilename(report, "analysis", "xlsx"));
+  downloadReportBytes(await buildAnalysisWorkbookBytes(report, await loadWorkbookImages()), analysisReportFilename(report, "analysis", "xlsx"));
 }
 export async function downloadPlannedOrdersWorkbook(report: AnalysisReport): Promise<void> {
-  downloadReportBytes(await buildAnalysisWorkbookBytes(report, { plannedOrdersOnly: true }), analysisReportFilename(report, "planned-orders", "xlsx"));
+  downloadReportBytes(await buildAnalysisWorkbookBytes(report, { plannedOrdersOnly: true, ...await loadWorkbookImages(true) }), analysisReportFilename(report, "planned-orders", "xlsx"));
 }
 
 const escapeHtml = (value: AnalysisReportCell): string => String(value).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
