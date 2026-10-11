@@ -111,7 +111,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   const excludedRows = new Set(props.snapshot.rows.filter(row => row.useState === "excluded").map(row => row.sourceRow));
   const mustFix = new Set(props.snapshot.issues.filter(issue => issue.issueCode !== "DUPLICATE_CANDIDATE" && issue.issueCode !== "DUPLICATE_CONFIRMED" && excludedRows.has(issue.sourceRow)).map(issue => issue.sourceRow)).size;
   const counts = { ready: 0, review: 0, missing: 0 }; products.forEach(product => counts[product.status]++);
-  const title = products.length === 0 || props.snapshot.reconciliation.rowsUsed === 0 ? "Your data needs corrections" : counts.missing > 0 || counts.review > 0 ? "Your data is mostly ready" : "Your data is ready";
+  const title = products.length === 0 || props.snapshot.reconciliation.rowsUsed === 0 ? "Your data needs corrections" : counts.missing > counts.ready + counts.review ? "Some products need more data" : counts.missing > 0 || counts.review > 0 ? "Your data is mostly ready" : "Your data is ready";
   const unavailable = props.checking || props.forecasting || props.snapshot.reconciliation.rowsUsed === 0;
   const continueButton = <button type="button" data-guide="readiness-continue" className="btn btn--primary" onClick={props.onContinue} disabled={unavailable} aria-busy={props.forecasting}>{t(props.forecasting ? "Estimating demand locally…" : "Continue to purchase planning →")}</button>;
   const viewEvidence = (id: string) => {

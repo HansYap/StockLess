@@ -44,7 +44,7 @@ it("places the real file details and clear control in the hero instead of the to
   expect(within(topbar).queryByText("Retailer file")).toBeNull();
   expect(within(topbar).queryByText(dataset.sourceName)).toBeNull();
   expect(within(topbar).queryByRole("button", { name: "Clear session" })).toBeNull();
-  const hero = screen.getByRole("region", { name: "Check how we read your file" });
+  const hero = screen.getByRole("region", { name: "Match your columns" });
   expect(within(hero).getByText(dataset.sourceName)).toBeTruthy();
   expect(within(hero).getByText("Retailer file")).toBeTruthy();
   fireEvent.click(within(hero).getByRole("button", { name: "Clear session" }));

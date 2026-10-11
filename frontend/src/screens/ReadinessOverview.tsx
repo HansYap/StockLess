@@ -6,7 +6,7 @@ import { previousCompleteWeekStarts, buildDemandHistoryEvidence, type ProductTim
 import { FOOD_CATEGORIES, type FoodCategory } from "../readiness/categories.ts";
 import { buildReadinessProducts, type ProductSummary, type ProductStatus } from "../readiness/model.ts";
 export { foodCategory } from "../readiness/categories.ts";
-const LABELS: Record<ProductStatus, string> = { ready: "Ready", review: "Need review", missing: "Missing data" };
+const LABELS: Record<ProductStatus, string> = { ready: "Ready", review: "Need review", missing: "Need more data" };
 const NOTES: Record<ProductStatus, string> = { ready: "Complete data, no major issues", review: "Usable, with something to check", missing: "Can't be planned yet" };
 
 function weeksFor(product: ProductSummary, date: string) {
@@ -37,7 +37,7 @@ export function ReadinessOverview({ snapshot, timelines, products: supplied, ini
   const openProduct = (product: ProductSummary) => { setSelected(product); dialog.current?.showModal(); };
   return <>
     <section className="rd-stats" data-guide="readiness-summary" aria-label={t("Product readiness summary")}>{(["ready", "review", "missing"] as const).map(item => <button className={"rd-stat rd-stat--" + item} type="button" key={item} aria-pressed={status === item} onClick={() => { setStatus(status === item ? null : item); setExpanded(false); }}>
-      <span className="rd-stat__icon"><ReadinessIcon name={item === "ready" ? "check" : item === "review" ? "warning" : "missing"} /></span><span><b className="num rd-stat__number">{counts[item]}</b> <b>{t(item === "ready" ? "products ready" : item === "review" ? "need review" : "missing data")}</b><small>{t(NOTES[item])}</small></span>
+      <span className="rd-stat__icon"><ReadinessIcon name={item === "ready" ? "check" : item === "review" ? "warning" : "missing"} /></span><span><b className="num rd-stat__number">{counts[item]}</b> <b>{t(item === "ready" ? "products ready" : item === "review" ? "need review" : "need more data")}</b><small>{t(NOTES[item])}</small></span>
     </button>)}</section>
     <section className="rd-card rd-products" aria-labelledby="readiness-products-title">
       <div className="rd-products__head" data-guide="readiness-products"><div><h2 id="readiness-products-title">{t("Products by category")}</h2><p>{t("Categories are suggested from product names. Products to check are listed first.")}</p><span className="sr-only">{derived.length} {t("products checked")}</span></div>

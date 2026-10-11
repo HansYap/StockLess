@@ -237,7 +237,7 @@ export function UploadScreen({
 
   async function handleSample() {
     const sampleAnalysisDate = malaysiaToday();
-    await run("sample_with_issues.csv", "sample", "text/csv", 0, async (signal) => {
+    await run("sample_shop_sales.csv", "sample", "text/csv", 0, async (signal) => {
       const response = await fetch("/samples/sample_with_issues.csv", { signal, cache: "no-store" });
       if (!response.ok) throw new Error("Sample unavailable");
       const csv = await response.text();
