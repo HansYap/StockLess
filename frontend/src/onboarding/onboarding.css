@@ -28,3 +28,11 @@
 body:has(.onboarding-coach){overflow-anchor:none}.onboarding-slot .onboarding-coach{scroll-margin-top:88px}
 .purchase-plan--new .pp-list:has(.onboarding-slot),.readiness-screen .rd-card:has(.onboarding-slot){overflow:visible}
 body:has(.onboarding-coach) .purchase-plan--new .pp-hero,body:has(.onboarding-coach) .readiness-screen .rd-hero{position:static}
+/* Stocky floats above the tip card and any sticky header, never clipped */
+.onboarding-coach--stocky{padding-top:34px}
+.onboarding-coach__stocky{z-index:3;top:-52px;filter:drop-shadow(0 6px 10px rgba(22,49,59,.18));animation:stocky-float 3.2s ease-in-out infinite}
+@keyframes stocky-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.onboarding-coach__stocky{animation:none}}
+.onboarding-slot{z-index:202}
+.onboarding-slot .onboarding-coach--stocky{margin-top:58px}
+body:has(.onboarding-coach) .onboarding-slot .onboarding-coach{scroll-margin-top:150px}
