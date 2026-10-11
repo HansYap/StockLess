@@ -3,7 +3,7 @@ interface Size { width: number; height: number; }
 
 /** Find room for the whole coach and Stocky without covering its target. */
 export function positionCoach(target: Rect, card: Size, viewport: Size): { left: number; top: number } | null {
-  const edge = 16, mascot = 46, gap = 22;
+  const edge = 16, mascot = 56, gap = 22;
   const minTop = edge + mascot, maxTop = viewport.height - edge - card.height;
   const maxLeft = viewport.width - edge - card.width;
   if (maxTop < minTop || maxLeft < edge) return null;
