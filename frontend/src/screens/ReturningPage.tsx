@@ -140,7 +140,7 @@ export function ReturningPage() {
     <dialog ref={dialogRef} className="stockless-dialog" aria-labelledby="returning-confirm-title" aria-describedby="returning-confirm-copy" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}>
       <h2 className="stockless-dialog__title" id="returning-confirm-title">{copy(pending === "all" ? "clearTitle" : "removeTitle")}</h2>
       <p className="stockless-dialog__description" id="returning-confirm-copy">{pending === "all" ? copy("clearCopy") : pending && copy("removeCopy").replace("{name}", `${displayShopName(pending.shopName)} / ${pending.datasetName}`)}</p>
-      <div className="stockless-dialog__actions"><button ref={cancelRef} className="stockless-dialog__button" type="button" disabled={busy} onClick={closeDialog}>{copy("cancel")}</button><button className="stockless-dialog__button stockless-dialog__button--danger" type="button" disabled={busy} onClick={() => void remove()}>{copy(busy ? "removing" : pending === "all" ? "clearAll" : "remove")}</button></div>
+      <div className="stockless-dialog__actions"><button ref={cancelRef} className="stockless-dialog__button" type="button" disabled={busy} onClick={closeDialog}>{copy("cancel")}</button><button className="stockless-dialog__button stockless-dialog__button--danger" type="button" disabled={busy} onClick={() => void remove()}>{copy(busy ? "removing" : pending === "all" ? "clearAllConfirm" : "remove")}</button></div>
     </dialog>
   </div>;
 }
