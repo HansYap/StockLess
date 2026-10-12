@@ -37,7 +37,7 @@ it('shows snapshot estimates without recording, correction or history forms',()=
   const environment=screen.getByRole('tabpanel',{name:'Environmental'});
   expect(environment.querySelectorAll('.ix-card')).toHaveLength(2);
   expect(within(environment).getByText('Potential excess: estimated CO₂e')).toBeTruthy();
-  expect(within(environment).getByText('Named scenario difference')).toBeTruthy();
+  expect(within(environment).getByText('If you follow our suggestion')).toBeTruthy();
   expect(within(screen.getByRole('list',{name:'Your plan at a glance'})).getAllByRole('button')).toHaveLength(3);
   fireEvent.click(screen.getByRole('tab',{name:'Business'}));
   expect(screen.getByRole('tabpanel',{name:'Business'}).querySelectorAll('.ix-card')).toHaveLength(4);

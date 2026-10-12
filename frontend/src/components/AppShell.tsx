@@ -15,7 +15,7 @@ import { GuideButton } from "../onboarding/Onboarding.tsx";
 export type StepId = 1 | 2 | 3 | 4;
 
 const STEPS: readonly { id: StepId; label: string }[] = [
-  { id: 1, label: "Upload" },
+  { id: 1, label: "Add your file" },
   { id: 2, label: "Map columns" },
   { id: 3, label: "Check readiness" },
 ];
@@ -78,7 +78,7 @@ export function AppShell({
             <span className="step__next">
               <span className="step__plant" aria-hidden="true"><GrowthIcon stage="tree" size={22} /></span>
               <span className="step__dot step__dot--next" aria-hidden="true">→</span>
-              <span className="step__label">{t("Purchase plan")}</span>
+              <span className="step__label">{t("Your order list")}</span>
             </span>
           </li>
         </ol>

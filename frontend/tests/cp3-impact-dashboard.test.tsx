@@ -97,7 +97,7 @@ it("keeps saved outcomes out of snapshot estimates without deleting those record
   expect(screen.queryByRole("heading", { name: "Improve the data behind these estimates" })).toBeNull();
   expect(screen.queryByText("Recorded waste: estimated CO₂e")).toBeNull();
   expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
-  expect(environmentalValue("Named scenario difference")).toBe("Unavailable");
+  expect(environmentalValue("If you follow our suggestion")).toBe("Unavailable");
   expect(environmentPanel().querySelectorAll('.ix-card')).toHaveLength(2);
   expect(JSON.stringify(saved)).toBe(before);
 });
@@ -106,7 +106,7 @@ it("missing cost does not block stock or automatic environmental estimates", asy
   const input=await evidence({cost:""});render(<Harness {...input} />);
   expect(environmentalValue("Potential excess: estimated CO₂e")).toMatch(/kg CO₂e/);
   expect(within(financialCard("Your planned spend")).getByText("Unavailable")).toBeTruthy();
-  expect(screen.getByRole("button",{name:/Possible excess stock/}).querySelector('b')?.textContent).toBe("60 units");
+  expect(screen.getByRole("button",{name:/Extra stock that may not sell/}).querySelector('b')?.textContent).toBe("60 units");
   expect(screen.queryByLabelText("Your purchase cost / sales unit (MYR)")).toBeNull();
 });
 
@@ -114,7 +114,7 @@ it("an unsupported automatic category leaves stock and money available without a
   const input=await evidence({name:'Unknown item'});render(<Harness {...input} />);
   expect(environmentalValue('Potential excess: estimated CO₂e')).toBe('Unavailable');
   expect(within(environmentPanel()).queryByText(/Confirm categories/)).toBeNull();
-  expect(screen.getByRole('button',{name:/Possible excess stock/}).querySelector('b')?.textContent).toBe('60 units');
+  expect(screen.getByRole('button',{name:/Extra stock that may not sell/}).querySelector('b')?.textContent).toBe('60 units');
   expect(within(financialCard('Your planned spend')).getByText('MYR 250.00')).toBeTruthy();
 });
 

@@ -56,7 +56,7 @@ it("purchase summary uses an automatic draft and retains an explicit zero", asyn
   const {snapshot,forecast} = await evidence();
   const props = {snapshot,forecast,selectedKey:"ID|A",onSelect:()=>{},onDraftChange:()=>{},onBack:()=>{},onImpact:()=>{}};
   const {rerender} = render(<PurchasePlanScreen {...props} drafts={{}} />);
-  const summary = () => within(screen.getByRole("button",{name:/Possible excess stock.*See impact/}));
+  const summary = () => within(screen.getByRole("button",{name:/Extra stock that may not sell.*See impact/}));
   expect(summary().getByText("0 units")).toBeTruthy();
   expect(summary().queryByText("Not entered")).toBeNull();
   rerender(<PurchasePlanScreen {...props} drafts={{"ID|A":{...emptyProductPurchaseInputs(),plannedOrder:createPurchaseQuantity(0,"input by you")}}} />);

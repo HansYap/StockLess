@@ -68,7 +68,7 @@ vi.mock("../src/screens/MappingScreen.tsx", () => ({
 }));
 vi.mock("../src/screens/ReadinessScreen.tsx", () => ({
   ReadinessScreen: ({ onContinue, onClear }: { onContinue: () => void; onClear: () => void }) => (
-    <><button onClick={onContinue}>Run test forecast</button><button onClick={onClear}>Clear session</button></>
+    <><button onClick={onContinue}>Run test forecast</button><button onClick={onClear}>Start over</button></>
   ),
 }));
 
@@ -94,7 +94,7 @@ const open = () =>
 describe("App forecast and draft lifecycle", () => {
   // Three upload-to-plan journeys include the rendered evidence charts. Allow
   // enough time for all assertions to complete on a busy machine.
-  it("input edits never rerun forecasting; navigation retains drafts; Clear session and replacement discard drafts", async () => {
+  it("input edits never rerun forecasting; navigation retains drafts; Start over and replacement discard drafts", async () => {
     vi.mocked(runDemandForecastInWorker).mockClear();
     const store = vi.spyOn(Storage.prototype, "setItem");
     render(<App />);
@@ -104,7 +104,7 @@ describe("App forecast and draft lifecycle", () => {
     fireEvent.change(screen.getByLabelText("Planned order"), {
       target: { value: "20" },
     });
-    fireEvent.change(screen.getByLabelText("Incoming stock"), {
+    fireEvent.change(screen.getByLabelText("Already ordered, not here yet"), {
       target: { value: "4" },
     });
     expect(runDemandForecastInWorker).toHaveBeenCalledTimes(1);
@@ -120,14 +120,14 @@ describe("App forecast and draft lifecycle", () => {
     ).toBe("20");
     expect(runDemandForecastInWorker).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "← Back to readiness" }));
-    fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start over" }));
     await reachPurchase();
     open();
     expect(
       screen.getByLabelText("Planned order").getAttribute("aria-valuetext"),
     ).toBe("12 units");
     expect(
-      (screen.getByLabelText("Incoming stock") as HTMLInputElement).value,
+      (screen.getByLabelText("Already ordered, not here yet") as HTMLInputElement).value,
     ).toBe("");
     fireEvent.change(screen.getByLabelText("Planned order"), {
       target: { value: "9" },

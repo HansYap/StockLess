@@ -47,7 +47,7 @@ describe("first-visit bulk confirmation", () => {
     const duplicate = { ...original, mappings: { ...original.mappings, quantity_sold: { ...original.mappings.quantity_sold!, sourceColumnId: "date" } } };
     expect(confirmCurrentMapping(duplicate)).toBeNull();
     render(mappingPage(partial));
-    expect((screen.getByRole("button", { name: "Confirm all and continue →" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Yes, all good →" }) as HTMLButtonElement).disabled).toBe(true);
   });
   it("honours a selected identity mode and keeps it blocked when its columns are missing", () => {
     const both = setMapping(setMapping(suggested(), "product_name", "name", false), "pack_variant", "pack", false);
@@ -73,13 +73,13 @@ describe("persistent language choice across the frontend", () => {
     expect(document.documentElement.lang).toBe("zh-Hans");
     unmount();
     render(mappingPage(suggested()));
-    expect(screen.getByText("全部确认并继续 →")).toBeTruthy();
+    expect(screen.getByText("是的，全部没问题 →")).toBeTruthy();
     expect(screen.getAllByRole("option", { name: "Ready" }).length).toBeGreaterThan(0);
     expect(screen.getByText("Ready.csv")).toBeTruthy();
     expect(screen.queryByText(/Unique approved/)).toBeNull();
     act(() => setLanguage("ms"));
-    expect(screen.getByText("Sahkan semua dan teruskan →")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Padankan lajur anda" })).toBeTruthy();
+    expect(screen.getByText("Ya, semua betul →")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Semak lajur" })).toBeTruthy();
   });
   it("translates purchase results without translating retailer product names", () => {
     const { snapshot, forecast } = makeEvidence();

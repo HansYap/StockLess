@@ -24,7 +24,7 @@ it("US1.3 requires a worksheet choice and sends only the chosen records with ori
   Object.defineProperty(file, "stream", { value: () => new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close(); } }) });
   const onSource = vi.fn(async () => {});
   render(<UploadScreen onSource={onSource} onCancel={() => {}} />);
-  fireEvent.change(screen.getByLabelText("Choose CSV or Excel file"), { target: { files: [file] } });
+  fireEvent.change(screen.getByLabelText("Choose file"), { target: { files: [file] } });
   const choice = await screen.findByRole("combobox", { name: "Worksheet" });
   expect((screen.getByRole("button", { name: "Continue to matching →" }) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.change(choice, { target: { value: "Second" } });

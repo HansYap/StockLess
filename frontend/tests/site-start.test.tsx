@@ -5,7 +5,7 @@ import { listSavedDatasets } from "../src/storage/saved-datasets.ts";
 
 vi.mock("../src/storage/saved-datasets.ts", () => ({ listSavedDatasets: vi.fn() }));
 vi.mock("../src/App.tsx", () => ({ default: ({ initialDatasetId }: { initialDatasetId?: string }) => <>
-  <h1>{initialDatasetId ? "Current purchase plan" : "Upload your sales file"}</h1>
+  <h1>{initialDatasetId ? "Current purchase plan" : "Add your sales file"}</h1>
   {initialDatasetId && <aside aria-label="Workspace navigation">{initialDatasetId}</aside>}
 </> }));
 
@@ -21,7 +21,7 @@ it("opens Upload when saved storage cannot be checked from Start", async () => {
   vi.mocked(listSavedDatasets).mockRejectedValue(new Error("Storage unavailable"));
   render(<Site />);
   await waitFor(() => expect(window.location.hash).toBe("#workspace"));
-  expect(await screen.findByRole("heading", { name: "Upload your sales file" })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "Add your sales file" })).toBeTruthy();
 });
 
 it.each(["", "#home", "#start"])("opens returning visitors directly in the latest purchase plan from %s", async hash => {
@@ -41,7 +41,7 @@ it.each([false, true])("keeps the homepage top open after clicking a workflow ca
   await waitFor(() => expect(document.getElementById("home-title")).toBeTruthy());
   expect(window.location.hash).toBe("#top");
   expect(screen.queryByRole("heading", { name: "Current purchase plan" })).toBeNull();
-  expect(screen.queryByRole("heading", { name: "Upload your sales file" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Add your sales file" })).toBeNull();
 });
 
 it.each(["", "#home", "#workspace", "#guide", "#history", "#returning"])("returns to the landing page when reopening %s without saved work", async hash => {
@@ -73,6 +73,6 @@ it("keeps the landing page accessible when local storage is unavailable", async 
 it("starts new visitors at Upload after the landing page", async () => {
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<Site />);
-  await screen.findByRole("heading", { name: "Upload your sales file" });
+  await screen.findByRole("heading", { name: "Add your sales file" });
   expect(window.location.hash).toBe("#workspace");
 });

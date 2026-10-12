@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { messages } from "./messages.ts";
+import { plainWording } from "./plain-wording.ts";
 
 export type Language = "en" | "zh" | "ms";
 const storageKey = "stockless.language";
@@ -33,8 +34,11 @@ export function getLocale() { return language === "zh" ? "zh-CN" : language === 
 
 /** Translate interface copy at render time; non-string React children pass through unchanged. */
 export function translateForLanguage<T>(value: T, target: Language): T {
-  if (typeof value !== "string" || target === "en") return value;
+  if (typeof value !== "string") return value;
   const key = value.replace(/\s+/g, " ").trim();
+  const plain = Object.hasOwn(plainWording, key) ? plainWording[key] : undefined;
+  if (plain) return (value.match(/^\s*/)?.[0] + plain[target === "zh" ? 1 : target === "ms" ? 2 : 0] + value.match(/\s*$/)?.[0]) as T;
+  if (target === "en") return value;
   const entry = Object.hasOwn(messages, key) ? messages[key] : undefined;
   if (entry) return (value.match(/^\s*/)?.[0] + entry[target === "zh" ? 0 : 1] + value.match(/\s*$/)?.[0]) as T;
   for (const template of templates) {

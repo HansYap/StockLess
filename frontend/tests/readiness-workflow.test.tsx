@@ -50,7 +50,7 @@ describe("readiness workflow", () => {
     const onContinue = vi.fn();
     render(<ReadinessScreen dataset={dataset} mapping={createMappingState()} snapshot={changed} dateConfirmations={[]} checking={false} error={null} forecasting={false} forecastError={null} filter={null} onFilter={() => {}} onConfirmDateFormat={() => {}} onBack={() => {}} onContinue={onContinue} reportFilename="problems.csv" />);
     const findingsRegion = screen.getByRole("region", { name: "What we found" });
-    expect(within(findingsRegion).getByText("Safe tidy-ups applied")).toBeTruthy();
+    expect(within(findingsRegion).getByText("Small fixes we made for you")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Add filter", exact: true }));
     const menu = screen.getByRole("dialog", { name: "Add filter" });
     fireEvent.click(within(menu).getByRole("button", { name: "Status / shown" }));
@@ -61,7 +61,7 @@ describe("readiness workflow", () => {
     fireEvent.click(within(menu).getByRole("button", { name: "Apply filters", exact: true }));
     expect(within(findingsRegion).getByText("Nothing matches these filters.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remove filter: Issue type" }));
-    expect(within(findingsRegion).getByText("Safe tidy-ups applied")).toBeTruthy();
+    expect(within(findingsRegion).getByText("Small fixes we made for you")).toBeTruthy();
     const products = buildReadinessProducts(changed, buildProductTimelines(changed));
     const findings = buildFindings(changed, products);
     const csv = findingsCsv(findings.map(item => ({ ...item, name: "=SUM(1)" })), "sales.csv", changed.analysisDate);

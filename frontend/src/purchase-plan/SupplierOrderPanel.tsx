@@ -38,9 +38,9 @@ export function SupplierOrderPanel({ estimate, terms, analysisDate, invalidQuant
     <fieldset className="pp-supplier-fields">
       <legend className="sr-only">{c("Ordering rules for this product", "此商品的订货规则", "Peraturan pesanan untuk produk ini")}</legend>
       {([
-        ["caseSize", c("Units per case", "每箱件数", "Unit setiap kotak")],
-        ["minimumOrder", c("Minimum order (units)", "最低订量（件）", "Pesanan minimum (unit)")],
-        ["leadTimeDays", c("Delivery time (days)", "送货时间（天）", "Masa penghantaran (hari)")],
+        ["caseSize", c("Units per carton", "每箱件数", "Unit sekotak")],
+        ["minimumOrder", c("Smallest order (units)", "最少订量（件）", "Pesanan minimum (unit)")],
+        ["leadTimeDays", c("Days to deliver", "送货天数", "Hari hantar")],
       ] as const).map(([field, label]) => <label key={field} htmlFor={`${id}-${field}`}>{label}<input id={`${id}-${field}`} type="text" inputMode="numeric" value={raw[field] ?? (terms[field] === undefined ? "" : String(terms[field]))} placeholder="—" aria-invalid={Boolean(errors[field])} aria-describedby={errors[field] ? `${id}-${field}-error` : undefined} onChange={event => change(field, event.currentTarget.value)} />{errors[field] && <span id={`${id}-${field}-error`} className="pp-input-error" role="alert">{t(errors[field])}</span>}</label>)}
     </fieldset>
     <div className="pp-supplier-order-result" aria-live="polite">

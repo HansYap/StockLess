@@ -27,13 +27,13 @@ describe("impact dashboard", () => {
     expect(overview.getByText("From 2 of 3 products · next 4 weeks")).toBeTruthy();
     expect((document.getElementById("business-breakdown") as HTMLDetailsElement).open).toBe(false);
     expect((document.getElementById("environment-breakdown") as HTMLDetailsElement).open).toBe(false);
-    fireEvent.click(overview.getByRole("button", { name: /Possible excess stock/ }));
+    fireEvent.click(overview.getByRole("button", { name: /Extra stock that may not sell/ }));
     expect(document.getElementById("impact-excess-products")).toBeTruthy();
-    fireEvent.click(overview.getByRole("button", { name: /Money tied up in excess/ }));
+    fireEvent.click(overview.getByRole("button", { name: /Money tied up in it/ }));
     expect(screen.getByRole("tab", { name: "Business" }).getAttribute("aria-selected")).toBe("true");
     expect((document.getElementById("business-breakdown") as HTMLDetailsElement).open).toBe(true);
     expect(screen.getByText("Excess-stock cost by product")).toBeTruthy();
-    fireEvent.click(overview.getByRole("button", { name: /Estimated CO₂e of excess/ }));
+    fireEvent.click(overview.getByRole("button", { name: /Pollution from wasted food/ }));
     expect(screen.getByRole("tab", { name: "Environmental" }).getAttribute("aria-selected")).toBe("true");
     expect((document.getElementById("environment-breakdown") as HTMLDetailsElement).open).toBe(true);
     expect(screen.getByText("Why these estimates? Potential excess by product")).toBeTruthy();
@@ -61,9 +61,9 @@ describe("impact dashboard", () => {
     expect(lines[0].units).toBeGreaterThan(0);
 
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
-    expect(screen.getByRole("heading", { name: "See the impact of your purchase plan" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "See what your plan could save" })).toBeTruthy();
     openAnalysis();
-    expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe(`${lines[0].units} units`);
+    expect(screen.getByRole("button", { name: /Extra stock that may not sell/ }).querySelector("b")?.textContent).toBe(`${lines[0].units} units`);
     const business = businessPanel();
     expect(business.getByText("Your planned spend")).toBeTruthy();
     expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("Unavailable");
@@ -105,7 +105,7 @@ describe("impact dashboard", () => {
     expect(lines.some(line => line.units === 0)).toBe(true);
     const excess = lines.reduce((total, line) => total + line.units, 0);
     render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={drafts} onBack={() => {}} />);
-    expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe(`${excess} units`);
+    expect(screen.getByRole("button", { name: /Extra stock that may not sell/ }).querySelector("b")?.textContent).toBe(`${excess} units`);
     expect(businessPanel().getByText("Your planned spend")).toBeTruthy();
   });
 
@@ -125,11 +125,11 @@ describe("impact dashboard", () => {
   it("uses sourced automatic drafts for missing orders and preserves an entered zero", () => {
     const { snapshot, forecast } = costEvidence();
     const { rerender } = render(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{}} onBack={() => {}} />);
-    expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
+    expect(screen.getByRole("button", { name: /Extra stock that may not sell/ }).querySelector("b")?.textContent).toBe("0 units");
     expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 50.00");
     expect(summary("Your planned spend").querySelector("small")?.textContent).toBe("Products included: 2/3");
     rerender(<ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{ A: entered(0) }} onBack={() => {}} />);
-    expect(screen.getByRole("button", { name: /Possible excess stock/ }).querySelector("b")?.textContent).toBe("0 units");
+    expect(screen.getByRole("button", { name: /Extra stock that may not sell/ }).querySelector("b")?.textContent).toBe("0 units");
     expect(summary("Your planned spend").querySelector("b")?.textContent).toBe("MYR 20.00");
     expect(summary("Your planned spend").querySelector("small")?.textContent).toBe("Products included: 2/3");
   });

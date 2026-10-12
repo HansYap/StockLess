@@ -31,12 +31,12 @@ vi.mock("../src/screens/UploadScreen.tsx", async original => {
 });
 vi.mock("../src/screens/MappingScreen.tsx", () => ({ MappingScreen: (props: ComponentProps<typeof import("../src/screens/MappingScreen.tsx").MappingScreen>) => <>
   <h1>Test mapping</h1><button onClick={props.onBack}>Back to test upload</button>
-  <button onClick={props.onClear}>Clear session</button>
+  <button onClick={props.onClear}>Start over</button>
   <button onClick={props.onConfirmAllAndContinue}>Check test readiness</button>{props.children}
 </> }));
 vi.mock("../src/screens/ReadinessScreen.tsx", () => ({ ReadinessScreen: (props: ComponentProps<typeof import("../src/screens/ReadinessScreen.tsx").ReadinessScreen>) => <>
   <h1>Test readiness</h1><button onClick={props.onContinue}>Calculate test plan</button><button onClick={props.onBack}>Back to test mapping</button>
-  <button onClick={props.onClear}>Clear session</button>
+  <button onClick={props.onClear}>Start over</button>
 </> }));
 vi.mock("../src/screens/PurchasePlanScreen.tsx", () => ({ PurchasePlanScreen: (props: ComponentProps<typeof import("../src/screens/PurchasePlanScreen.tsx").PurchasePlanScreen>) => <>
   <h1>Saved purchase plan</h1><button onClick={props.onBack}>Back to test readiness</button>
@@ -103,9 +103,9 @@ afterEach(() => { vi.restoreAllMocks(); localStorage.removeItem("stockless.hasUp
 it.each(["reupload", "guide"] as const)("offers replacement confirmation for an actual file through %s and keeps saved work on decline", async route => {
   const before = structuredClone(saved);
   render(route === "guide" ? <App guidedImport guideReturnId="existing" /> : <App updateDatasetId="existing" />);
-  await screen.findByRole("heading", { name: route === "guide" ? "Upload your sales file" : "Reupload your sales file" });
+  await screen.findByRole("heading", { name: route === "guide" ? "Add your sales file" : "Reupload your sales file" });
   const file = new File(["date,sku,quantity\n2026-09-20,A,2"], "October.csv", { type: "text/csv" });
-  fireEvent.change(screen.getByLabelText("Choose CSV or Excel file"), { target: { files: [file] } });
+  fireEvent.change(screen.getByLabelText("Choose file"), { target: { files: [file] } });
   fireEvent.click(screen.getByRole("button", { name: "Continue to matching →" }));
   expect(screen.getByRole("dialog", { name: "Replace your current sales data?" }).textContent).toContain("September sales");
   expect(replaceSessionSourceInWorker).not.toHaveBeenCalled();
@@ -118,7 +118,7 @@ it.each(["reupload", "guide"] as const)("offers replacement confirmation for an 
 it("Guide preparation keeps the sidebar hidden and leaves the saved plan untouched until a real replacement plan is generated", async () => {
   const before = structuredClone(saved);
   render(<App guidedImport guideReturnId="existing" />);
-  await screen.findByRole("heading", { name: "Upload your sales file" });
+  await screen.findByRole("heading", { name: "Add your sales file" });
   expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
   expect(screen.getByRole("button", { name: "Back to my plan" })).toBeTruthy();
   fireEvent.click(screen.getByText("Import test replacement"));
@@ -143,7 +143,7 @@ it("sample practice never replaces or autosaves a returning user's plan and reta
     return { ...envelope, session: { ...envelope.session, sourceMode: "sample", dataset: { ...envelope.session.dataset!, sourceMode: "sample" } } };
   });
   render(<App guidedImport guideReturnId="existing" />);
-  await screen.findByRole("heading", { name: "Upload your sales file" });
+  await screen.findByRole("heading", { name: "Add your sales file" });
   fireEvent.click(screen.getByText("Import test sample"));
   await screen.findByRole("heading", { name: "Test mapping" });
   expect(screen.getByText("This sample is for practice. It won’t replace your plan or enter upload history.")).toBeTruthy();
@@ -161,11 +161,11 @@ it("sample practice never replaces or autosaves a returning user's plan and reta
 it("clearing a guided import keeps preparation without the sidebar and preserves saved history", async () => {
   const before = structuredClone(saved);
   render(<App guidedImport guideReturnId="existing" />);
-  await screen.findByRole("heading", { name: "Upload your sales file" });
+  await screen.findByRole("heading", { name: "Add your sales file" });
   fireEvent.click(screen.getByText("Import test replacement"));
   await screen.findByRole("heading", { name: "Test mapping" });
-  fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
-  await screen.findByRole("heading", { name: "Upload your sales file" });
+  fireEvent.click(screen.getByRole("button", { name: "Start over" }));
+  await screen.findByRole("heading", { name: "Add your sales file" });
   expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
   expect(saved).toEqual(before);
   expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
@@ -183,16 +183,16 @@ it("adds saved-dataset navigation and graphics to reupload, without saved manage
   expect(within(sidebar).getByRole("button", { name: "Reupload" }).getAttribute("aria-current")).toBe("page");
   expect(within(sidebar).getByRole("link", { name: "Upload history" }).getAttribute("href")).toBe("#history");
   expect(screen.queryByText("Manage saved information")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Use sample file" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Try with sample data" })).toBeNull();
   expect(within(screen.getByRole("navigation", { name: "Progress" })).getAllByRole("button")).toHaveLength(3);
   expect(document.querySelectorAll(".saved-workspace__content .ws-decor .garden-vine")).toHaveLength(2);
 });
 it("keeps the fresh upload screen without a sidebar when there is no saved history", async () => {
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<App />);
-  await screen.findByRole("heading", { name: "Upload your sales file" });
-  expect(screen.getByRole("heading", { name: "Upload your sales file" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Use sample file" })).toBeTruthy();
+  await screen.findByRole("heading", { name: "Add your sales file" });
+  expect(screen.getByRole("heading", { name: "Add your sales file" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Try with sample data" })).toBeTruthy();
   expect(screen.queryByRole("complementary", { name: "Workspace navigation" })).toBeNull();
 });
 it.each([ ["Purchase plan", "Saved purchase plan"], ["Impact dashboard", "Saved impact dashboard"] ])("%s restores the selected dataset's saved work", async (button, heading) => {
@@ -297,7 +297,7 @@ it("keeps reupload and results destinations when the page is refreshed", async (
   expect(window.location.hash).toBe("#dataset/existing");
 });
 
-it.each(["mapping", "readiness"])("Clear session from %s returns to upload with its sidebar and keeps saved work", async stage => {
+it.each(["mapping", "readiness"])("Start over from %s returns to upload with its sidebar and keeps saved work", async stage => {
   await updatePage();
   fireEvent.click(screen.getByText("Import test replacement"));
   await screen.findByRole("heading", { name: "Test mapping" });
@@ -305,7 +305,7 @@ it.each(["mapping", "readiness"])("Clear session from %s returns to upload with 
     fireEvent.click(screen.getByText("Check test readiness"));
     await screen.findByRole("heading", { name: "Test readiness" });
   }
-  fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start over" }));
   await screen.findByRole("heading", { name: "Reupload your sales file" });
   expect(sidebar()).toBeTruthy();
   expect(window.location.hash).toBe("#update/existing");
@@ -320,8 +320,8 @@ it("returns to first-use Upload when an unfinished first file is cleared", async
   render(<App />);
   fireEvent.click(screen.getByText("Import test replacement"));
   await screen.findByRole("heading", { name: "Test mapping" });
-  fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
-  await screen.findByRole("heading", { name: "Upload your sales file" });
+  fireEvent.click(screen.getByRole("button", { name: "Start over" }));
+  await screen.findByRole("heading", { name: "Add your sales file" });
   noSidebar();
   expect(screen.queryByRole("heading", { name: "Test mapping" })).toBeNull();
   expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
@@ -339,7 +339,7 @@ it("ignores the old upload flag when no saved work remains", async () => {
   localStorage.setItem("stockless.hasUploaded", "true");
   vi.mocked(listSavedDatasets).mockResolvedValue([]);
   render(<App />);
-  await screen.findByRole("heading", { name: "Upload your sales file" });
+  await screen.findByRole("heading", { name: "Add your sales file" });
   noSidebar();
 });
 
@@ -363,7 +363,7 @@ it.each(["Skip for now", "Skip guide"])("returns to Home without another invitat
   await waitFor(() => expect(window.location.hash).toBe("#home"));
   expect(document.getElementById("home-title")).toBeTruthy();
   await act(async () => { window.location.hash = "#start"; });
-  expect(await screen.findByRole("heading", { name: "Upload your sales file" })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "Add your sales file" })).toBeTruthy();
   expect(document.querySelector(".onboarding-welcome")?.hasAttribute("open")).toBe(false);
   noSidebar();
   expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
@@ -382,8 +382,8 @@ it("returns to first-use Upload after clearing an unsaved sample plan", async ()
   fireEvent.click(await screen.findByText("Check test readiness"));
   fireEvent.click(await screen.findByText("Calculate test plan"));
   fireEvent.click(await screen.findByText("Back to test readiness"));
-  fireEvent.click(screen.getByRole("button", { name: "Clear session" }));
-  await screen.findByRole("heading", { name: "Upload your sales file" });
+  fireEvent.click(screen.getByRole("button", { name: "Start over" }));
+  await screen.findByRole("heading", { name: "Add your sales file" });
   noSidebar();
   expect(saveGeneratedPurchasePlan).not.toHaveBeenCalled();
 });

@@ -88,8 +88,6 @@ export function MappingScreen(props: MappingScreenProps) {
   }
   const requiredCount = Number(matched("transaction_date")) + Number(matched("quantity_sold")) + Number(productFields.every(matched));
   const optionalCount = OPTIONAL_FIELDS.filter(([field]) => matched(field)).length;
-  const totalCount = requiredCount + optionalCount;
-  const totalFields = 3 + OPTIONAL_FIELDS.length;
   const unusedColumns = dataset.columns.filter(column => !usage.has(column.id));
   const otherMatchedFields = (Object.keys(mapping.mappings) as CanonicalField[])
     .filter(field => FIELD_REGISTRY[field].status === "later_locked");
@@ -154,8 +152,8 @@ export function MappingScreen(props: MappingScreenProps) {
         <div className="mapping-actions">
           {props.onUndo && <button type="button" className="btn btn--ghost" onClick={props.onUndo} disabled={props.checking}>{t("Undo last match change")}</button>}
           <span className="mapping-actions__spacer" />
-          <span className="mapping-total" role="status">{totalCount} {t("of")} {totalFields} {t("matched")}</span>
-          <span className="mapping-meter" aria-hidden="true"><i style={{ width: (100 * totalCount / totalFields) + "%" }} /></span>
+          <span className="mapping-total" role="status">{requiredCount} {t("of")} 3 {t("ready")}{requiredCount === 3 ? " ✓" : ""}</span>
+          <span className="mapping-meter" aria-hidden="true"><i style={{ width: (100 * requiredCount / 3) + "%" }} /></span>
           <button data-guide="mapping-confirm" type="button" className="btn btn--primary" disabled={blocked || props.checking} aria-busy={props.checking}
             onClick={props.onConfirmAllAndContinue}>{t(props.checking ? "Checking locally…" : "Confirm and check my data →")}</button>
         </div>
