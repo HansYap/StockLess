@@ -12,6 +12,7 @@ import { PurchaseDemandChart } from "../purchase-plan/PurchaseDemandChart.tsx";
 import { PurchaseStockChart } from "../purchase-plan/PurchaseStockChart.tsx";
 import { addCalendarDays, previousCompleteWeekStarts, type WeeklyEvidence } from "../engine.ts";
 
+import { NiceSelect } from "../components/NiceSelect.tsx";
 const exampleWeeks: readonly WeeklyEvidence[] = previousCompleteWeekStarts("2026-09-15").map((start, i) => {
   const quantity = [4, 2, 6, 2, 4, 6, 6, 6][i];
   return { productKey: "MM0002", weekStart: start, weekEnd: addCalendarDays(start, 6), positiveQuantity: quantity,
@@ -181,7 +182,7 @@ function HomeHeader() {
         <span className="sr-only">
           {"Language"}
         </span>
-        <select aria-label={t("Language")} value={language} onChange={event => setLanguage(event.target.value as Language)}>
+        <NiceSelect aria-label={t("Language")} value={language} onChange={event => setLanguage(event.target.value as Language)}>
           <option value="en" lang="en">
             {"English"}
           </option>
@@ -191,7 +192,7 @@ function HomeHeader() {
           <option value="zh" lang="zh-Hans">
             {"中文"}
           </option>
-        </select>
+        </NiceSelect>
       </label>
       <a className="btn btn--primary hp-topcta" href={startHref}>
         <span>

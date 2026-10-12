@@ -9,6 +9,7 @@ import { BrandIcon } from "../components/BrandIcon.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
 import { UploadBehaviorNotice } from "../components/UploadBehaviorNotice.tsx";
 import { malaysiaToday } from "../malaysia-date.ts";
+import { NiceSelect } from "../components/NiceSelect.tsx";
 import {
   CsvImportError,
   PRIVACY_NOTICE,
@@ -388,7 +389,7 @@ export function UploadScreen({
               <button ref={continueRef} data-guide="upload-continue" type="button" className="btn btn--primary" disabled={!!workbook && (!chosenSheet || !!chosenSheet.problem)} onClick={continueImport}>{t("Continue to matching →")}</button>
             </div>}
             {workbook && !busy && <section className="upload-sheet" aria-label={t("Worksheet preview")}>
-              <label htmlFor="upload-worksheet">{t("Worksheet")}</label><select id="upload-worksheet" value={worksheetName} onChange={event => setWorksheetName(event.target.value)}><option value="">{t("Choose a worksheet")}</option>{workbook.sheets.map(sheet => <option key={sheet.name} value={sheet.name}>{sheet.name} ({sheet.rowCount})</option>)}</select>
+              <label htmlFor="upload-worksheet">{t("Worksheet")}</label><NiceSelect id="upload-worksheet" value={worksheetName} onChange={event => setWorksheetName(event.target.value)}><option value="">{t("Choose a worksheet")}</option>{workbook.sheets.map(sheet => <option key={sheet.name} value={sheet.name}>{sheet.name} ({sheet.rowCount})</option>)}</NiceSelect>
               {chosenSheet?.problem && <p role="alert">{t(chosenSheet.problem)} {t("Choose another worksheet or correct the workbook.")}</p>}
               {chosenSheet && !chosenSheet.problem && <><p>{chosenSheet.name} · {chosenSheet.rowCount} {t("rows")} · {t("Only this worksheet will be analysed.")}</p><div className="upload-sheet__table"><table><thead><tr>{chosenSheet.headers.map((header, i) => <th key={i}>{header}</th>)}</tr></thead><tbody>{chosenSheet.previewRows.map((row, i) => <tr key={i}>{row.map((value, j) => <td key={j}>{value}</td>)}</tr>)}</tbody></table></div></>}
             </section>}

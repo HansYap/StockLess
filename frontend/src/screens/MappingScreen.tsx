@@ -15,6 +15,7 @@ import "./mapping.css";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
 import { UploadBehaviorNotice } from "../components/UploadBehaviorNotice.tsx";
 
+import { NiceSelect } from "../components/NiceSelect.tsx";
 type IdentityMode = "stable" | "composite";
 interface MappingScreenProps {
   readonly dataset: ParsedDataset;
@@ -99,14 +100,14 @@ export function MappingScreen(props: MappingScreenProps) {
     const warning = warningFor(field, required);
     const id = "mapping-" + field;
     return <div className="mapping-select">
-      <select id={id} value={mapping.mappings[field]?.sourceColumnId ?? ""} disabled={props.checking}
+      <NiceSelect id={id} value={mapping.mappings[field]?.sourceColumnId ?? ""} disabled={props.checking}
         aria-label={t(`Source column for ${FIELD_REGISTRY[field].label}`)} aria-invalid={!!warning}
         aria-describedby={warning ? id + "-warning" : undefined}
         className={!columnFor(field) ? "mapping-select--empty" : undefined}
         onChange={event => props.onSelectColumn(field, event.target.value || null)}>
         <option value="">{t("Not in this file")}</option>
         {dataset.columns.map(column => <option key={column.id} value={column.id}>{column.header}</option>)}
-      </select>
+      </NiceSelect>
       {warning && <small className="mapping-warning" id={id + "-warning"}>{t(warning)}</small>}
     </div>;
   }

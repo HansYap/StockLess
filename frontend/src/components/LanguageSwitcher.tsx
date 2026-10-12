@@ -1,6 +1,7 @@
 import { t, useLanguage, setLanguage, type Language } from "../i18n/index.ts";
 import "../i18n/language.css";
 
+import { NiceSelect } from "./NiceSelect.tsx";
 /** Native select keeps the compact language control keyboard and touch accessible. */
 export function LanguageSwitcher({ compact = false }: { readonly compact?: boolean }) {
   const language = useLanguage();
@@ -12,10 +13,10 @@ export function LanguageSwitcher({ compact = false }: { readonly compact?: boole
       <path d="M22 10h9m-5-3v3m-3 3c1 4 4 6 7 8m-1-11c-1 5-3 8-7 11" fill="none" stroke="#347452" strokeWidth="1.7" strokeLinecap="round" />
     </svg>}
     {compact && <span className="workflow-language__code" aria-hidden="true">{language === "zh" ? "中文" : language === "ms" ? "BM" : "EN"}</span>}
-    <select aria-label={t("Language")} value={language} onChange={event => setLanguage(event.target.value as Language)}>
+    <NiceSelect aria-label={t("Language")} value={language} onChange={event => setLanguage(event.target.value as Language)}>
       <option value="en" lang="en">English</option>
       <option value="zh" lang="zh-Hans">中文</option>
       <option value="ms" lang="ms">Bahasa Melayu</option>
-    </select>
+    </NiceSelect>
   </label>;
 }

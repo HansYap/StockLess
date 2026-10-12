@@ -1,5 +1,6 @@
 import { t, useLanguage } from "../i18n/index.ts";
 import { useMemo } from "react";
+import { NiceSelect } from "../components/NiceSelect.tsx";
 import {
   CAPABILITY_LABELS,
   buildDemandReview,
@@ -118,7 +119,7 @@ export function DemandScreen(props: DemandScreenProps) {
       <div className="picker">
         <div className="picker__left">
           <span className="picker__label">{t("Viewing product")}</span>
-          <select
+          <NiceSelect
             className="select"
             aria-label={t("Viewing product")}
             value={selected.productKey}
@@ -129,7 +130,7 @@ export function DemandScreen(props: DemandScreenProps) {
                 {t(product.displayName)}
               </option>
             ))}
-          </select>
+          </NiceSelect>
         </div>
         <span className={`pill ${selected.state === "standard" ? "pill--teal" : "pill--amber"}`}>
           {t(selected.state === "standard" ? "Standard demand history" : "Demand history: Limited data")}

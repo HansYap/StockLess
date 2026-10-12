@@ -1,0 +1,27 @@
+/* Our own option list for <select> (design A: clean list). */
+.nice-select__list {
+  position: fixed; z-index: 1000; margin: 0; padding: 6px; list-style: none;
+  overflow-y: auto; box-sizing: border-box; max-width: min(420px, calc(100vw - 24px));
+  background: #FFFFFF; border: 1px solid #DCE7E3; border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(22, 49, 59, .14), 0 2px 6px rgba(22, 49, 59, .06);
+  font: 500 14px/1.3 var(--body, "Source Sans 3", system-ui, sans-serif); color: #2E4A52;
+  outline: none; animation: nice-select-in .12s ease-out;
+}
+.nice-select__list--up { transform: translateY(-100%); animation-name: nice-select-in-up; }
+.nice-select__option {
+  display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 10px;
+  border-radius: 9px; cursor: pointer; white-space: nowrap;
+}
+.nice-select__tick { width: 16px; flex: none; color: #167D74; font-weight: 800; text-align: center; }
+.nice-select__option.is-active { background: #F3F7F6; }
+.nice-select__option.is-selected { background: #E8F3F0; color: #11655E; font-weight: 700; }
+.nice-select__option.is-empty { color: #66767D; font-style: italic; }
+.nice-select__option.is-empty + .nice-select__option { margin-top: 9px; position: relative; }
+.nice-select__option.is-empty + .nice-select__option::before {
+  content: ""; position: absolute; left: 6px; right: 6px; top: -5px; height: 1px; background: #EEF2F0;
+}
+.nice-select__option[aria-disabled="true"] { opacity: .45; cursor: default; }
+.nice-select[aria-expanded="true"] { border-color: #167D74; box-shadow: 0 0 0 4px rgba(22, 125, 116, .12); }
+@keyframes nice-select-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes nice-select-in-up { from { opacity: 0; transform: translateY(calc(-100% + 4px)); } to { opacity: 1; transform: translateY(-100%); } }
+@media (prefers-reduced-motion: reduce) { .nice-select__list { animation: none; } }

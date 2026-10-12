@@ -2,6 +2,7 @@ import { useState } from "react";
 import { t, useLanguage } from "../i18n/index.ts";
 import type { SavedDataset, SavedDatasetSummary } from "../storage/saved-datasets.ts";
 
+import { NiceSelect } from "./NiceSelect.tsx";
 function quantity(field: { readonly state: string; readonly value?: number }): string {
   return field.state === "value" ? String(field.value) : t("not entered");
 }
@@ -64,10 +65,10 @@ export function SavedDataControls({ items, activeId, selected, onInspect, onOpen
         <h4>{t("Outcomes")}</h4>
         <ul>{selected.outcomes.map((item) => <li key={item.id}>{item.recordedAt}: {String(item.details.description ?? t("Recorded outcome"))}{" "}<button type="button" onClick={() => onDeleteOutcome(item.id)}>{t("Delete outcome")}</button></li>)}</ul>
         <label>{t("Record an outcome")} <input value={outcome} onChange={(event) => setOutcome(event.currentTarget.value)} /></label>{" "}
-        <label>{t("Related decision")} <select value={outcomeDecisionId} onChange={(event) => setOutcomeDecisionId(event.currentTarget.value)}>
+        <label>{t("Related decision")} <NiceSelect value={outcomeDecisionId} onChange={(event) => setOutcomeDecisionId(event.currentTarget.value)}>
           <option value="">{t("None")}</option>
           {selected.decisions.map((item) => <option key={item.id} value={item.id}>{item.note ?? item.recordedAt}</option>)}
-        </select></label>{" "}
+        </NiceSelect></label>{" "}
         <button type="button" disabled={!outcome.trim()} onClick={async () => {
           if (await onSaveOutcome(outcome, outcomeDecisionId || undefined)) { setOutcome(""); setOutcomeDecisionId(""); }
         }}>{t("Save outcome")}</button>

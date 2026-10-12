@@ -8,6 +8,7 @@ import { purchaseDate } from "./PurchaseDemandChart.tsx";
 import { numberText } from "./SourceTag.tsx";
 import "./product-steps.css";
 
+import { NiceSelect } from "../components/NiceSelect.tsx";
 export type StepKey = "cost" | "category" | "weight" | "expiry";
 export interface StepState { readonly key: StepKey; readonly required: boolean; readonly done: boolean; readonly value?: string; readonly found?: string }
 type Copy = (en: string, zh: string, ms: string) => string;
@@ -162,7 +163,7 @@ export const ProductDetailsSteps = forwardRef<ProductStepsHandle, Props>(functio
           {suggestion && <Choice name={`category-${product.key}`} checked={pick === suggestion} error={!!error && !pick} label={categoryLabel(suggestion)} sub={c("Suggested by AI", "AI 建议", "Dicadangkan oleh AI")} onPick={() => { setPick(suggestion); setError(""); }} />}
           <Choice name={`category-${product.key}`} checked={pick === "non_food"} error={!!error && !pick} label={c("Not food", "非食品", "Bukan makanan")} sub={c("Left out of CO₂e", "不计入 CO₂e", "Tidak dikira dalam CO₂e")} onPick={() => { setPick("non_food"); setError(""); }} />
           <label className={`pp-steps__choice pp-steps__choice--select${otherPicked ? " is-picked" : ""}${error && !pick ? " is-error" : ""}`}><span><b>{c("Another food category", "其他食品类别", "Kategori makanan lain")}</b>
-            <select aria-label={c("Another food category", "其他食品类别", "Kategori makanan lain")} value={otherPicked ? pick : ""} onChange={event => { setPick(event.currentTarget.value); setError(""); }}><option value="">{c("Choose…", "请选择…", "Pilih…")}</option>{others.map(item => <option key={item} value={item}>{categoryLabel(item)}</option>)}</select></span></label>
+            <NiceSelect aria-label={c("Another food category", "其他食品类别", "Kategori makanan lain")} value={otherPicked ? pick : ""} onChange={event => { setPick(event.currentTarget.value); setError(""); }}><option value="">{c("Choose…", "请选择…", "Pilih…")}</option>{others.map(item => <option key={item} value={item}>{categoryLabel(item)}</option>)}</NiceSelect></span></label>
         </div></>;
     }
     if (step.key === "expiry") {

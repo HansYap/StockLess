@@ -6,6 +6,7 @@ import { malaysiaToday } from '../malaysia-date.ts';
 export { malaysiaToday } from '../malaysia-date.ts';
 import './decision-outcome-controls.css';
 
+import { NiceSelect } from "./NiceSelect.tsx";
 interface Props {
   datasetId?: string;
   product: { key: string; title: string; sku?: string; pack?: string };
@@ -53,10 +54,10 @@ export function StockOutcomeControls({datasetId,product,snapshot,onChanged}:Prop
     <p>{copy('Recorded waste is separate from predicted excess. No record is different from a recorded zero.','实际浪费与预测的过量库存分开记录。没有记录与记录为零不同。','Sisa direkodkan berasingan daripada lebihan ramalan. Tiada rekod berbeza daripada sifar direkodkan.')}</p>
     <form onSubmit={event=>{event.preventDefault();void save();}}><fieldset disabled={!canSave||busy}><legend>{editing?copy('Correct an actual outcome','修正实际结果','Betulkan hasil sebenar'):copy('Observed record','实际观测记录','Rekod diperhatikan')}</legend>
       <div className="decision-outcomes__grid">
-        <label>{copy('Outcome type','结果类型','Jenis hasil')}<select value={kind} onChange={event=>setKind(event.target.value as StockOutcomeKind)}>{(['discarded','expired','sales','stock'] as const).map(value=><option key={value} value={value}>{kindName(value)}</option>)}</select></label>
+        <label>{copy('Outcome type','结果类型','Jenis hasil')}<NiceSelect value={kind} onChange={event=>setKind(event.target.value as StockOutcomeKind)}>{(['discarded','expired','sales','stock'] as const).map(value=><option key={value} value={value}>{kindName(value)}</option>)}</NiceSelect></label>
         <label>{copy('Outcome date','实际发生日期','Tarikh hasil')}<input type="date" value={date} max={today} onChange={event=>setDate(event.target.value)}/></label>
         <label>{copy('Recorded quantity','实际记录数量','Kuantiti direkodkan')}<input inputMode="decimal" value={quantity} onChange={event=>setQuantity(event.target.value)}/></label>
-        <label>{copy('Recorded unit','记录单位','Unit direkodkan')}<select value={unit} onChange={event=>setUnit(event.target.value as OutcomeUnit)}>{(['pieces','kg','litres'] as const).map(value=><option key={value} value={value}>{unitName(value)}</option>)}</select></label>
+        <label>{copy('Recorded unit','记录单位','Unit direkodkan')}<NiceSelect value={unit} onChange={event=>setUnit(event.target.value as OutcomeUnit)}>{(['pieces','kg','litres'] as const).map(value=><option key={value} value={value}>{unitName(value)}</option>)}</NiceSelect></label>
       </div><div className="decision-outcomes__actions"><button className="btn btn--primary" type="submit">{copy('Save actual outcome','保存实际结果','Simpan hasil sebenar')}</button>{editing&&<button type="button" onClick={()=>{setEditing(undefined);setQuantity('');}}>{copy('Cancel edit','取消修改','Batal suntingan')}</button>}</div>
     </fieldset></form>
     <details className="decision-outcomes__records"><summary>{copy(`Saved actual records (${outcomes.length})`,`已保存的实际记录（${outcomes.length}）`,`Rekod sebenar disimpan (${outcomes.length})`)}</summary>
