@@ -32,8 +32,8 @@ it("explains no usable records and offers matching while blocking analysis", () 
   render(<ReadinessScreen dataset={dataset} mapping={createMappingState()} snapshot={empty} dateConfirmations={[]} checking={false} error={null} forecasting={false} forecastError={null} filter={null} onFilter={() => {}} onConfirmDateFormat={() => {}} onBack={onBack} onContinue={onContinue} reportFilename="problems.csv" />);
   expect(screen.getByRole("alert").textContent).toContain("no product has usable sales records");
   expect(screen.queryByText(/You can continue with usable rows/)).toBeNull();
-  expect((screen.getByRole("button", { name: /Continue to purchase planning/ }) as HTMLButtonElement).disabled).toBe(true);
-  fireEvent.click(screen.getByRole("button", { name: "← Back to matching" }));
+  expect((screen.getByRole("button", { name: /Make my order list/ }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "← Check the columns" }));
   expect(onBack).toHaveBeenCalledOnce();
   expect(onContinue).not.toHaveBeenCalled();
   expect(screen.getByText("Worksheet: Sales Oct")).toBeTruthy();
@@ -81,8 +81,8 @@ it("retries opening the selected saved dataset as well as checking history", asy
 
 it("explains single and total deletion and the separate clear-session action", () => {
   render(<StorageExplanation onManage={() => {}} />);
-  expect(screen.getByText(/use Delete beside an upload/).textContent).toContain("Clear Everything");
-  expect(screen.getByText(/Clear session clears only/).textContent).toContain("does not delete saved uploads");
+  expect(screen.getByText(/use Delete beside an upload/).textContent).toContain("Clear everything…");
+  expect(screen.getByText(/Start over clears only/).textContent).toContain("does not delete saved uploads");
   expect(screen.queryByText(/outcomes you record/)).toBeNull();
   expect(screen.queryByText(/Decisions:/)).toBeNull();
 });
