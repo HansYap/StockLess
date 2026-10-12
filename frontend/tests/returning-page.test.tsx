@@ -12,12 +12,12 @@ const items: SavedDatasetSummary[] = [
 ];
 beforeEach(() => { vi.resetAllMocks(); setLanguage("en"); storage.listSavedDatasets.mockResolvedValue(items); });
 afterEach(() => setLanguage("en"));
-async function page() { render(<ReturningPage />); await screen.findByRole("link", { name: "Back to purchase plan" }); }
+async function page() { render(<ReturningPage />); await screen.findByRole("link", { name: "Back to my plan" }); }
 function rows() { return Array.from(document.querySelectorAll(".returning-row")).map(row => within(row as HTMLElement).getByRole("heading").textContent); }
 
 it("shows upload history and reuploads only the current file", async () => {
   await page();
-  expect(screen.getByRole("link", { name: "Back to purchase plan" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
+  expect(screen.getByRole("link", { name: "Back to my plan" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
   expect(screen.getByRole("link", { name: "View plan September sales" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
   expect(screen.queryByRole("link", { name: "Update" })).toBeNull();
   expect(screen.getByRole("link", { name: "Upload a new file" }).getAttribute("href")).toBe("#update/recent%20%2F%20file");
@@ -28,7 +28,7 @@ it("filters by file, dataset and shop while keeping the most recent card indepen
   fireEvent.change(input, { target: { value: "  AUG.CSV " } });
   expect(rows()).toEqual(["August sales"]);
   expect(screen.getByText("Showing 1 of 2 uploads")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Back to purchase plan" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
+  expect(screen.getByRole("link", { name: "Back to my plan" }).getAttribute("href")).toBe("#dataset/recent%20%2F%20file");
   fireEvent.change(input, { target: { value: "Corner Shop" } });
   expect(rows()).toEqual(["September sales"]);
   fireEvent.change(input, { target: { value: "missing" } });
@@ -55,7 +55,7 @@ it("requires confirmation before removing one dataset and refreshes the resume c
   storage.listSavedDatasets.mockResolvedValue([items[1]]);
   fireEvent.click(screen.getByRole("button", { name: "Remove upload" }));
   await waitFor(() => expect(storage.removeSavedDataset).toHaveBeenCalledWith(items[0].id));
-  await waitFor(() => expect(screen.getByRole("link", { name: "Back to purchase plan" }).getAttribute("href")).toBe("#dataset/older"));
+  await waitFor(() => expect(screen.getByRole("link", { name: "Back to my plan" }).getAttribute("href")).toBe("#dataset/older"));
   expect(storage.clearEverything).not.toHaveBeenCalled();
 });
 it("keeps saved data visible after a failed delete and translates the new controls", async () => {
@@ -67,15 +67,15 @@ it("keeps saved data visible after a failed delete and translates the new contro
   expect(rows()).toHaveLength(2);
   act(() => setLanguage("ms"));
   expect(screen.getByRole("searchbox", { name: "Cari muat naik" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Kembali ke pelan pembelian" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Kembali ke pelan saya" })).toBeTruthy();
 });
-it("Clear Everything removes saved work and returns to the fresh upload route", async () => {
+it("Clear everything… removes saved work and returns to the fresh upload route", async () => {
   await page();
   window.history.replaceState(null, "", "#history");
-  fireEvent.click(screen.getByRole("button", { name: "Clear Everything" }));
+  fireEvent.click(screen.getByRole("button", { name: "Clear everything…" }));
   expect(storage.clearEverything).not.toHaveBeenCalled();
   storage.listSavedDatasets.mockResolvedValue([]);
-  fireEvent.click(within(screen.getByRole("dialog", { name: "Clear everything?" })).getByRole("button", { name: "Clear Everything" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Clear everything?" })).getByRole("button", { name: "Clear everything" }));
   await waitFor(() => expect(storage.clearEverything).toHaveBeenCalledOnce());
   await waitFor(() => expect(window.location.hash).toBe("#workspace"));
 });
@@ -83,7 +83,7 @@ it("shows upload and empty states without creating example data", async () => {
   storage.listSavedDatasets.mockResolvedValue([]);
   render(<ReturningPage />);
   await screen.findByRole("heading", { name: "No uploads yet" });
-  expect(screen.queryByRole("link", { name: "Back to purchase plan" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Clear Everything" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Back to my plan" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Clear everything…" })).toBeNull();
   expect(screen.getAllByRole("link", { name: "Upload a new file" })).toHaveLength(2);
 });

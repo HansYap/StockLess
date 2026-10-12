@@ -19,7 +19,7 @@ function salesFile(name = "sales.csv") {
 
 function upload(onSource = vi.fn<ImportSource>(async () => {}), onCancel = vi.fn()) {
   render(<UploadScreen onSource={onSource} onCancel={onCancel} />);
-  return { onSource, onCancel, input: screen.getByLabelText("Choose CSV or Excel file") };
+  return { onSource, onCancel, input: screen.getByLabelText("Choose file") };
 }
 
 it("stages dropped data until Continue and keeps the file when the language changes", async () => {
@@ -85,7 +85,7 @@ it.each([false, true])("continues directly with sample data even with a saved pl
   const onSource = vi.fn<ImportSource>(async () => {});
   render(<UploadScreen onSource={onSource} onCancel={() => {}} hasSavedPlan={hasSavedPlan} />);
   expect(screen.getByText(/Sample dates adjust to today/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Use sample file" }));
+  fireEvent.click(screen.getByRole("button", { name: "Try with sample data" }));
   await waitFor(() => expect(onSource).toHaveBeenCalledOnce());
   const call = onSource.mock.calls[0]!;
   expect(call[2]).toBe("sample");
@@ -96,7 +96,7 @@ it.each([false, true])("continues directly with sample data even with a saved pl
 it("requires an explicit replacement choice and imports only the new file", async () => {
   const onSource = vi.fn<ImportSource>(async () => {});
   render(<UploadScreen onSource={onSource} onCancel={() => {}} currentFileName="September.csv" hasSavedPlan />);
-  fireEvent.change(screen.getByLabelText("Choose CSV or Excel file"), { target: { files: [salesFile("October.csv")] } });
+  fireEvent.change(screen.getByLabelText("Choose file"), { target: { files: [salesFile("October.csv")] } });
   expect(onSource).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Continue to matching →" }));
   const dialog = screen.getByRole("dialog", { name: "Replace your current sales data?" });
@@ -115,7 +115,7 @@ it("requires an explicit replacement choice and imports only the new file", asyn
 it("keeps the saved plan without importing when the user declines", () => {
   const onSource = vi.fn<ImportSource>(async () => {}), onKeepCurrentPlan = vi.fn();
   render(<UploadScreen onSource={onSource} onCancel={() => {}} hasSavedPlan currentFileName="Saved sales" onKeepCurrentPlan={onKeepCurrentPlan} />);
-  fireEvent.change(screen.getByLabelText("Choose CSV or Excel file"), { target: { files: [salesFile()] } });
+  fireEvent.change(screen.getByLabelText("Choose file"), { target: { files: [salesFile()] } });
   fireEvent.click(screen.getByRole("button", { name: "Continue to matching →" }));
   fireEvent.click(screen.getByRole("button", { name: "Keep current plan" }));
   expect(onSource).not.toHaveBeenCalled();
@@ -126,7 +126,7 @@ it("keeps the saved plan without importing when the user declines", () => {
 it("cancels the replacement dialog without importing and restores focus", () => {
   const onSource = vi.fn<ImportSource>(async () => {});
   render(<UploadScreen onSource={onSource} onCancel={() => {}} currentFileName="Original.csv" />);
-  fireEvent.change(screen.getByLabelText("Choose CSV or Excel file"), { target: { files: [salesFile()] } });
+  fireEvent.change(screen.getByLabelText("Choose file"), { target: { files: [salesFile()] } });
   const next = screen.getByRole("button", { name: "Continue to matching →" });
   fireEvent.click(next);
   const dialog = screen.getByRole("dialog");
@@ -156,7 +156,7 @@ it.each(["drop", "picker"])("rejects multiple files from the %s instead of silen
 it.each(["zh", "ms"] as const)("translates the replacement confirmation in %s without losing the selected file", async language => {
   const onSource = vi.fn<ImportSource>(async () => {});
   render(<UploadScreen onSource={onSource} onCancel={() => {}} currentFileName="Original.csv" hasSavedPlan />);
-  fireEvent.change(screen.getByLabelText("Choose CSV or Excel file"), { target: { files: [salesFile()] } });
+  fireEvent.change(screen.getByLabelText("Choose file"), { target: { files: [salesFile()] } });
   fireEvent.click(screen.getByRole("button", { name: "Continue to matching →" }));
   act(() => setLanguage(language));
   const dialog = screen.getByRole("dialog", { name: language === "zh" ? "替换当前销售数据？" : "Gantikan data jualan semasa?" });

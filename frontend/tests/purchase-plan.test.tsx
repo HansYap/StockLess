@@ -24,7 +24,7 @@ describe("purchase planning", () => {
     const onImpact = vi.fn();
     render(<PurchasePlanScreen {...makeEvidence()} drafts={{}} selectedKey={null} onSelect={() => {}} onDraftChange={() => {}} onBack={() => {}} onImpact={onImpact} />);
     fireEvent.click(screen.getByRole("button", { name: "See your impact →" }));
-    fireEvent.click(screen.getByRole("button", { name: /Possible excess stock.*See impact/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Extra stock that may not sell.*See impact/ }));
     expect(onImpact).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
