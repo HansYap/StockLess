@@ -24,7 +24,12 @@ export const plainWording: Readonly<Record<string, readonly [string, string, str
   "Use sample file": ["Try with sample data", "用示例数据试试", "Cuba dengan data contoh"],
   "Your file needs three columns": ["Your file needs 3 columns", "您的文件需要 3 个栏位", "Fail anda perlu 3 lajur"],
   "Optional columns add more": ["Add more details (optional)", "添加更多详情（可选）", "Butiran tambahan (pilihan)"],
+  "Retailer file": ["Your file", "您的文件", "Fail anda"],
   // Step 2
+  "Required": ["Must have", "必须有", "Wajib"],
+  "Optional": ["Add more details", "更多详情", "Butiran tambahan"],
+  "Product code": ["Code", "编码", "Kod"],
+  "Name + pack size": ["Name + size", "名称 + 规格", "Nama + saiz"],
   "We matched your columns by their names. Fix anything that's wrong, then confirm. Your file isn't changed.": [
     "I matched these 3 for you. Do they look right?",
     "我已为您对应好这 3 项。看起来对吗？",
@@ -52,7 +57,10 @@ export const plainWording: Readonly<Record<string, readonly [string, string, str
     "没有记录的一周不会被算作零销售。",
     "Minggu tanpa rekod tidak dikira sebagai jualan sifar.",
   ],
+  "Estimating demand locally…": ["Working out what you'll sell…", "正在估算您的销量…", "Mengira jualan anda…"],
   // Purchase plan / shared
+  "Incoming stock": ["Already ordered, not here yet", "已订购，尚未到货", "Sudah dipesan, belum sampai"],
+  "Weeks of cover": ["Stock lasts (weeks)", "库存可撑（周）", "Stok cukup (minggu)"],
   "Possible excess stock": ["Extra stock that may not sell", "可能卖不完的多余库存", "Stok lebih yang mungkin tak laku"],
   // Upload history
   "Clear Everything": ["Clear everything…", "全部清除…", "Padam semuanya…"],
