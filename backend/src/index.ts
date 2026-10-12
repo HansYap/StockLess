@@ -37,3 +37,4 @@ export * from './reference-data/cp3-prices.ts';
 export * from './reference-data/cp3-source-manifest.ts';
 export * from './reference-price.ts';
 export * from './automatic-planning.ts';
+export * from './shop-name.ts';

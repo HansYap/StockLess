@@ -4,6 +4,7 @@ import { addCalendarDays, buildEnvironmentalImpact, buildImpactReview, buildMiss
   type CarbonImpactKind, type CarbonImpactResult, type CarbonImpactSummary, type DemandForecastReview, type ImpactProduct, type MonetaryFigure, type MonetaryTotal, type PlanningContexts, type ProductPlanningContext, type ReadinessSnapshot, type SupplierOrderTerms } from '../engine.ts';
 import { evaluatePurchaseProduct, joinPurchaseEvidence, type PurchaseDrafts } from '../purchase-plan/model.ts';
 import { SourceTag } from '../purchase-plan/SourceTag.tsx';
+import { displayShopName } from '../engine.ts';
 import { getSavedDataset, savedStockOutcomes, type SavedDataset } from '../storage/saved-datasets.ts';
 import { downloadAnalysisWorkbook, downloadPlannedOrdersWorkbook, NoPlannedOrdersError, printAnalysisReport } from '../purchase-plan/analysis-report-export.ts';
 import type { ReportLanguageChoice } from '../purchase-plan/report-language.ts';
@@ -185,7 +186,7 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
   </>;
 
   const about:ReactNode=<aside className="impact__about" aria-labelledby="impact-about-title"><h2 id="impact-about-title">{c('About this plan','关于此计划','Tentang pelan ini')}</h2><dl>
-      <div><dt>{c('Shop','店铺','Kedai')}</dt><dd>{shopName||c('Shop not named','未命名店铺','Kedai belum dinamakan')}</dd></div>
+      <div><dt>{c('Shop','店铺','Kedai')}</dt><dd>{shopName?displayShopName(shopName):c('Shop not named','未命名店铺','Kedai belum dinamakan')}</dd></div>
       <div><dt>{c('Dataset','数据集','Set data')}</dt><dd>{datasetName||snapshot.sourceName}</dd></div>
       {snapshot.worksheetName && <div><dt>{t("Worksheet")}</dt><dd>{snapshot.worksheetName}</dd></div>}
       <div><dt>{c('Analysis date','分析日期','Tarikh analisis')}</dt><dd>{day(snapshot.analysisDate)}</dd></div>

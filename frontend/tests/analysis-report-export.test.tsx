@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 import type { AnalysisReport } from "../src/engine.ts";
+import { buildAnalysisReport } from "../src/engine.ts";
+import { makeEvidence } from "./fixtures.ts";
 import { buildAnalysisWorkbookBytes, NoPlannedOrdersError, renderAnalysisReportHtml } from "../src/purchase-plan/analysis-report-export.ts";
 
 function report(): AnalysisReport {
@@ -135,4 +137,16 @@ it("prints in the requested language without changing source-provided names", ()
   expect(ms).toContain('lang="ms"');
   expect(ms).toContain("Gambaran lebih jelas");
   expect(ms).toContain("<b>Shop</b>");
+});
+
+it("exports the same Your store label used on screen for older saved uploads", async () => {
+  const { snapshot, forecast } = makeEvidence();
+  const source = buildAnalysisReport({ snapshot, forecast, datasetId: "saved", shopName: "My store", datasetName: "Sales" });
+  const book = XLSX.read(await buildAnalysisWorkbookBytes(source), { type: "array" });
+  const metadata = XLSX.utils.sheet_to_json<(string | number)[]>(book.Sheets.Metadata, { header: 1 });
+  expect(metadata.find(row => row[0] === "Shop")?.[1]).toBe("Your store");
+  expect(book.Sheets.Overview.B15.v).toBe("Your store");
+  const html = renderAnalysisReportHtml(source);
+  expect(html).toContain("<b>Your store</b>");
+  expect(html).not.toContain("My store");
 });

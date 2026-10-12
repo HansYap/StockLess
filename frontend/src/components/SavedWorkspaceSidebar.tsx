@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { getLocale, t, useLanguage } from "../i18n/index.ts";
+import { displayShopName } from "../engine.ts";
 import type { SavedDatasetSummary } from "../storage/saved-datasets.ts";
 import "./saved-workspace-sidebar.css";
 
@@ -50,7 +51,7 @@ export function SavedWorkspaceSidebar({ dataset, saved = true, currentSection = 
       <section className="saved-sidebar__dataset" aria-label={t("Viewing upload")}>
         <p className="saved-sidebar__eyebrow">{t("Viewing upload")}</p>
         <p className="saved-sidebar__name">{dataset.datasetName}</p>
-        {dataset.shopName && <p className="saved-sidebar__meta">{dataset.shopName}</p>}
+        {dataset.shopName && <p className="saved-sidebar__meta">{displayShopName(dataset.shopName)}</p>}
         <p className="saved-sidebar__meta">{dataset.rowCount.toLocaleString(getLocale())} {t("rows")} · {t(saved ? "Available on this device" : "This session only")}</p>
         <a className="saved-sidebar__switch" data-guide="sidebar-history" href="#history">{t("Upload history")}<Icon name="arrow" /></a>
       </section>

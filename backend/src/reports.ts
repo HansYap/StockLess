@@ -6,6 +6,7 @@ import { validateReportingPeriod, type RecordedStockOutcome, type ReportingPerio
 import { buildProductTimelines } from "./timeline.ts";
 import { buildPurchasePlanReview } from "./purchase-plan.ts";
 import { compareSupplierOrders, type SupplierScenario } from "./supplier-order.ts";
+import { displayShopName } from "./shop-name.ts";
 
 export type AnalysisReportCell = string | number | boolean;
 export interface AnalysisReportTable {
@@ -79,7 +80,7 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
   const recorded = (input.includeRecordedOutcomes ? input.outcomes ?? [] : []).filter(item=>item.datasetId===input.datasetId).map(item => item.date);
   const period = input.period ?? { start: dates[0] ?? snapshot.analysisDate, end: [snapshot.analysisDate, ...recorded].sort().pop()! };
   validateReportingPeriod(period);
-  const metadata = Object.freeze({ shopName: input.shopName?.trim() || "Not supplied", datasetId: input.datasetId,
+  const metadata = Object.freeze({ shopName: displayShopName(input.shopName?.trim() || "Not supplied"), datasetId: input.datasetId,
     datasetName: input.datasetName?.trim() || snapshot.sourceName, sourceName: snapshot.sourceName, worksheetName: snapshot.worksheetName, sourceSha256: snapshot.sourceSha256,
     sourceMode: snapshot.sourceMode, sourceLabel: snapshot.sourceMode === "sample" ? "Sample data" as const : "Retailer file" as const,
     analysisDate: snapshot.analysisDate, period: Object.freeze({ ...period }), generatedAt, snapshotId: snapshot.id, currency: "MYR" as const });

@@ -116,10 +116,21 @@ test("current reports carry the worksheet, omit old outcomes and agree with opti
     carbonResults: [estimateCarbonImpact({ productKey: "ID|000102", kind: "recorded_waste", isFood: true, category: "bread", categoryConfirmed: true, measuredMassKg: 0 })],
     supplierScenariosByProduct: { "ID|000102": [{ id: "current-terms", name: "Entered supplier terms", terms: { caseSize: 6, minimumOrder: 60 } }] } });
   assert.equal(report.metadata.worksheetName, "Sales Oct");
-  assert.equal(report.metadata.shopName, "My store");
+  assert.equal(report.metadata.shopName, "Your store");
   assert.equal(report.tables.some(table => table.id === "outcomes"), false);
   assert.equal(JSON.stringify(report.tables).includes("recorded_waste"), false);
   assert.equal(rowValue(report, "scenarios", "Scenario quantity", 0), 60);
   assert.equal(rowValue(report, "scenarios", "Arrival date", 0), "Unavailable");
   assert.equal(rowValue(report, "scenarios", "Status", 0), "available");
+});
+
+test("legacy and new default shop labels produce identical reports while custom names stay unchanged", async () => {
+  const { snapshot, forecast, plans } = await reportFixture();
+  const input = { snapshot, forecast, plans, datasetId: "D", generatedAt: GENERATED };
+  const legacy = buildAnalysisReport({ ...input, shopName: "My store" });
+  const current = buildAnalysisReport({ ...input, shopName: "Your store" });
+  assert.deepEqual(legacy, current);
+  assert.equal(legacy.metadata.shopName, "Your store");
+  assert.equal(rowValue(legacy, "metadata", "Value", 0), "Your store");
+  assert.equal(buildAnalysisReport({ ...input, shopName: "Corner Shop" }).metadata.shopName, "Corner Shop");
 });

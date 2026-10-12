@@ -5,6 +5,8 @@ import { ReadinessScreen } from "../src/screens/ReadinessScreen.tsx";
 import { PurchasePlanScreen } from "../src/screens/PurchasePlanScreen.tsx";
 import { PurchaseCheckCard } from "../src/purchase-plan/PurchaseCheckCard.tsx";
 import { StorageExplanation } from "../src/components/StorageExplanation.tsx";
+import { SavedWorkspaceSidebar } from "../src/components/SavedWorkspaceSidebar.tsx";
+import { ImpactDashboard } from "../src/screens/ImpactDashboard.tsx";
 import { createMappingState, type ParsedDataset } from "../src/engine.ts";
 import { listSavedDatasets, getSavedDataset } from "../src/storage/saved-datasets.ts";
 import { setLanguage } from "../src/i18n/index.ts";
@@ -83,4 +85,19 @@ it("explains single and total deletion and the separate clear-session action", (
   expect(screen.getByText(/Clear session clears only/).textContent).toContain("does not delete saved uploads");
   expect(screen.queryByText(/outcomes you record/)).toBeNull();
   expect(screen.queryByText(/Decisions:/)).toBeNull();
+});
+
+it("AT-9.1-01 shows Your store for legacy saved uploads across the sidebar and Impact", () => {
+  const { snapshot, forecast } = makeEvidence();
+  const renderShop = (shopName: string) => <>
+    <SavedWorkspaceSidebar dataset={{ datasetName: "Sales", shopName, rowCount: snapshot.rows.length }} onReupload={() => {}} onPurchasePlan={() => {}} onImpact={() => {}} />
+    <ImpactDashboard snapshot={snapshot} forecast={forecast} drafts={{}} shopName={shopName} datasetName="Sales" onBack={() => {}} />
+  </>;
+  const view = render(renderShop("My store"));
+  expect(within(screen.getByRole("complementary", { name: "Workspace navigation" })).getByText("Your store")).toBeTruthy();
+  expect(within(screen.getByRole("complementary", { name: "About this plan" })).getByText("Your store")).toBeTruthy();
+  expect(screen.queryByText("My store")).toBeNull();
+  view.rerender(renderShop("Corner Shop"));
+  expect(within(screen.getByRole("complementary", { name: "Workspace navigation" })).getByText("Corner Shop")).toBeTruthy();
+  expect(within(screen.getByRole("complementary", { name: "About this plan" })).getByText("Corner Shop")).toBeTruthy();
 });

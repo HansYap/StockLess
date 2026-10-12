@@ -11,6 +11,7 @@ import "./returning.css";
 import "../components/dialog.css";
 import { StorageExplanation } from "../components/StorageExplanation.tsx";
 import { t } from "../i18n/index.ts";
+import { displayShopName } from "../engine.ts";
 import { GuideButton, useGuidePage } from "../onboarding/Onboarding.tsx";
 
 const iconPaths = {
@@ -110,7 +111,7 @@ export function ReturningPage() {
             <div className="returning-resume__heading"><p className="returning-eyebrow">{copy("resume")}</p>{recent && <span className="returning-pill"><span className="returning-dot" />{copy("recent")}</span>}</div>
             {loading ? <p role="status">{copy("loading")}</p> : recent ? <>
               <div className="returning-resume__file"><span className="returning-file-icon"><ReturningIcon name="file" /></span><div><h3>{recent.datasetName}</h3><p className="returning-file-meta">{meta(recent)}</p></div></div>
-              <div className="returning-resume__bottom"><span className="returning-last-step">{recent.shopName} · {copy("lastSaved")} <strong>{date(recent)}</strong></span><a className="btn btn--primary" href={href(recent)}>{copy("continue")}<ReturningIcon name="arrow" /></a></div>
+              <div className="returning-resume__bottom"><span className="returning-last-step">{displayShopName(recent.shopName)} · {copy("lastSaved")} <strong>{date(recent)}</strong></span><a className="btn btn--primary" href={href(recent)}>{copy("continue")}<ReturningIcon name="arrow" /></a></div>
             </> : <div className="returning-resume__empty"><h2>{copy("ready")}</h2><p>{copy("savedAppear")}</p></div>}
           </section>
           <section className="returning-new-file"><ReturningIcon name="upload" /><h3>{copy("newFile")}</h3><p>{copy("newFileLead")}</p><a className="btn btn--ghost" href={recent ? `#update/${encodeURIComponent(recent.id)}` : "#workspace"}><ReturningIcon name="plus" />{copy("upload")}</a></section>
@@ -123,7 +124,7 @@ export function ReturningPage() {
           </div>
           {loading ? <p className="returning-empty" role="status">{copy("loading")}</p> : shown.length > 0 ? <div className="returning-list">{shown.map(item => <article className="returning-row" key={item.id}>
             <span className="returning-file-icon"><ReturningIcon name="file" /></span>
-            <div className="returning-row__details"><h3><a href={href(item)}>{item.datasetName}</a></h3><p className="returning-file-meta">{meta(item)}</p><p className="returning-source">{item.shopName} · {item.sourceName}</p></div>
+            <div className="returning-row__details"><h3><a href={href(item)}>{item.datasetName}</a></h3><p className="returning-file-meta">{meta(item)}</p><p className="returning-source">{displayShopName(item.shopName)} · {item.sourceName}</p></div>
             <div className="returning-row__status"><span className="returning-pill returning-pill--neutral">{copy(item.id === recent?.id ? "resume" : "savedDataset")}</span></div>
             <div className="returning-row__actions"><a className="btn btn--ghost" aria-label={`${copy("open")} ${item.datasetName}`} href={href(item)}>{copy("open")}<ReturningIcon name="arrow" /></a><button className="btn btn--ghost returning-delete" type="button" disabled={busy} aria-label={`${copy("delete")} ${item.datasetName}`} onClick={() => setPending(item)}><ReturningIcon name="trash" /></button></div>
           </article>)}</div> : <div className="returning-empty"><h3>{copy(search ? "noMatches" : "fresh")}</h3><p>{copy(search ? "tryName" : "emptyLead")}</p>{search ? <button type="button" className="btn btn--ghost" onClick={() => { setQuery(""); searchRef.current?.focus(); }}>{copy("clearSearch")}</button> : <a className="btn btn--primary" href="#workspace">{copy("upload")}</a>}</div>}
@@ -138,7 +139,7 @@ export function ReturningPage() {
     </dialog>
     <dialog ref={dialogRef} className="stockless-dialog" aria-labelledby="returning-confirm-title" aria-describedby="returning-confirm-copy" onCancel={event => { event.preventDefault(); if (!busy) closeDialog(); }}>
       <h2 className="stockless-dialog__title" id="returning-confirm-title">{copy(pending === "all" ? "clearTitle" : "removeTitle")}</h2>
-      <p className="stockless-dialog__description" id="returning-confirm-copy">{pending === "all" ? copy("clearCopy") : pending && copy("removeCopy").replace("{name}", `${pending.shopName} / ${pending.datasetName}`)}</p>
+      <p className="stockless-dialog__description" id="returning-confirm-copy">{pending === "all" ? copy("clearCopy") : pending && copy("removeCopy").replace("{name}", `${displayShopName(pending.shopName)} / ${pending.datasetName}`)}</p>
       <div className="stockless-dialog__actions"><button ref={cancelRef} className="stockless-dialog__button" type="button" disabled={busy} onClick={closeDialog}>{copy("cancel")}</button><button className="stockless-dialog__button stockless-dialog__button--danger" type="button" disabled={busy} onClick={() => void remove()}>{copy(busy ? "removing" : pending === "all" ? "clearAll" : "remove")}</button></div>
     </dialog>
   </div>;

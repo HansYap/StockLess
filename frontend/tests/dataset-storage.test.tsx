@@ -166,7 +166,7 @@ it("automatically names a completed upload and stores its plan and original vers
   const work = completedWork();
   const first = await saveGeneratedPurchasePlan(work, planRecord("first"));
   expect(first.datasetName).toBe("sales");
-  expect(first.shopName).toBe("My store");
+  expect(first.shopName).toBe("Your store");
   expect((await getSavedDataset(first.id))?.forecast).toEqual(work.forecast);
   await saveDatasetWork(first.id, { supplierTerms: { Vendor: "Case of 6" } });
   const imported = importedDataset();
@@ -291,4 +291,18 @@ it("migrates old cross-file previews without losing uploads, inputs or their own
   expect(restored.purchaseDrafts).toEqual(ownDrafts);
   expect(restored.envelope).toEqual(saved.envelope);
   expect(await listSavedDatasets()).toHaveLength(1);
+});
+
+it("displays legacy uploads as Your store without rewriting saved work or custom shop names", async () => {
+  const stores = new Map<string, Map<IDBValidKey, unknown>>();
+  browserDatabase(0, stores);
+  const saved = await saveGeneratedPurchasePlan(completedWork(), planRecord("own"));
+  const legacy = { ...saved, shopName: "My store", shopKey: "my store" };
+  stores.get("datasets")!.set(saved.id, structuredClone(legacy));
+  expect((await listSavedDatasets())[0].shopName).toBe("Your store");
+  expect(await getSavedDataset(saved.id)).toEqual(legacy);
+  const custom = { ...legacy, shopName: "Corner Shop", shopKey: "corner shop" };
+  stores.get("datasets")!.set(saved.id, structuredClone(custom));
+  expect((await listSavedDatasets())[0].shopName).toBe("Corner Shop");
+  expect(await getSavedDataset(saved.id)).toEqual(custom);
 });

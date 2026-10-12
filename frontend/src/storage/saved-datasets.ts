@@ -4,7 +4,7 @@ import type {
   PurchaseDecision, PurchaseDecisionInput, PurchaseDecisionEdit, RecordedStockOutcome, StockOutcomeInput,
 } from "../engine.ts";
 import { createPurchaseDecision, updatePurchaseDecision, createStockOutcome, updateStockOutcome, emptyProductPurchaseInputs } from "../engine.ts";
-import { applyPlanningContexts, planningMass, parsePackQuantity } from "../engine.ts";
+import { applyPlanningContexts, planningMass, parsePackQuantity, DEFAULT_SHOP_NAME, displayShopName } from "../engine.ts";
 import type { PurchaseDrafts } from "../purchase-plan/model.ts";
 import { withStore, withTransaction } from "./browser-db.ts";
 
@@ -121,7 +121,7 @@ function requireImport(envelope: SessionEnvelope): void {
 
 export function summarizeSavedDataset(item: SavedDataset): SavedDatasetSummary {
   return {
-    id: item.id, shopName: item.shopName, datasetName: item.datasetName,
+    id: item.id, shopName: displayShopName(item.shopName), datasetName: item.datasetName,
     createdAt: item.createdAt, updatedAt: item.updatedAt,
     sourceName: item.envelope.session.dataset?.sourceName ?? "",
     rowCount: item.envelope.session.dataset?.rows.length ?? 0,
@@ -196,7 +196,7 @@ export async function saveGeneratedPurchasePlan(
       const upload = newUpload || !datasetId;
       const now = new Date().toISOString();
       const datasetName = work.envelope.session.dataset!.sourceName.replace(/\.[^.]+$/, "") || "Sales upload";
-      const shopName = current?.shopName ?? "My store";
+      const shopName = current?.shopName ?? DEFAULT_SHOP_NAME;
       const saved: SavedDataset = {
         ...(current ?? {}), ...work,
         supplierTerms: { ...current?.supplierTerms, ...work.supplierTerms },
