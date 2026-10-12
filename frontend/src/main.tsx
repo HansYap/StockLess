@@ -5,6 +5,7 @@ import "@fontsource-variable/manrope";
 import "@fontsource-variable/source-sans-3";
 import Site from "./Site.tsx";
 import "./styles.css";
+import "./premium.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

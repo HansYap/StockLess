@@ -1,0 +1,55 @@
+/* ── Premium finish (subtle) ──────────────────────────────────────
+   Layout, colours and wording unchanged. Loaded after styles.css.
+   Floating cards, buttons with depth, calmer page, quieter lines. */
+:root{
+  --pm-page:#F6F9F7;
+  --pm-hair:rgba(22,49,59,.055);
+  --pm-line:rgba(22,49,59,.07);
+  --pm-card-shadow:0 1px 1px rgba(16,40,48,.03),0 12px 32px -10px rgba(16,40,48,.10);
+  --pm-btn-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 18px -6px rgba(18,102,94,.55);
+  --pm-ring:0 0 0 4px rgba(22,125,116,.14);
+  --pm-muted:#5E7177;
+}
+
+/* Calmer page */
+html body .frame{background:var(--pm-page)}
+html body .topbar{background:rgba(255,255,255,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--pm-line);box-shadow:0 6px 20px -14px rgba(16,40,48,.25)}
+html body :is(.upload-hero,.mapping-hero,.rd-hero,.pp-hero,.returning-hero){
+  background:radial-gradient(120% 140% at 88% 0%,rgba(255,255,255,.9) 0%,rgba(255,255,255,0) 55%),linear-gradient(180deg,#EAF5F1 0%,#F3F9F6 100%);
+  border-bottom-color:var(--pm-line)}
+html body .sx-band::before{background:radial-gradient(120% 140% at 88% 0%,rgba(255,255,255,.9) 0%,rgba(255,255,255,0) 55%),linear-gradient(180deg,#EAF5F1 0%,#F3F9F6 100%);border-bottom-color:var(--pm-line)}
+
+/* Cards float */
+html body :is(.card,.upload-screen .upload-card,.upload-screen .upload-picked,.mapping-screen .mapping-file,.mapping-screen .mapping-all,
+  .mapping-screen .mapping-card,.mapping-screen .mapping-more,.mapping-screen .mapping-additional,.readiness-screen .rd-file,
+  .readiness-screen .rd-card,.readiness-screen .rd-stat,.readiness-screen .rd-product,.purchase-plan--new .pp-excess,
+  .purchase-plan--new .pp-kpi,.purchase-plan--new .pp-detail,.purchase-plan--new .pp-list,.purchase-plan--new .pp-privacy,
+  .returning-paper .returning-card,.sx-card,.ix-card,.ix-breakdown,.impact__toolbar){
+  border-color:var(--pm-hair);box-shadow:var(--pm-card-shadow)}
+html body :is(.readiness-screen .rd-card,.readiness-screen .rd-stat,.mapping-screen .mapping-card,.purchase-plan--new .pp-detail,
+  .purchase-plan--new .pp-list,.returning-paper .returning-card,.ix-card,.upload-screen .upload-card){border-radius:18px}
+/* keep coloured status stripes on product cards */
+html body .readiness-screen .rd-product{border-top-color:var(--pm-hair);border-right-color:var(--pm-hair);border-bottom-color:var(--pm-hair)}
+
+/* Buttons have depth */
+html body .btn--primary{background-image:linear-gradient(180deg,#1E9488 0%,#12665E 100%);border-color:transparent;box-shadow:var(--pm-btn-shadow)}
+html body .btn--primary:hover:not(:disabled){background-image:linear-gradient(180deg,#1A887D 0%,#0F5952 100%)}
+html body .btn--primary:active:not(:disabled){box-shadow:inset 0 1px 2px rgba(0,0,0,.18)}
+html body .btn--primary:disabled{background-image:none;box-shadow:none}
+html body .btn--ghost{border-color:rgba(22,49,59,.10);box-shadow:0 1px 2px rgba(16,40,48,.06),0 2px 6px -2px rgba(16,40,48,.06)}
+
+/* Focus rings: current step, inputs, selects */
+html body .step--current .step__dot{background-image:linear-gradient(180deg,#1E9488,#12665E);box-shadow:var(--pm-ring)}
+html body :is(input,select,textarea):focus-visible{outline:none;box-shadow:var(--pm-ring);border-color:var(--teal)}
+html body :is(.readiness-screen .rd-search,.returning-search input){border-color:rgba(22,49,59,.14)}
+
+/* Sharper type, one calm grey */
+html body :is(.upload-hero h1,.mapping-hero h1,.rd-hero h1,.pp-hero h1,.returning-hero h1,.sx-band .impact__title){letter-spacing:-0.025em}
+html body :is(.upload-hero__lede,.mapping-lede,.rd-hero p,.sx-band .impact__lede){color:var(--pm-muted)}
+
+/* Quieter lines */
+html body :is(.readiness-screen .rd-rows,.readiness-screen .rd-rows__reason,.ix-queue li,.impact__missing-details li){border-color:var(--pm-line)}
+html body hr{border-color:var(--pm-line)}
+
+@media (prefers-reduced-transparency: reduce){html body .topbar{backdrop-filter:none;background:#fff}}
