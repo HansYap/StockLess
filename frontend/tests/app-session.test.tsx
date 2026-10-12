@@ -104,7 +104,7 @@ describe("App forecast and draft lifecycle", () => {
     fireEvent.change(screen.getByLabelText("Planned order"), {
       target: { value: "20" },
     });
-    fireEvent.change(screen.getByLabelText("Incoming stock"), {
+    fireEvent.change(screen.getByLabelText("Already ordered, not here yet"), {
       target: { value: "4" },
     });
     expect(runDemandForecastInWorker).toHaveBeenCalledTimes(1);
@@ -127,7 +127,7 @@ describe("App forecast and draft lifecycle", () => {
       screen.getByLabelText("Planned order").getAttribute("aria-valuetext"),
     ).toBe("12 units");
     expect(
-      (screen.getByLabelText("Incoming stock") as HTMLInputElement).value,
+      (screen.getByLabelText("Already ordered, not here yet") as HTMLInputElement).value,
     ).toBe("");
     fireEvent.change(screen.getByLabelText("Planned order"), {
       target: { value: "9" },
