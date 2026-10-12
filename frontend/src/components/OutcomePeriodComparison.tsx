@@ -6,6 +6,7 @@ import { getSavedDataset, savedPurchaseDecisions, savedStockOutcomes } from "../
 import { malaysiaToday } from "../malaysia-date.ts";
 import "./decision-outcome-controls.css";
 
+import { NiceSelect } from "./NiceSelect.tsx";
 interface Props {
   readonly datasetId?: string;
   readonly currentSnapshot: ReadinessSnapshot;
@@ -83,7 +84,7 @@ export function OutcomePeriodComparison({ datasetId, currentSnapshot, onLoaded }
         <label>{copy("First period end", "第一个期间结束", "Akhir tempoh pertama")}<input type="date" value={firstEnd} onChange={event => setFirstEnd(event.target.value)} /></label>
         <label>{copy("Second period start", "第二个期间开始", "Mula tempoh kedua")}<input type="date" value={secondStart} onChange={event => setSecondStart(event.target.value)} /></label>
         <label>{copy("Second period end", "第二个期间结束", "Akhir tempoh kedua")}<input type="date" value={secondEnd} onChange={event => setSecondEnd(event.target.value)} /></label>
-        <label>{copy("Waste comparison unit", "浪费比较单位", "Unit perbandingan sisa")}<select value={unit} onChange={event => setUnit(event.target.value as OutcomeUnit | "")}><option value="">{copy("Use compatible recorded units", "使用兼容的记录单位", "Gunakan unit rekod serasi")}</option>{(["pieces", "kg", "litres"] as const).map(value => <option value={value} key={value}>{unitName(value)}</option>)}</select></label>
+        <label>{copy("Waste comparison unit", "浪费比较单位", "Unit perbandingan sisa")}<NiceSelect value={unit} onChange={event => setUnit(event.target.value as OutcomeUnit | "")}><option value="">{copy("Use compatible recorded units", "使用兼容的记录单位", "Gunakan unit rekod serasi")}</option>{(["pieces", "kg", "litres"] as const).map(value => <option value={value} key={value}>{unitName(value)}</option>)}</NiceSelect></label>
       </div>
       {loading && <p role="status">{copy("Loading recorded history…", "正在加载已记录的历史…", "Memuatkan sejarah direkodkan…")}</p>}
       {loadError && <p role="alert">{copy("Saved history could not be read. Reopen this dataset and try again.", "无法读取已保存的历史，请重新打开数据集后重试。", "Sejarah tersimpan tidak dapat dibaca. Buka semula set data dan cuba lagi.")}</p>}

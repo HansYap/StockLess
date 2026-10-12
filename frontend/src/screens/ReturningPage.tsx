@@ -14,6 +14,7 @@ import { t } from "../i18n/index.ts";
 import { displayShopName } from "../engine.ts";
 import { GuideButton, useGuidePage } from "../onboarding/Onboarding.tsx";
 
+import { NiceSelect } from "../components/NiceSelect.tsx";
 const iconPaths = {
   file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8m-8 4h5",
   arrow: "M4 12h16m-6-6 6 6-6 6",
@@ -120,7 +121,7 @@ export function ReturningPage() {
         <section className="returning-card returning-files" data-guide="history-list" aria-labelledby="returning-datasets-title" aria-busy={loading}>
           <div className="returning-toolbar">
             <label className="returning-search"><ReturningIcon name="search" /><input ref={searchRef} type="search" aria-label={copy("search")} placeholder={copy("searchPlaceholder")} value={query} onChange={event => setQuery(event.target.value)} /></label>
-            <label className="returning-sort">{copy("sort")}<select className="select" value={sort} onChange={event => setSort(event.target.value)}><option value="recent">{copy("recent")}</option><option value="name">{copy("fileName")}</option><option value="rows">{copy("rowCount")}</option></select></label>
+            <label className="returning-sort">{copy("sort")}<NiceSelect className="select" value={sort} onChange={event => setSort(event.target.value)}><option value="recent">{copy("recent")}</option><option value="name">{copy("fileName")}</option><option value="rows">{copy("rowCount")}</option></NiceSelect></label>
           </div>
           {loading ? <p className="returning-empty" role="status">{copy("loading")}</p> : shown.length > 0 ? <div className="returning-list">{shown.map(item => <article className="returning-row" key={item.id}>
             <span className="returning-file-icon"><ReturningIcon name="file" /></span>

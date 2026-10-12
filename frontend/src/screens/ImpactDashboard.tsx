@@ -17,6 +17,7 @@ import './impact-reference.css';
 import '../components/cp3-controls.css';
 import '../components/impact-open.css';
 
+import { NiceSelect } from "../components/NiceSelect.tsx";
 interface Props {
   snapshot: ReadinessSnapshot; forecast: DemandForecastReview; drafts: PurchaseDrafts;
   contexts?: PlanningContexts; datasetId?: string; shopName?: string; datasetName?: string;
@@ -321,7 +322,7 @@ export function ImpactDashboard({snapshot,forecast,drafts:enteredDrafts,contexts
     {whyItMatters}
 
     <section data-guide="impact-downloads" className="impact-download impact__downloads" ref={downloads} aria-labelledby="impact-download-title">
-    <div className="impact-download__language"><label htmlFor="impact-report-language">{c('Report language','报告语言','Bahasa laporan')}</label><select id="impact-report-language" value={reportLanguage} disabled={busy} onChange={event=>setReportLanguage(event.target.value as ReportLanguageChoice)}><option value="follow">{c('Follow page language','跟随页面语言','Ikut bahasa halaman')}</option><option value="en">English</option><option value="zh">简体中文</option><option value="ms">Bahasa Melayu</option></select><small>{c('Applies to all downloads below.','适用于下方所有导出。','Digunakan untuk semua muat turun di bawah.')}</small></div>
+    <div className="impact-download__language"><label htmlFor="impact-report-language">{c('Report language','报告语言','Bahasa laporan')}</label><NiceSelect id="impact-report-language" value={reportLanguage} disabled={busy} onChange={event=>setReportLanguage(event.target.value as ReportLanguageChoice)}><option value="follow">{c('Follow page language','跟随页面语言','Ikut bahasa halaman')}</option><option value="en">English</option><option value="zh">简体中文</option><option value="ms">Bahasa Melayu</option></NiceSelect><small>{c('Applies to all downloads below.','适用于下方所有导出。','Digunakan untuk semua muat turun di bawah.')}</small></div>
     <div><h2 id="impact-download-title"><span className="impact-sec__icon" aria-hidden="true"><ImpactIcon name="download" size={22} /></span>{c('Download your results','下载结果','Muat turun hasil anda')}</h2><p>{c('Your current purchase plan and its estimated impact.','当前采购计划及其预估影响。','Pelan belian semasa anda dan anggaran kesannya.')}</p>
     <div className="impact__toolbar" role="group" aria-label={c('Download your results','下载结果','Muat turun hasil anda')}>
       <button type="button" className="btn btn--ghost btn--small" disabled={busy} onClick={()=>void download()}>{c('Download analysis Excel','下载分析 Excel','Muat turun Excel analisis')}</button>

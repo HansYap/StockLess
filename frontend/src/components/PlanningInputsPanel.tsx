@@ -3,6 +3,7 @@ import { useLanguage } from '../i18n/index.ts';
 import { automaticStorageAdvice, planningStorageWindow, resolveReferencePrice, type ProductPlanningContext, type ReadinessSnapshot } from '../engine.ts';
 import { categoryLabel, foodCategories, productEstimateDetails, type PlanningDetail } from './product-estimates.ts';
 import './cp3-controls.css';
+import { NiceSelect } from "./NiceSelect.tsx";
 interface Props { snapshot: ReadinessSnapshot; productKey: string; value?: ProductPlanningContext; onChange: (value: ProductPlanningContext) => void; focus?: { field: PlanningDetail; revision: number } }
 /** Optional corrections to shared automatic results, never a completion checklist. */
 export function PlanningInputsPanel({ snapshot, productKey, value, onChange, focus }: Props) {
@@ -42,7 +43,7 @@ export function PlanningInputsPanel({ snapshot, productKey, value, onChange, foc
     <div className="planning-details" aria-label={c('Product estimate details','商品估算详情','Butiran anggaran produk')}>{(['cost','category','weight'] as const).map(detail=><button type="button" key={detail} aria-pressed={field === detail} onClick={()=>edit(detail)}><b>{labels[detail]}</b>{' '}<small>{status(detail)}</small>{' '}<span>{c('Review / edit','查看／修改','Semak / edit')} →</span></button>)}</div>
     {message && <p className="planning-message" role="status">{message}</p>}
     {field && field in labels && <section className="planning-prompt" ref={prompt}><h3 tabIndex={-1}>{labels[field as keyof typeof labels]}</h3><form onSubmit={save}>
-      {field === 'category' ? <label>{labels.category}<select value={raw} onChange={event=>setRaw(event.target.value)}><option value="">{c('Use automatic match','使用自动匹配','Guna padanan automatik')}</option><option value="non_food">{c('Not food','非食品','Bukan makanan')}</option>{foodCategories.map(category=><option key={category} value={category}>{categoryLabel(category)}</option>)}</select></label>
+      {field === 'category' ? <label>{labels.category}<NiceSelect value={raw} onChange={event=>setRaw(event.target.value)}><option value="">{c('Use automatic match','使用自动匹配','Guna padanan automatik')}</option><option value="non_food">{c('Not food','非食品','Bukan makanan')}</option>{foodCategories.map(category=><option key={category} value={category}>{categoryLabel(category)}</option>)}</NiceSelect></label>
         : <><label>{field === 'cost' ? c('Your purchase cost / sales unit (MYR)','每销售单位采购成本（MYR）','Kos belian anda / unit jualan (MYR)') : c('Measured kg / sales unit','每销售单位实测公斤数','Kg diukur / unit jualan')}<input inputMode="decimal" value={raw} onChange={event=>setRaw(event.target.value)} /></label><p>{c('Leave blank to use the available file or pack information.','留空使用已有文件或包装信息。','Biarkan kosong untuk menggunakan maklumat fail atau pek tersedia.')}</p></>}
       {error && <p role="alert">{error}</p>}<div className="cp3-actions"><button type="submit" className="btn btn--primary">{c('Save this detail','保存此详情','Simpan butiran ini')}</button><button type="button" className="btn btn--ghost" onClick={()=>{setField(null);setError('');}}>{c('Skip for now','暂时跳过','Langkau buat masa ini')}</button></div>
     </form></section>}
