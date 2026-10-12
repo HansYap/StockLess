@@ -1249,3 +1249,32 @@ body{margin:0}
 @media(max-width:768px){.frame :is(button,select,summary){min-height:44px}.dtable td[data-label]::before{content:attr(data-label)}}
 .impact{width:100%;min-width:0}
 .impact__empty{margin:10px 0 0;color:var(--muted);font-size:var(--text-body)}
+
+/* ── Plain look (UX review, Oct 2026) ──────────────────────────────
+   One colour code everywhere: green = fine, orange = check this,
+   grey = can't tell yet. Red stays for real errors only.
+   Workflow eyebrows and small labels use sentence case. */
+:root{--grey-state:#5F6F75;--grey-state-tint:#EEF1F2;--grey-state-line:#A9B6BA}
+
+/* Check your file: "need more sales history" is grey, not red */
+html body .readiness-screen .rd-stat--missing .rd-stat__icon{background:var(--grey-state-tint);color:var(--grey-state)}
+html body .readiness-screen .rd-stat--missing[aria-pressed="true"]{border-color:var(--grey-state-line);box-shadow:0 0 0 3px var(--grey-state-tint)}
+html body .readiness-screen .rd-product.pcard--missing{border-left-color:var(--grey-state-line)}
+html body .readiness-screen .rd-pill--missing{background:var(--grey-state-tint);color:var(--grey-state)}
+html body .readiness-screen .rd-product__note--missing{background:var(--grey-state-tint);color:var(--grey-state)}
+html body .readiness-screen .rd-planning li:nth-child(3) svg{color:var(--grey-state)}
+html body .pcard--missing{border-left-color:var(--grey-state-line)}
+html body .summary__group--missing b{color:var(--grey-state)}
+
+/* Purchase plan: "Order needed" is something to check, so orange */
+html body .purchase-plan--new .pp-pill--order_needed{color:var(--amber);background:var(--amber-tint)}
+html body .purchase-plan--new .pp-check-message--order_needed{background:var(--amber-tint);border-color:#F1DDB0}
+
+/* Check the columns: a missing match is a to-do, not an error */
+html body .mapping-screen .mapping-pill--missing{background:var(--amber-tint);color:var(--amber)}
+
+/* Sentence case instead of uppercase, letter-spaced eyebrows */
+html body :is(.upload-screen .upload-hero__eyebrow,.mapping-screen .mapping-eyebrow,.mapping-screen .mapping-card__head h2,
+  .readiness-screen .rd-eyebrow,.readiness-screen .rd-rows h3,.readiness-screen .rd-product__facts small,.readiness-screen .rd-weekly>small,
+  .returning-eyebrow,.purchase-plan--new .pp-kicker,.sx-band .eyebrow,.impact__about dt,.impact-bars__head,.impact__meta dt,
+  .sx-tile__k,.ix-card__k,.saved-sidebar__eyebrow,.sl-home .hp-eyebrow){text-transform:none;letter-spacing:normal}
