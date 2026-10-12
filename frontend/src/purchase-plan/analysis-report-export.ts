@@ -59,11 +59,12 @@ function carbonOverview(report: AnalysisReport): string {
   }
   const state = (row: readonly AnalysisReportCell[] | undefined): string => !row ? 'Unavailable' : typeof row[index('CO2e (kg)')] === 'number'
     ? Number(row[index('CO2e (kg)')]).toFixed(2) + ' kg · Estimated' : String(row[index('Status')]);
+  const includeOutcomes = report.tables.some(table => table.id === 'outcomes');
   const rows = [...byKey.values()].map(kinds => {
     const first = kinds.values().next().value as readonly AnalysisReportCell[];
-    return [first[index('Product name')], state(kinds.get('recorded_waste')), state(kinds.get('potential_excess')), state(kinds.get('scenario_difference'))];
+    return [first[index('Product name')], ...(includeOutcomes ? [state(kinds.get('recorded_waste'))] : []), state(kinds.get('potential_excess')), state(kinds.get('scenario_difference'))];
   });
-  const overview: AnalysisReportTable = { id: 'carbon-overview', title: 'Potential carbon impact', columns: ['Product', 'Recorded waste', 'Potential excess', 'Scenario difference'], rows };
+  const overview: AnalysisReportTable = { id: 'carbon-overview', title: 'Potential carbon impact', columns: includeOutcomes ? ['Product', 'Recorded waste', 'Potential excess', 'Scenario difference'] : ['Product', 'Potential excess', 'Scenario difference'], rows };
   const included = source.rows.filter(row => row[index('Measure')] === 'potential_excess' && row[index('Status')] === 'estimated');
   const evidence: AnalysisReportTable = { id: 'carbon-evidence', title: 'Evidence behind included estimates', columns: ['Product', 'Mass (kg)', 'CO2e (kg)', 'Factor', 'Source names'], rows: included.map(row => [
     row[index('Product name')], row[index('Mass (kg)')], row[index('CO2e (kg)')], row[index('Factor label')], row[index('Source names')],
@@ -142,7 +143,7 @@ export function renderAnalysisReportHtml(report: AnalysisReport, language: Langu
     '<div class="meta-strip"><div><small>SHOP</small><b>' + escapeHtml(report.metadata.shopName) + '</b></div><div><small>DATASET</small><b>' + escapeHtml(report.metadata.datasetName) + '</b></div><div><small>RECORDED PERIOD</small><b>' + escapeHtml(report.metadata.period.start) + ' to ' + escapeHtml(report.metadata.period.end) + '</b></div><div><small>SOURCE FILE</small><b>' + escapeHtml(report.metadata.sourceName) + '</b></div></div>' +
     '<div class="metrics">' + metric('PLANNED PURCHASE SPEND', money(findValue('financialtotals', 'Estimated planned purchase spend', 'Estimated amount (MYR)')), 'Current plan · partial total') + metric('POTENTIAL EXCESS COST', money(findValue('financialtotals', 'Estimated excess-stock cost', 'Estimated amount (MYR)')), 'Estimated · partial total', true) + metric('POTENTIAL EXCESS CO2E', typeof carbon === 'number' ? carbon.toFixed(2) + ' kg' : String(carbon ?? 'Unavailable'), 'Estimated · partial coverage') + metric('PLANNED ORDER LINES', String(orders?.rows.length ?? 0), 'Positive quantities only') + '</div>' +
     '<div class="action-panel"><strong>' + risks.length + ' ORDERS TO REVIEW</strong><b>Check these planned orders before placing them</b><p>' + escapeHtml(risks.map(row => nameIndex >= 0 ? row[nameIndex] : '').join(', ') || 'No orders flagged by the current purchase check.') + '</p><small>' + (table('problems')?.rows.length ?? 0) + ' source issues also need review. Forecasts are ranges; unentered values are not zero.</small></div>' +
-    '<aside class="report-note"><b>Read the numbers with context</b><span>Forecasts, money and CO2e are estimates. Recorded outcomes are separate. Missing values and unentered quantities are not zero.</span></aside></header>';
+    '<aside class="report-note"><b>Read the numbers with context</b><span>Forecasts, money and CO2e are estimates. Missing values and unentered quantities are not zero.</span></aside></header>';
   const summary = report.tables.filter(item => !['metadata', 'sales', 'history', 'evidence', 'limitations', 'carbon', 'carbontotals', 'financialtotals'].includes(item.id));
   const beforeCarbon = summary.filter(item => !['outcomes', 'problems'].includes(item.id));
   const afterCarbon = summary.filter(item => ['outcomes', 'problems'].includes(item.id));
@@ -150,7 +151,7 @@ export function renderAnalysisReportHtml(report: AnalysisReport, language: Langu
     '<p class="print-help">Use your browser\'s Print dialog and select “Save as PDF”. The detailed Excel workbook includes complete sales history and planning evidence.</p>' +
     demandCharts(report) + beforeCarbon.map(item => htmlTable(compactSummary(item))).join('') + carbonOverview(report) + afterCarbon.map(item => htmlTable(compactSummary(item))).join('') +
     '<section class="report-section"><h2>Explanations and limitations</h2><ol class="limits">' + report.limitations.map(item => '<li>' + escapeHtml(item) + '</li>').join('') + '</ol></section>' +
-    '<section class="report-section"><h2>Source and provenance</h2><p>' + escapeHtml(report.metadata.sourceLabel) + ' · Generated ' + escapeHtml(report.metadata.generatedAt) + '<br>Source SHA-256: ' + escapeHtml(report.metadata.sourceSha256) + '</p></section></body></html>';
+    '<section class="report-section"><h2>Source and provenance</h2><p>' + escapeHtml(report.metadata.sourceLabel) + (report.metadata.worksheetName ? '<br>Worksheet: ' + escapeHtml(report.metadata.worksheetName) : '') + ' · Generated ' + escapeHtml(report.metadata.generatedAt) + '<br>Source SHA-256: ' + escapeHtml(report.metadata.sourceSha256) + '</p></section></body></html>';
   if (language === "en") return markup;
   const parsed = new DOMParser().parseFromString(markup, "text/html");
   parsed.documentElement.lang = language === "zh" ? "zh-Hans" : "ms";

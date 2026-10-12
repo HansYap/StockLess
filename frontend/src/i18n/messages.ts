@@ -6,6 +6,13 @@ import { i3CompletionMessages } from "./i3-completion.ts";
 import { uploadMessages } from "./upload.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
 export const messages: Record<string, readonly [string, string]> = {
+  "Enter a quantity from 0 to 999,999": ["请输入 0 至 999,999 之间的数量", "Masukkan kuantiti dari 0 hingga 999,999"],
+  "Saved work failed to load in this browser. You can try again, upload a file or use the sample.": ["此浏览器无法加载已保存的工作。您可以重试、上传文件或使用示例。", "Kerja disimpan gagal dimuatkan dalam pelayar ini. Anda boleh cuba lagi, muat naik fail atau gunakan sampel."],
+  "Results: checked data and demand estimates so you can review earlier work.": ["结果：检查过的数据和需求估算，供您查看先前的工作。", "Hasil: data disemak dan anggaran permintaan untuk menyemak kerja terdahulu."],
+  "In Upload history, use Delete beside an upload and confirm Remove upload to delete that upload and its saved plan. Use Clear Everything to remove all saved uploads and settings from this browser.": ["在上传历史中，点击文件旁的删除，再确认移除上传，以删除该文件及其保存的计划。点击清除所有内容，以移除此浏览器中的全部上传和设置。", "Dalam Sejarah muat naik, pilih Padam di sebelah fail dan sahkan Buang muat naik untuk memadam fail dan pelan disimpan. Pilih Padam Semua untuk membuang semua muat naik dan tetapan dalam pelayar ini."],
+  "Clear session clears only the file currently open. It does not delete saved uploads. Your original files are not changed.": ["清除会话仅清除当前打开的文件，不会删除已保存的上传，也不会改变原始文件。", "Kosongkan sesi hanya mengosongkan fail yang sedang dibuka. Ia tidak memadam muat naik disimpan. Fail asal anda tidak diubah."],
+  "Sample data is kept separate from your saved uploads and purchase plans.": ["示例数据与已保存的上传和采购计划分开。", "Data sampel diasingkan daripada muat naik dan pelan belian disimpan."],
+  "Analysis cannot continue because no product has usable sales records. Go back to matching to check your columns, or correct your file and upload it again.": ["没有商品具有可用的销售记录，因此分析无法继续。请返回列匹配检查列，或修正文件后重新上传。", "Analisis tidak boleh diteruskan kerana tiada produk mempunyai rekod jualan boleh digunakan. Kembali ke padanan untuk menyemak lajur, atau betulkan fail dan muat naik semula."],
   "Suggested drafts are calculated automatically. Adjust the quantity if needed; zero is a valid order.": ["建议草稿会自动计算。需要时可调整数量；零也是有效订单。", "Draf cadangan dikira secara automatik. Laraskan kuantiti jika perlu; sifar ialah pesanan sah."],
   "Saved buying restrictions are included automatically in suggestions. Check an adjusted order against the demand range.": ["保存的采购限制会自动计入建议。请按需求区间核对调整后的订单。", "Sekatan belian disimpan dikira secara automatik dalam cadangan. Semak pesanan dilaraskan berbanding julat permintaan."],
 
@@ -2503,7 +2510,6 @@ export const messages: Record<string, readonly [string, string]> = {
   "is excluded from the totals until you correct it.": ["在您修正之前不计入总数。", "dikecualikan daripada jumlah sehingga anda membetulkannya."],
   "Your file is never changed either way. A row that is left out stays listed here, with the reason, so you can fix it in your own spreadsheet and upload again.": ["无论哪种情况，您的文件都不会被更改。被排除的行会连同原因一直列在这里，方便您在自己的表格中修正后重新上传。", "Fail anda tidak pernah diubah dalam kedua-dua keadaan. Baris yang ditinggalkan kekal tersenarai di sini dengan sebabnya, supaya anda boleh membetulkannya dalam hamparan sendiri dan muat naik semula."],
   "Your data is mostly ready": ["您的数据大致就绪", "Data anda hampir sedia"],
-  "Some products need more data": ["部分商品需要更多数据", "Sesetengah produk perlu lebih data"],
   "need more data": ["需要更多数据", "perlu lebih data"],
   "Match your columns": ["对应您的栏位", "Padankan lajur anda"],
   "products checked": ["项产品已检查", "produk disemak"],

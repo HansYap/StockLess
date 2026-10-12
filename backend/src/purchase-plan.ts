@@ -122,7 +122,7 @@ export function applyPurchaseQuantityEdit(
 
   const value = Number(trimmed);
   if (!Number.isSafeInteger(value) || value > EPIC5_POLICY.maximumQuantity) {
-    return Object.freeze({ accepted: false, field: previous, message: "Whole numbers only" });
+    return Object.freeze({ accepted: false, field: previous, message: "Enter a quantity from 0 to 999,999" });
   }
 
   return Object.freeze({

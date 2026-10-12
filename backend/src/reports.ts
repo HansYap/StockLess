@@ -21,6 +21,7 @@ export interface AnalysisReport {
     readonly datasetId: string;
     readonly datasetName: string;
     readonly sourceName: string;
+    readonly worksheetName?: string;
     readonly sourceSha256: string;
     readonly sourceMode: "user" | "sample";
     readonly sourceLabel: "Sample data" | "Retailer file";
@@ -46,6 +47,8 @@ export interface AnalysisReportInput {
   /** Legacy records remain in storage; current orders never depend on them. */
   readonly decisions?: readonly PurchaseDecision[];
   readonly outcomes?: readonly RecordedStockOutcome[];
+  /** Only legacy outcome reports opt in; the current purchase report uses estimates. */
+  readonly includeRecordedOutcomes?: boolean;
   readonly carbonResults?: readonly CarbonImpactResult[];
   readonly supplierScenariosByProduct?: Readonly<Record<string, readonly SupplierScenario[] | undefined>>;
 }
@@ -73,11 +76,11 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   if (!/^\d{4}-\d{2}-\d{2}T/.test(generatedAt) || !Number.isFinite(Date.parse(generatedAt))) throw new Error("A valid report generation date and time is required.");
   const dates = snapshot.rows.flatMap(row => row.interpretedValues.transactionDate && row.interpretedValues.transactionDate <= snapshot.analysisDate ? [row.interpretedValues.transactionDate] : []).sort();
-  const recorded = (input.outcomes ?? []).filter(item=>item.datasetId===input.datasetId).map(item => item.date);
+  const recorded = (input.includeRecordedOutcomes ? input.outcomes ?? [] : []).filter(item=>item.datasetId===input.datasetId).map(item => item.date);
   const period = input.period ?? { start: dates[0] ?? snapshot.analysisDate, end: [snapshot.analysisDate, ...recorded].sort().pop()! };
   validateReportingPeriod(period);
   const metadata = Object.freeze({ shopName: input.shopName?.trim() || "Not supplied", datasetId: input.datasetId,
-    datasetName: input.datasetName?.trim() || snapshot.sourceName, sourceName: snapshot.sourceName, sourceSha256: snapshot.sourceSha256,
+    datasetName: input.datasetName?.trim() || snapshot.sourceName, sourceName: snapshot.sourceName, worksheetName: snapshot.worksheetName, sourceSha256: snapshot.sourceSha256,
     sourceMode: snapshot.sourceMode, sourceLabel: snapshot.sourceMode === "sample" ? "Sample data" as const : "Retailer file" as const,
     analysisDate: snapshot.analysisDate, period: Object.freeze({ ...period }), generatedAt, snapshotId: snapshot.id, currency: "MYR" as const });
   const plans = new Map((input.plans ?? buildPurchasePlanReview(snapshot, forecast).products).map(item => [item.productKey, item]));
@@ -96,17 +99,18 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
   }
   for (const [key, labels] of labelSets) identities.set(key, [[...labels[0]].join(" | ") || "Not supplied", [...labels[1]].join(" | "), [...labels[2]].join(" | ")]);
   const identity = (key: string): readonly AnalysisReportCell[] => identities.get(key) ?? ["Not supplied", "", ""];
-  const outcomes = (input.outcomes ?? []).filter(item => item.datasetId === input.datasetId && item.date >= period.start && item.date <= period.end);
+  const outcomes = (input.includeRecordedOutcomes ? input.outcomes ?? [] : []).filter(item => item.datasetId === input.datasetId && item.date >= period.start && item.date <= period.end);
+  const carbonResults = (input.carbonResults ?? []).filter(item => input.includeRecordedOutcomes || item.kind !== "recorded_waste");
   const limitations = Object.freeze([
-    "Forecasts, purchase commitments, potential excess and CO2e are estimates; recorded sales and waste are reported separately.",
+    "Forecasts, purchase commitments, potential excess and CO2e are estimates, not measured waste or achieved savings.",
     "Missing values and unentered quantities are not replaced by zero. Returns remain separate from positive sales demand.",
     "The order list uses current Purchase plan quantities. Editing the plan changes the next export; it does not establish an actual purchase or stock outcome.",
     "Supplier comparisons are quantities and arrival dates; no supplier price or achieved savings is assumed.",
-    "Current product and scenario results describe the analysis date and the next four-week demand horizon. The reporting period filters recorded outcomes, not the current forecast or order list.",
+    "Current product and scenario results describe the analysis date and the next four-week demand horizon. The sales period describes the recorded sales history.",
     "Only positive current planned quantities appear in the order list. Zero orders and unentered quantities remain distinct in Product Results.",
     "CO2e source agreement is not ground-truth validation or evidence of achieved emissions reductions.",
     "Automatic planned quantities are labelled worked out by StockLess. AI-assigned categories retain model and source provenance and are not manual confirmations.",
-    ...(snapshot.sourceMode === "sample" ? ["Sample data: these results are illustrative and are not this retailer's recorded outcomes."] : []),
+    ...(snapshot.sourceMode === "sample" ? ["Sample data: these results are illustrative and are not this retailer's actual results."] : []),
   ]);
   const tables: AnalysisReportTable[] = [];
   tables.push(table("metadata", "Metadata", ["Field", "Value"], [
@@ -151,7 +155,7 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
     Object.values(input.impact?.totals ?? {}).map(total => [total.label, total.state, total.state === "estimated" ? total.amount : "Unavailable", total.includedCount, total.excludedCount,
       total.state === "unavailable" ? total.reason : total.excludedCount ? "Partial total: excluded products are not treated as zero." : "Estimated from seller unit costs.", metadata.sourceLabel])));
   tables.push(table("carbon", "CO2e Estimates", ["Product name", "Product code", "Pack size", "Product key", "Measure", "Status", "Category", "Quantity", "Unit", "Mass (kg)", "Mass basis", "CO2e (kg)", "CO2e low (kg)", "CO2e high (kg)", "Factor (kg CO2e/kg)", "Factor label", "Source names", "Source values", "Source boundary", "Conversion source", "Calculation", "Baseline", "Limitation", "Source"],
-    (input.carbonResults ?? []).map(item => [...identity(item.productKey), item.productKey, item.kind, item.state, item.category ?? "Unconfirmed", present(item.quantity, item.state === "no_record" ? "No waste record" : "Not entered"), item.quantityUnit ?? "Not supplied",
+    carbonResults.map(item => [...identity(item.productKey), item.productKey, item.kind, item.state, item.category ?? "Unconfirmed", present(item.quantity, item.state === "no_record" ? "No waste record" : "Not entered"), item.quantityUnit ?? "Not supplied",
       item.state === "estimated" ? item.massKg : "Unavailable", item.state === "estimated" ? item.massBasis : "Unavailable", item.state === "estimated" ? item.kgCO2e : "Unavailable",
       item.state === "estimated" ? item.kgCO2eRange.low : "Unavailable", item.state === "estimated" ? item.kgCO2eRange.high : "Unavailable",
       item.state === "estimated" ? item.factor.factorKgCO2ePerKg : "Unavailable", item.state === "estimated" ? item.factor.label : "Unavailable",
@@ -159,12 +163,12 @@ export function buildAnalysisReport(input: AnalysisReportInput): AnalysisReport 
       item.factor?.sources.map(source => `${source.name}: ${source.boundary}`).join("; ") ?? "", item.state === "estimated" ? item.conversionSource : "Unavailable",
       item.state === "estimated" ? item.calculation : "Unavailable", item.baseline ?? "Not applicable", item.state === "estimated" ? item.limitation : item.reason, metadata.sourceLabel])));
   tables.push(table("carbontotals", "CO2e Totals", ["Measure", "State", "Estimated CO2e (kg)", "CO2e low (kg)", "CO2e high (kg)", "Included products", "Excluded products", "Mass from sources-agree factors (kg)", "Mass from estimated factors (kg)", "Limitation", "Source"],
-    (["recorded_waste", "potential_excess", "scenario_difference"] as readonly CarbonImpactKind[]).map(kind => {
-      const total = summarizeCarbonImpact((input.carbonResults ?? []).filter(item => item.kind === kind));
+    (input.includeRecordedOutcomes ? ["recorded_waste", "potential_excess", "scenario_difference"] as const : ["potential_excess", "scenario_difference"] as const).map(kind => {
+      const total = summarizeCarbonImpact(carbonResults.filter(item => item.kind === kind));
       return [kind, total.state, present(total.kgCO2e), present(total.kgCO2eRange?.low), present(total.kgCO2eRange?.high), total.includedProductCount, total.excludedProductCount,
         total.massKgSourcesAgree, total.massKgEstimate, total.reason ?? (total.excludedProductCount ? "Partial estimate: excluded products are not zero." : "Estimate; separate from achieved environmental outcomes."), metadata.sourceLabel];
     })));
-  tables.push(table("outcomes", "Recorded Outcomes", ["Product name", "Product code", "Pack size", "Product key", "Record ID", "Kind", "Date", "Recorded quantity", "Unit", "kg per unit", "Conversion source", "Description", "Recorded at", "Updated at"],
+  if (input.includeRecordedOutcomes) tables.push(table("outcomes", "Recorded Outcomes", ["Product name", "Product code", "Pack size", "Product key", "Record ID", "Kind", "Date", "Recorded quantity", "Unit", "kg per unit", "Conversion source", "Description", "Recorded at", "Updated at"],
     outcomes.map(item => [...identity(item.productKey), item.productKey, item.id, item.kind, item.date, item.quantity, item.unit,
       present(item.conversion?.kilogramsPerUnit, "Not supplied"), item.conversion?.source ?? "Not supplied", item.description ?? "", item.recordedAt, item.updatedAt ?? ""] )));
   tables.push(table("problems", "Problems to Fix", ["Product name", "Product code", "Pack size", "Product key", "Source row", "Issue", "Field", "Source column", "Observed value", "Reason", "Corrective action", "State"],

@@ -79,7 +79,7 @@ describe("persistent language choice across the frontend", () => {
     expect(screen.queryByText(/Unique approved/)).toBeNull();
     act(() => setLanguage("ms"));
     expect(screen.getByText("Sahkan semua dan teruskan →")).toBeTruthy();
-    expect(screen.getByText("Semak cara kami baca fail anda")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Padankan lajur anda" })).toBeTruthy();
   });
   it("translates purchase results without translating retailer product names", () => {
     const { snapshot, forecast } = makeEvidence();

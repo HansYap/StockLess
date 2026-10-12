@@ -19,7 +19,7 @@ const en = {
   readError: "Upload history could not be read in this browser.",
   deleteError: "Saved information could not be removed. Please try again.", retry: "Retry",
   clearTitle: "Clear everything?", removeTitle: "Remove this upload?",
-  clearCopy: "All uploads and their saved plans, settings, decisions and outcomes will be removed from this device. Your original files are not affected.",
+  clearCopy: "All uploads and their saved plans and settings will be removed from this device. Your original files are not affected.",
   removeCopy: "Remove {name} and its saved work from this device? Your original file and other uploads are not affected. If this is your current upload, the next most recent upload becomes current.",
   cancel: "Cancel", removing: "Removing…", remove: "Remove upload",
 };
@@ -36,7 +36,7 @@ const zh: Record<keyof typeof en, string> = {
   showing: "显示 {shown} 次，共 {total} 次上传", clearAll: "清除全部", tagline: "少一点库存，少很多浪费。",
   loading: "正在加载上传历史…", readError: "无法在此浏览器中读取上传历史。",
   deleteError: "无法删除已保存的信息。请重试。", retry: "重试", clearTitle: "清除所有信息？",
-  removeTitle: "删除此次上传？", clearCopy: "此设备上的所有上传及其计划、设置、决策和结果都将被删除。原始文件不受影响。",
+  removeTitle: "删除此次上传？", clearCopy: "此设备上的所有上传及其计划和设置都将被删除。原始文件不受影响。",
   removeCopy: "从此设备删除 {name} 及其保存的工作？原始文件和其他上传不受影响。如果这是当前上传，下一次最新上传将成为当前文件。",
   cancel: "取消", removing: "正在删除…", remove: "删除上传",
 };
@@ -53,7 +53,7 @@ const ms: Record<keyof typeof en, string> = {
   showing: "Memaparkan {shown} daripada {total} muat naik", clearAll: "Padam Semua", tagline: "Kurangkan stok. Kurangkan pembaziran.",
   loading: "Memuatkan sejarah muat naik…", readError: "Sejarah muat naik tidak dapat dibaca dalam pelayar ini.",
   deleteError: "Maklumat tersimpan tidak dapat dipadam. Sila cuba lagi.", retry: "Cuba lagi", clearTitle: "Padam semuanya?",
-  removeTitle: "Padam muat naik ini?", clearCopy: "Semua muat naik serta pelan, tetapan, keputusan dan hasil tersimpan akan dipadam daripada peranti ini. Fail asal anda tidak terjejas.",
+  removeTitle: "Padam muat naik ini?", clearCopy: "Semua muat naik serta pelan dan tetapan tersimpan akan dipadam daripada peranti ini. Fail asal anda tidak terjejas.",
   removeCopy: "Padam {name} dan kerja tersimpannya daripada peranti ini? Fail asal dan muat naik lain tidak terjejas. Jika ini muat naik semasa, muat naik terkini seterusnya menjadi fail semasa.",
   cancel: "Batal", removing: "Memadam…", remove: "Padam muat naik",
 };

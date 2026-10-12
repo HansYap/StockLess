@@ -38,7 +38,7 @@ async function reportFixture() {
   ];
   const outcomes = [createStockOutcome({ id: "recorded-zero", datasetId: "D", productKey: "ID|000102", kind: "discarded", date: DATE, quantity: 0, unit: "pieces", referenceDate: DATE, recordedAt: "2026-10-06T00:00:00Z" })];
   const carbonResults = [estimateCarbonImpact({ productKey: "ID|000102", kind: "recorded_waste", isFood: true, category: "bread", categoryConfirmed: true, measuredMassKg: 0 })];
-  const report = buildAnalysisReport({ snapshot, forecast, plans, impact, datasetId: "D", shopName: "Local shop", datasetName: "October", generatedAt: GENERATED, decisions, outcomes, carbonResults,
+  const report = buildAnalysisReport({ snapshot, forecast, plans, impact, datasetId: "D", shopName: "Local shop", datasetName: "October", generatedAt: GENERATED, decisions, outcomes, carbonResults, includeRecordedOutcomes: true,
     supplierScenariosByProduct: { "ID|000102": [{ id: "S", name: "Bakery", terms: { caseSize: 6, minimumOrder: 12, leadTimeDays: 1 } }] } });
   return { snapshot, forecast, plans, decisions, report };
 }
@@ -107,4 +107,19 @@ test("report rejects mixed stale snapshots and invalid metadata dates", async ()
   assert.throws(() => buildAnalysisReport({ snapshot, forecast: { ...forecast, snapshotId: "stale" }, datasetId: "D" }), /same current/);
   assert.throws(() => buildAnalysisReport({ snapshot, forecast, datasetId: "D", generatedAt: "invalid" }), /generation date/);
   assert.throws(() => buildAnalysisReport({ snapshot, forecast, datasetId: "D", period: { start: DATE, end: "2026-01-01" } }), /valid reporting period/);
+});
+
+
+test("current reports carry the worksheet, omit old outcomes and agree with optional supplier terms", async () => {
+  const { snapshot, forecast, plans } = await reportFixture();
+  const report = buildAnalysisReport({ snapshot: { ...snapshot, worksheetName: "Sales Oct" }, forecast, plans, datasetId: "D", shopName: "My store", generatedAt: GENERATED,
+    carbonResults: [estimateCarbonImpact({ productKey: "ID|000102", kind: "recorded_waste", isFood: true, category: "bread", categoryConfirmed: true, measuredMassKg: 0 })],
+    supplierScenariosByProduct: { "ID|000102": [{ id: "current-terms", name: "Entered supplier terms", terms: { caseSize: 6, minimumOrder: 60 } }] } });
+  assert.equal(report.metadata.worksheetName, "Sales Oct");
+  assert.equal(report.metadata.shopName, "My store");
+  assert.equal(report.tables.some(table => table.id === "outcomes"), false);
+  assert.equal(JSON.stringify(report.tables).includes("recorded_waste"), false);
+  assert.equal(rowValue(report, "scenarios", "Scenario quantity", 0), 60);
+  assert.equal(rowValue(report, "scenarios", "Arrival date", 0), "Unavailable");
+  assert.equal(rowValue(report, "scenarios", "Status", 0), "available");
 });

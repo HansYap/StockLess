@@ -7,7 +7,7 @@
  */
 
 const DB_NAME = "stockless";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 export type StoreName = "datasets";
 
@@ -25,6 +25,27 @@ function upgrade(db: IDBDatabase, oldVersion: number, transaction: IDBTransactio
     const datasets = transaction.objectStore("datasets");
     datasets.deleteIndex("shop_and_name");
     datasets.createIndex("shop_and_name", ["shopKey", "nameKey"]);
+  }
+  if (oldVersion < 5) {
+    // Older uploads inherited generated previews from other files. Remove those
+    // copies atomically while preserving each upload, its inputs and its own plan.
+    const datasets = transaction.objectStore("datasets");
+    const request = datasets.getAll() as IDBRequest<import("./saved-datasets.ts").SavedDataset[]>;
+    request.onsuccess = () => {
+      for (const saved of request.result) {
+        const hash = saved.envelope.session.dataset?.sourceSha256;
+        const decisions = saved.decisions.filter(item => item.purchaseDecision
+          ? item.purchaseDecision.datasetId === saved.id
+          : !item.recommendation || item.recommendation.sourceSha256 === hash);
+        const retained = new Set(decisions.map(item => item.id));
+        const outcomes = saved.outcomes?.filter(item => item.stockOutcome
+          ? item.stockOutcome.datasetId === saved.id
+          : !item.decisionId || retained.has(item.decisionId)) ?? [];
+        if (decisions.length !== saved.decisions.length || outcomes.length !== (saved.outcomes?.length ?? 0)) {
+          datasets.put({ ...saved, decisions, outcomes });
+        }
+      }
+    };
   }
 }
 

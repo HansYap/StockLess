@@ -138,7 +138,7 @@ test("purchase fields accept only whole numbers from 0 to 999999", () => {
     const result = applyPurchaseQuantityEdit(previous, raw);
     assert.equal(result.accepted, false);
     assert.equal(result.field, previous);
-    if (!result.accepted) assert.equal(result.message, "Whole numbers only");
+    if (!result.accepted) assert.equal(result.message, raw === "1000000" ? "Enter a quantity from 0 to 999,999" : "Whole numbers only");
   }
 
   assert.deepEqual(applyPurchaseQuantityEdit(previous, "0"), {

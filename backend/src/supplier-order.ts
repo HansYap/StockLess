@@ -28,8 +28,8 @@ export function compareSupplierOrders(estimate: RestockEstimate | undefined, sce
     let result: SupplierOrderSuggestion;
     if (!scenario.id.trim() || !scenario.name.trim() || counts.get(scenario.id) !== 1) {
       result = { state: "unavailable", reason: "Give each supplier a name and a unique identifier." };
-    } else if (scenario.terms.caseSize === undefined || scenario.terms.minimumOrder === undefined || scenario.terms.leadTimeDays === undefined) {
-      result = { state: "unavailable", reason: "Enter case size, minimum order and lead time for this supplier." };
+    } else if (Object.values(scenario.terms).every(value => value === undefined)) {
+      result = { state: "unavailable", reason: "Enter supplier terms for this supplier." };
     } else result = suggestSupplierOrder(estimate, scenario.terms, analysisDate);
     return { id: scenario.id, name: scenario.name.trim(), terms: scenario.terms, result,
       extraUnits: result.state === "available" && estimate?.state === "available" ? result.quantity - estimate.quantity.value : undefined };

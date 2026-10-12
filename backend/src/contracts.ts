@@ -645,7 +645,7 @@ export type PurchaseQuantityValidation =
   | {
       readonly accepted: false;
       readonly field: PurchaseQuantityField;
-      readonly message: "Whole numbers only";
+      readonly message: "Whole numbers only" | "Enter a quantity from 0 to 999,999";
     };
 
 export interface ProductPurchaseInputs {

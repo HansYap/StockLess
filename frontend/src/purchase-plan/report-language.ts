@@ -6,7 +6,7 @@ export const reportLocale = (language: Language): string => language === "zh" ? 
 
 /** Source-provided labels and names are evidence, not interface copy. */
 export function protectedReportValues(report: AnalysisReport): ReadonlySet<string> {
-  const values = new Set([report.metadata.shopName, report.metadata.datasetName, report.metadata.sourceName, report.metadata.datasetId, report.metadata.sourceSha256].filter(value => value !== "Not supplied"));
+  const values = new Set([report.metadata.shopName, report.metadata.datasetName, report.metadata.sourceName, ...(report.metadata.worksheetName ? [report.metadata.worksheetName] : []), report.metadata.datasetId, report.metadata.sourceSha256].filter(value => value !== "Not supplied"));
   const sourceColumns = new Set(["Product name", "Product code", "Pack size", "Product key", "Supplier", "Supplier ID", "Source column", "Observed value", "Source rows", "Source names", "Source values", "Source boundary", "Factor label", "Description"]);
   for (const table of report.tables) table.columns.forEach((label, index) => {
     if (sourceColumns.has(label)) for (const row of table.rows) {
@@ -20,6 +20,10 @@ export function protectedReportValues(report: AnalysisReport): ReadonlySet<strin
 // The report contract stays in English so column lookups and calculations remain stable.
 // These are presentation strings used by PDF, print and workbook exports.
 const copy: Record<string, readonly [string, string]> = {
+  "Forecasts, money and CO2e are estimates. Missing values and unentered quantities are not zero.": ["预测、金额和 CO₂e 均为估算。缺失值及未输入数量不等于零。", "Ramalan, wang dan CO₂e ialah anggaran. Nilai yang tiada dan kuantiti belum diisi bukan sifar."],
+  "Forecasts, purchase commitments, potential excess and CO2e are estimates, not measured waste or achieved savings.": ["预测、采购支出、潜在过量和 CO₂e 均为估算，并非实测浪费或已实现的节省。", "Ramalan, komitmen belian, lebihan berpotensi dan CO₂e ialah anggaran, bukan pembaziran diukur atau penjimatan dicapai."],
+  "Current product and scenario results describe the analysis date and the next four-week demand horizon. The sales period describes the recorded sales history.": ["当前商品和情景结果基于分析日期及未来四周需求。销售期间描述已记录的销售历史。", "Hasil produk dan senario semasa merujuk tarikh analisis dan permintaan empat minggu berikutnya. Tempoh jualan menerangkan sejarah jualan direkod."],
+  "Sample data: these results are illustrative and are not this retailer's actual results.": ["示例数据：这些结果仅供演示，并非此零售商的实际结果。", "Data sampel: hasil ini untuk ilustrasi dan bukan hasil sebenar peruncit ini."],
   "RETAILER FILE ANALYSIS": ["零售商数据分析", "ANALISIS FAIL PERUNCIT"],
   "RETAILER ANALYSIS": ["零售商分析", "ANALISIS PERUNCIT"],
   "ANALYSIS REPORT": ["分析报告", "LAPORAN ANALISIS"],

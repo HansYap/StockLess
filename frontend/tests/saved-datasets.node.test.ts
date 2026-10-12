@@ -21,7 +21,7 @@ function envelope(sourceName: string, values: readonly string[]): SessionEnvelop
   };
 }
 
-test("replacement uses the new file once and preserves dated decision evidence and outcomes", () => {
+test("replacement uses the new file once while old decision evidence stays with the original upload", () => {
   const original = envelope("old.csv", ["A", "B"]);
   const decision = {
     id: "decision-1", recordedAt: "2026-01-03T00:00:00Z",
@@ -44,10 +44,11 @@ test("replacement uses the new file once and preserves dated decision evidence a
   assert.equal(updated.envelope.session.dataset?.sourceName, "new.csv");
   assert.equal(updated.readiness, null);
   assert.equal(updated.forecast, null);
-  assert.deepEqual(updated.decisions, [decision]);
-  assert.deepEqual(updated.outcomes, saved.outcomes);
+  assert.deepEqual(updated.decisions, []);
+  assert.deepEqual(updated.outcomes, []);
+  assert.deepEqual(saved.decisions, [decision]);
   assert.deepEqual(updated.supplierTerms, { Vendor: "7 days" });
-  assert.equal(updated.decisions[0].recommendation.analysisDate, "2026-01-02");
+  assert.equal(saved.decisions[0].recommendation.analysisDate, "2026-01-02");
   assert.equal(saved.envelope.session.dataset?.sourceName, "old.csv");
   assert.equal(summarizeSavedDataset(updated).rowCount, 3);
 });

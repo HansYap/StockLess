@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { confirmIdentityMode, createEmptySession, setMapping, updateSessionMapping, type SessionEnvelope } from "../src/engine.ts";
 import { makeEvidence } from "./fixtures.ts";
 import { withStore } from "../src/storage/browser-db.ts";
-import { clearEverything, createSavedDataset, getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork, saveGeneratedPurchasePlan,
+import { clearEverything, removeSavedDataset, createSavedDataset, getSavedDataset, listSavedDatasets, replaceSavedDataset, saveDatasetWork, saveGeneratedPurchasePlan,
   savePurchaseDecision, updateSavedPurchaseDecision, saveStockOutcome, updateSavedStockOutcome, savedPurchaseDecisions, savedStockOutcomes, removeSavedDecision, type SavedWork } from "../src/storage/saved-datasets.ts";
 
 // Exercise the real storage callers against an asynchronous browser database adapter.
@@ -59,7 +59,8 @@ function browserDatabase(version: number, stores: Map<string, Map<IDBValidKey, u
         request.onupgradeneeded?.({ oldVersion: version });
         version = nextVersion;
       }
-      request.onsuccess?.();
+      // Opening succeeds only after the upgrade's queued requests have completed.
+      queueMicrotask(() => request.onsuccess?.());
     });
     return request;
   });
@@ -91,7 +92,7 @@ describe("dataset-only browser storage", () => {
     ]);
     const database = browserDatabase(2, stores);
     expect(await getSavedDataset(saved.id)).toEqual(saved);
-    expect(database.open).toHaveBeenCalledWith("stockless", 4);
+    expect(database.open).toHaveBeenCalledWith("stockless", 5);
     expect(database.remove).toHaveBeenCalledExactlyOnceWith("mapping_templates");
     expect(database.create).not.toHaveBeenCalled();
     expect(stores.get("datasets")).toBe(datasets);
@@ -182,7 +183,7 @@ it("automatically names a completed upload and stores its plan and original vers
   expect(archived?.decisions.map(item => item.id)).toEqual(["first"]);
   await saveGeneratedPurchasePlan(completedWork(replacement), planRecord("second"), first.id);
   expect(await listSavedDatasets()).toHaveLength(2);
-  expect((await getSavedDataset(first.id))?.decisions.map(item => item.id)).toEqual(["first", "second"]);
+  expect((await getSavedDataset(first.id))?.decisions.map(item => item.id)).toEqual(["second"]);
 });
 
 it("does not create or replace saved work before the purchase plan is ready", async () => {
@@ -245,4 +246,49 @@ it("freezes known pack and seller mass at recording while litres require a volum
   expect(outcomes.find(o=>o.id==='pack')?.conversion?.kilogramsPerUnit).toBe(.5);
   expect(outcomes.find(o=>o.id==='manual')?.conversion?.kilogramsPerUnit).toBe(.2);
   expect(outcomes.find(o=>o.id==='litres')?.conversion).toBeUndefined();
+});
+
+
+it("keeps each generated plan only in its own upload through pruning and deletion", async () => {
+  const stores = new Map<string, Map<IDBValidKey, unknown>>();
+  browserDatabase(0, stores);
+  let current: Awaited<ReturnType<typeof saveGeneratedPurchasePlan>> | undefined;
+  for (let i = 0; i < 14; i++) {
+    const imported = importedDataset();
+    const envelope = { ...imported, session: { ...imported.session, dataset: { ...imported.session.dataset!, sourceName: `shop-${i}.csv`, sourceSha256: `hash-${i}` } } };
+    const plan = { ...planRecord(`plan-${i}`), recommendation: { ...planRecord(`plan-${i}`).recommendation, sourceSha256: `hash-${i}`, products: [{ key: `product-${i}`, name: `Product ${i}`, inputs: { plannedOrder: { state: "empty" as const }, incomingStock: { state: "empty" as const } } }] } };
+    current = await saveGeneratedPurchasePlan(completedWork(envelope), plan, current?.id, true);
+  }
+  const history = await listSavedDatasets();
+  expect(history).toHaveLength(12);
+  const deleted = history[3];
+  const deletedHash = (await getSavedDataset(deleted.id))!.envelope.session.dataset!.sourceSha256;
+  await removeSavedDataset(deleted.id);
+  expect(await getSavedDataset(deleted.id)).toBeUndefined();
+  const remaining = await withStore<import("../src/storage/saved-datasets.ts").SavedDataset[]>("datasets", "readonly", store => store.getAll());
+  expect(remaining).toHaveLength(11);
+  for (const item of remaining) {
+    expect(item.decisions).toHaveLength(1);
+    expect(item.decisions[0].recommendation.sourceSha256).toBe(item.envelope.session.dataset.sourceSha256);
+  }
+  const raw = JSON.stringify(remaining);
+  expect(raw).not.toContain(deletedHash);
+  expect(raw).not.toContain('"hash-0"');
+  expect(raw).not.toContain('"hash-1"');
+});
+
+it("migrates old cross-file previews without losing uploads, inputs or their own evidence", async () => {
+  const stores = new Map<string, Map<IDBValidKey, unknown>>();
+  browserDatabase(0, stores);
+  const saved = await saveGeneratedPurchasePlan(completedWork(), { ...planRecord("own"), recommendation: { ...planRecord("own").recommendation, sourceSha256: "hash" } });
+  const ownDrafts = { A: { plannedOrder: { state: "value" as const, value: 44, source: "input by you" as const }, incomingStock: { state: "empty" as const } } };
+  const contaminated = { ...saved, purchaseDrafts: ownDrafts, decisions: [...saved.decisions, planRecord("deleted-file")], outcomes: [{ id: "copied-note", recordedAt: saved.createdAt, decisionId: "deleted-file", details: { description: "foreign plan" } }] };
+  stores.get("datasets")!.set(saved.id, contaminated);
+  browserDatabase(4, stores);
+  const restored = (await getSavedDataset(saved.id))!;
+  expect(restored.decisions.map(item => item.id)).toEqual(["own"]);
+  expect(restored.outcomes).toEqual([]);
+  expect(restored.purchaseDrafts).toEqual(ownDrafts);
+  expect(restored.envelope).toEqual(saved.envelope);
+  expect(await listSavedDatasets()).toHaveLength(1);
 });

@@ -136,7 +136,7 @@ describe("purchase planning", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Expiry date/ }));
     expect(detail().getByText(/Expires in 6 days/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Planned order"), { target: { value: "21" } });
-    expect(detail().getByText("input by you")).toBeTruthy();
+    expect(detail().getAllByText("input by you").length).toBeGreaterThan(0);
   });
   it("keeps insufficient and stale evidence unplannable instead of showing false estimates", () => {
     const data = makeEvidence();

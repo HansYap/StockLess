@@ -125,3 +125,19 @@ it("optional corrections lead to one product-details home in Purchase plan", asy
   fireEvent.click(screen.getByRole("button",{name:"Add cost"}));expect(review).toHaveBeenCalledWith(KEY);
   expect(screen.queryByLabelText("Your purchase cost / sales unit (MYR)")).toBeNull();
 });
+
+
+it("shows readable category, per-unit weight, sources and rounded CO2e working with the worksheet", async () => {
+  const input = await evidence({ pack: "5kg" });
+  const snapshot = { ...input.snapshot, worksheetName: "Sales Oct" };
+  render(<Harness {...input} snapshot={snapshot} />);
+  const detail = document.querySelector('.ix-explain')!;
+  expect(detail.textContent).toContain("Food category: Rice");
+  expect(detail.textContent).toContain("Weight per unit: 5 kg");
+  expect(detail.textContent).toContain("worked out by StockLess");
+  expect(detail.textContent).not.toContain('"evidence"');
+  expect(detail.textContent).not.toMatch(/\d+\.\d{8,}/);
+  expect(screen.getByText("Sales Oct")).toBeTruthy();
+  expect(screen.queryByText(/record outcomes to compare/)).toBeNull();
+  expect(screen.queryByText(/Step 4/)).toBeNull();
+});

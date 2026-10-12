@@ -205,9 +205,10 @@ export async function saveGeneratedPurchasePlan(
         datasetName: upload ? datasetName : current!.datasetName,
         nameKey: upload ? key(datasetName) : current!.nameKey,
         createdAt: upload ? now : current!.createdAt, updatedAt: now,
-        decisions: current?.decisions.some(item => item.id === plan.id)
+        // A replacement's old file and plan belong only to its separate history entry.
+        decisions: upload ? [plan] : current?.decisions.some(item => item.id === plan.id)
           ? current.decisions : [...(current?.decisions ?? []), plan],
-        outcomes: current?.outcomes ?? [],
+        outcomes: upload ? [] : current?.outcomes ?? [],
       };
       if (upload) writeUpload(store, saved, current);
       else store.put(saved);
@@ -260,6 +261,7 @@ export function replaceDatasetContents(current: SavedDataset, replacement: Sessi
   const datasetName = name(datasetInput ?? replacement.session.dataset!.sourceName.replace(/\.[^.]+$/, ""));
   return {
     ...current, envelope: replacement, readiness: null, forecast: null,
+    decisions: [], outcomes: [],
     datasetName, nameKey: key(datasetName),
     analysisDate, dateConfirmations: [], createdAt: now, updatedAt: now,
   };

@@ -113,6 +113,8 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
   const [workspaceInfo, setWorkspaceInfo] = useState<{ datasetName: string; shopName: string; rowCount: number } | null>(null);
   const [openingDataset, setOpeningDataset] = useState(Boolean(initialDatasetId || updateDatasetId));
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [retryAttempt, setRetryAttempt] = useState(0);
   const retrySaves = useRef(new Map<string, () => Promise<unknown>>());
@@ -161,10 +163,10 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
       setUploadTarget(items[0]);
       setUpdateTargetId(items[0].id);
       window.history.replaceState(null, "", `#update/${encodeURIComponent(items[0].id)}`);
-    }).catch(() => { if (!cancelled) setSaveError("Saved information is unavailable here. You can still upload a file or use the sample."); })
+    }).catch(() => { if (!cancelled) setLoadFailed(true); })
       .finally(() => { if (!cancelled) setHistoryLoaded(true); });
     return () => { cancelled = true; };
-  }, [initialDatasetId, updateDatasetId, refreshSavedDatasets, guidedImport, guideReturnId]);
+  }, [initialDatasetId, updateDatasetId, refreshSavedDatasets, guidedImport, guideReturnId, loadAttempt]);
 
   const persistWork = useCallback(async (id: string, work: Partial<SavedWork>) => {
     pendingWork.current.set(id, { ...pendingWork.current.get(id), ...work });
@@ -483,9 +485,9 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
 
   useEffect(() => {
     if (initialDatasetId) void openSavedDataset(initialDatasetId)
-      .catch(() => setSaveError("The dataset could not be opened."))
+      .catch(() => setLoadFailed(true))
       .finally(() => setOpeningDataset(false));
-  }, [initialDatasetId, openSavedDataset]);
+  }, [initialDatasetId, openSavedDataset, loadAttempt]);
 
   useEffect(() => {
     if (!updateTargetId) return;
@@ -496,10 +498,10 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
       setUploadTarget(summarizeSavedDataset(saved));
       setWorkspaceActive(true);
       setSessionNotice("Upload the replacement file for the selected dataset.");
-    }).catch(() => { if (!cancelled) setSaveError("The dataset could not be opened."); })
+    }).catch(() => { if (!cancelled) setLoadFailed(true); })
       .finally(() => { if (!cancelled) setOpeningDataset(false); });
     return () => { cancelled = true; };
-  }, [updateTargetId]);
+  }, [updateTargetId, loadAttempt]);
 
   useEffect(() => () => {
     readinessAbort.current?.abort();
@@ -729,6 +731,7 @@ export default function App({ initialDatasetId, updateDatasetId, guidedImport = 
         <button type="button" className="onboarding-button" onClick={() => { onboarding.stop(); window.location.hash = `#dataset/${encodeURIComponent(returnPlanId)}`; }}>{t("Back to my plan")}</button>
       </section>}
       {saveError && <p role="alert">{t(saveError)}</p>}
+      {loadFailed && <p role="alert">{t("Saved work failed to load in this browser. You can try again, upload a file or use the sample.")} <button type="button" className="btn btn--ghost btn--small" onClick={() => { setLoadFailed(false); setLoadAttempt(value => value + 1); }}>{t("Try again")}</button></p>}
       {workspaceActive && dataset?.sourceMode === "user" && <span className="workspace-autosave sr-only" role="status" aria-live="polite">{t(saveState === "saving" ? "Saving automatically…" : saveState === "saved" ? "Saved automatically on this device" : saveState === "error" ? "Waiting to save automatically" : "Your upload will be saved automatically when your purchase plan is ready.")}</span>}
       {t(step === 1 && (
         <UploadScreen

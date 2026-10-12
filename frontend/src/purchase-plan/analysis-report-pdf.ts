@@ -274,7 +274,7 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   page.drawLine({ start: { x: MARGIN + 15, y: y - 71 }, end: { x: MARGIN + CONTENT_W - 15, y: y - 71 }, thickness: .5, color: color.lineSoft });
   draw(String(problems?.rows.length ?? 0) + ' source issues also need review. Forecasts are ranges; unentered values are not zero.', MARGIN + 15, y - 82, 7.3, color.muted);
   y -= 100;
-  note('Read the numbers with context', 'Forecasts, money and CO2e are estimates. Recorded outcomes are separate. Missing values and unentered quantities are not zero.', false, 48);
+  note('Read the numbers with context', 'Forecasts, money and CO2e are estimates. Missing values and unentered quantities are not zero.', false, 48);
 
   addPage();
   section('01', 'Your purchase plan', 'Current positive planned quantities, grouped for a quick order check.');
@@ -405,10 +405,11 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
     const amount = value(carbon, row, 'CO2e (kg)');
     return typeof amount === 'number' ? format(amount, 2) + ' kg · Estimated' : text(value(carbon, row, 'Status'));
   };
-  table(['PRODUCT', 'RECORDED WASTE', 'POTENTIAL EXCESS', 'SCENARIO DIFFERENCE'], resultRows.map(row => {
+  const includeOutcomes = !!getTable('outcomes');
+  table(includeOutcomes ? ['PRODUCT', 'RECORDED WASTE', 'POTENTIAL EXCESS', 'SCENARIO DIFFERENCE'] : ['PRODUCT', 'POTENTIAL EXCESS', 'SCENARIO DIFFERENCE'], resultRows.map(row => {
     const kinds = byKey.get(String(value(results, row, 'Product key')));
-    return [identity(results, row), carbonState(kinds?.get('recorded_waste')), carbonState(kinds?.get('potential_excess')), carbonState(kinds?.get('scenario_difference'))];
-  }), [240, 170, 180, CONTENT_W - 590]);
+    return [identity(results, row), ...(includeOutcomes ? [carbonState(kinds?.get('recorded_waste'))] : []), carbonState(kinds?.get('potential_excess')), carbonState(kinds?.get('scenario_difference'))];
+  }), includeOutcomes ? [240, 170, 180, CONTENT_W - 590] : [300, 230, CONTENT_W - 530]);
   const included = (carbon?.rows ?? []).filter(row => value(carbon, row, 'Measure') === 'potential_excess' && value(carbon, row, 'Status') === 'estimated');
   if (included.length) {
     addPage();
@@ -420,14 +421,16 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   }
 
   addPage();
-  section('06', 'Recorded outcomes and data issues', 'Actual records are kept distinct from forecast and planning estimates.');
   const outcomes = getTable('outcomes');
+  if (outcomes) {
+  section('06', 'Recorded outcomes and data issues', 'Actual records are kept distinct from forecast and planning estimates.');
   table(['PRODUCT', 'KIND', 'DATE', 'QUANTITY', 'CONVERSION SOURCE'], (outcomes?.rows ?? []).map(row => [
     identity(outcomes, row), text(value(outcomes, row, 'Kind')), text(value(outcomes, row, 'Date')),
     format(value(outcomes, row, 'Recorded quantity')) + ' ' + text(value(outcomes, row, 'Unit')),
     text(value(outcomes, row, 'Conversion source')),
   ]), [220, 80, 90, 100, CONTENT_W - 490]);
-  section('06B', 'Problems to fix', 'Review source rows and missing costs before relying on affected estimates.');
+  }
+  section(outcomes ? '06B' : '06', 'Problems to fix', 'Review source rows and missing costs before relying on affected estimates.');
   table(['PRODUCT', 'SOURCE ROW', 'ISSUE', 'REASON', 'CORRECTIVE ACTION'], (problems?.rows ?? []).map(row => [
     identity(problems, row), format(value(problems, row, 'Source row')), text(value(problems, row, 'Issue')),
     text(value(problems, row, 'Reason')), text(value(problems, row, 'Corrective action')),
@@ -446,6 +449,7 @@ export async function buildAnalysisPdfBytes(report: AnalysisReport, fontBytes: U
   note('Where the full evidence lives', 'This visual report highlights current decisions. The unchanged analysis workbook contains complete sales rows, weekly history and per-product evidence.', false, 46);
   table(['PROVENANCE', 'VALUE'], [
     ['SOURCE', report.metadata.sourceLabel], ['FILE', report.metadata.sourceName],
+    ...(report.metadata.worksheetName ? [['Worksheet', report.metadata.worksheetName]] : []),
     ['DATASET ID', report.metadata.datasetId], ['GENERATED', report.metadata.generatedAt],
     ['SOURCE SHA-256', report.metadata.sourceSha256],
   ], [150, CONTENT_W - 150]);
