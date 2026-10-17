@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { Logo } from "../components/Logo.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { ImpactIcon } from "../components/ImpactIcon.tsx";
 import { BrandIcon } from "../components/BrandIcon.tsx";
 import { HeroBasket } from "../components/HeroBasket.tsx";
 import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
@@ -222,13 +223,13 @@ function Hero() {
       <HeroBasket className="hp-hero__basket" />
       <div className="wrap hp-hero__in">
         <div className="hp-hero__text">
-          <p className="hp-eyebrow">
-            <span aria-hidden="true">
-              <GrowthIcon stage="sprout" size={16} className="hp-inline-icon" />
+          <p className="hp-eyebrow hp-hello">
+            <span className="hp-hello__stocky" aria-hidden="true">
+              <Stocky pose="hello" size={64} />
             </span>
-            {" "}
-            <span>
-              {copy("hp.eyebrow")}
+            <span className="hp-hello__bubble">
+              <b>{copy("hp.hello.h")}</b>
+              <small>{copy("hp.hello.t")}</small>
             </span>
           </p>
           <h1 id="home-title">
@@ -482,7 +483,7 @@ function WasteContext() {
   );
 }
 
-const GUIDE_POSES: readonly StockyPose[] = ["point", "check", "magnify", "great"];
+const GUIDE_POSES: readonly StockyPose[] = ["point", "check", "magnify", "great", "coins"];
 
 function Workflow() {
   const { copy } = useHomeView();
@@ -493,7 +494,7 @@ function Workflow() {
   const returnToTop = (event: MouseEvent<HTMLAnchorElement>) => followSmoothAnchor(event, "top", reducedMotion);
   useEffect(() => {
     if (reducedMotion || heldStep !== null) return;
-    const timer = window.setInterval(() => setStep(value => (value + 1) % 4), 2400);
+    const timer = window.setInterval(() => setStep(value => (value + 1) % 5), 2400);
     return () => window.clearInterval(timer);
   }, [reducedMotion, heldStep]);
   return (
@@ -522,7 +523,7 @@ function Workflow() {
           </div>
         </div>
         <div className="hp-steps__line" aria-hidden="true">
-          <span id="hs-line" style={{ width: `${(activeStep + 1) * 25}%` }} />
+          <span id="hs-line" style={{ width: `${(activeStep + 1) * 20}%` }} />
         </div>
         <div className="hp-steps">
           <a className={activeStep === 0 ? "hp-step is-on" : "hp-step"} href="#top" onClick={returnToTop} onMouseEnter={() => setHeldStep(0)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(0)} onBlur={() => setHeldStep(null)}>
@@ -579,6 +580,20 @@ function Workflow() {
             </b>
             <p>
               {copy("hp.s4t")}
+            </p>
+          </a>
+          <a className={activeStep === 4 ? "hp-step hp-step--impact is-on" : "hp-step hp-step--impact"} href="#top" onClick={returnToTop} onMouseEnter={() => setHeldStep(4)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(4)} onBlur={() => setHeldStep(null)}>
+            <span className="hp-step__n">
+              {"5"}
+            </span>
+            <span className="hp-step__plant" aria-hidden="true">
+              <ImpactIcon name="globe" size={28} />
+            </span>
+            <b>
+              {copy("hp.s5")}
+            </b>
+            <p>
+              {copy("hp.s5t")}
             </p>
           </a>
         </div>
