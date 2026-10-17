@@ -108,3 +108,7 @@
 .upload-screen .upload-zone .upload-sample-note { position: relative; max-width: 52ch; margin: 4px auto 0; padding: 9px 12px 9px 42px; border: 1px solid #d3e8df; border-radius: 12px; background: #eff6f2; color: #2f4850; text-align: left; font-size: 13px; line-height: 1.45; }
 .upload-screen .upload-zone .upload-sample-note::before { content: "i"; position: absolute; left: 12px; top: 9px; width: 20px; height: 20px; border-radius: 7px; background: #3b7b74; color: #fff; font: 800 12px/20px var(--display); text-align: center; }
 .upload-screen .upload-zone .upload-limits { display: inline-block; margin-top: 8px; padding: 4px 12px; border: 1px solid #cfe4de; border-radius: 999px; background: #fff; color: #2e615b; font-size: 12px; font-weight: 600; }
+.upload-screen .upload-progress-stocky { display: flex; justify-content: center; margin: 6px 0 -4px; line-height: 0; }
+.upload-screen .upload-progress-stocky svg { width: 64px; height: auto; animation: upload-stocky-bob 1.6s ease-in-out infinite; }
+@keyframes upload-stocky-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .upload-screen .upload-progress-stocky svg { animation: none; } }

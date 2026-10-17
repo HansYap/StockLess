@@ -1,4 +1,5 @@
 import { t, useLanguage } from "../i18n/index.ts";
+import { Stocky } from "../onboarding/Stocky.tsx";
 import { HeroStocky } from "../components/HeroStocky.tsx";
 import { useOnboarding } from "../onboarding/Onboarding.tsx";
 import { useEffect, useRef, useState } from "react";
@@ -343,6 +344,7 @@ export function UploadScreen({
                   <BrandIcon name="file" size={30} />
                   <span><b>{busyFile.name}</b><small>{formatFileSize(busyFile.size)} · {t("Read in this browser")}</small></span>
                 </div>}
+                <span className="upload-progress-stocky" aria-hidden="true"><Stocky pose={progress?.phase === "complete" ? "great" : "magnify"} size={64} /></span>
                 <h2>{t(progress?.phase === "complete" ? "Almost there" : "Reading your file")}</h2>
                 <ol className="upload-steps">
                   {PHASE_ORDER.map((phase, index) => {
