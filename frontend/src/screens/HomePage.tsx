@@ -1289,6 +1289,7 @@ function Benefits() {
               {copy("hp.pv.c3")}
             </span>
           </div>
+          <p className="hp-priv__stocky"><span className="hp-priv__stocky-img" aria-hidden="true"><Stocky pose="hello" size={40} /></span><span>{copy("hp.pv.stocky")}</span></p>
         </div>
       </div>
     </section>
@@ -1374,6 +1375,11 @@ function Sustainability() {
             {copy("hp.sdg.t1")}
           </span>
         </p>
+        <ol className="hp-flow">
+          <li className="hp-flow__step hp-flow__step--sell"><span className="hp-flow__ic" aria-hidden="true">🛒</span><span>{copy("hp.flow.1")}</span></li>
+          <li className="hp-flow__step hp-flow__step--shelf"><span className="hp-flow__ic" aria-hidden="true">📦</span><span>{copy("hp.flow.2")}</span></li>
+          <li className="hp-flow__step hp-flow__step--waste"><span className="hp-flow__ic" aria-hidden="true">🌏</span><span>{copy("hp.flow.3")}</span></li>
+        </ol>
         <p className="hp-p">
           <span>
             {copy("hp.sdg.t2")}
@@ -1410,7 +1416,7 @@ function FAQs() {
             {copy("hp.lm.t")}
           </span>
         </p>
-        <span className="hp-lm__stocky" aria-hidden="true"><Stocky pose="point" size={64} /></span>
+        <span className="hp-lm__stocky" aria-hidden="true"><span className="hp-lm__bubble">{copy("hp.lm.stocky")}</span><Stocky pose="point" size={64} /></span>
         <div className="hp-faqs">
           <details className="hp-faq" open={faqOpen[0]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 0 ? !open : open)); }}>

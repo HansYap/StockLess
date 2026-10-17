@@ -343,3 +343,6 @@
 .ix-compare__col--excess b{color:#b5661a}
 .ix-compare__col--excess .ix-compare__bar{background:#e3953f}
 .ix-queue--chips>li{border:1.5px dashed #e3b65a;border-radius:10px;background:#fffcf5}
+.ix-progress{display:inline-flex;align-items:center;gap:8px;margin-left:12px;padding:4px 10px;border-radius:999px;background:#fff3d6;color:#7a5600;font:800 12px var(--display);white-space:nowrap}
+.ix-progress__bar{display:inline-block;width:64px;height:7px;border-radius:999px;background:#f1e6c8;overflow:hidden}
+.ix-progress__bar>i{display:block;height:100%;background:#3b7b74;border-radius:999px}
