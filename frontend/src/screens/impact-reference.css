@@ -323,7 +323,7 @@
 .impact details.ix-more>summary,.impact details.ix-breakdown>summary{justify-content:flex-start}
 .impact details.ix-more>summary::after,.impact details.ix-breakdown>summary::after{margin-left:auto}
 .ix-tile{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:10px;background:#eef6f0;color:#2e615b}
-.ix-formula{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0;padding:14px 16px;border-radius:14px;background:#f7fbf8}
+.ix-formula{max-width:620px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0;padding:14px 16px;border-radius:14px;background:#f7fbf8}
 .ix-formula>b{font:800 18px var(--display);color:#9ab0aa}
 .ix-formula__item{display:flex;flex-direction:column;align-items:center;gap:6px;font:600 12px var(--body);color:#4f646b;text-align:center}
 .ix-formula__tile{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px}
