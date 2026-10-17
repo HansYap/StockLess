@@ -373,11 +373,11 @@
 .purchase-plan--new .pp-expiry-details-head > .pp-tile + div > p { align-self: flex-start; margin: 0; padding: 3px 10px; border-radius: 999px; background: #fff3d6; color: #7a5600; font-weight: 700; font-size: 12px; }
 
 /* Kedai refresh: one colour per status, on the summary cards and the list pills. */
-.purchase-plan--new .pp-kpi { border-top-width: 5px; }
-.purchase-plan--new .pp-kpi--order_needed { border-top-color: #8a4b1f; }
-.purchase-plan--new .pp-kpi--check_order { border-top-color: #a9790b; }
-.purchase-plan--new .pp-kpi--balanced { border-top-color: #2e615b; }
-.purchase-plan--new .pp-kpi--need_data { border-top-color: #8a9a97; }
+html body .purchase-plan--new .pp-kpi { border-top-width: 5px; border-top-style: solid; }
+html body .purchase-plan--new .pp-kpi.pp-kpi--order_needed { border-top-color: #8a4b1f; }
+html body .purchase-plan--new .pp-kpi.pp-kpi--check_order { border-top-color: #a9790b; }
+html body .purchase-plan--new .pp-kpi.pp-kpi--balanced { border-top-color: #2e615b; }
+html body .purchase-plan--new .pp-kpi.pp-kpi--need_data { border-top-color: #8a9a97; }
 .purchase-plan--new .pp-kpi--order_needed .pp-kpi-number { color: #8a4b1f; }
 .purchase-plan--new .pp-kpi--check_order .pp-kpi-number { color: #7a5600; }
 .purchase-plan--new .pp-kpi--balanced .pp-kpi-number { color: #2e615b; }
