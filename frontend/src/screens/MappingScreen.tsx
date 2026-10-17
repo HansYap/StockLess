@@ -1,4 +1,5 @@
 import { t, useLanguage, getLocale } from "../i18n/index.ts";
+import { HeroStocky } from "../components/HeroStocky.tsx";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -136,6 +137,7 @@ export function MappingScreen(props: MappingScreenProps) {
             <h1 id="mapping-title">{t("Match your columns")}</h1>
             <p className="mapping-lede">{t("We matched your columns by their names. Fix anything that's wrong, then confirm. Your file isn't changed.")}</p>
           </div>
+          {!compactTitle && <HeroStocky pose="magnify" say={{ en: "I matched these. Have a quick look.", zh: "我已配对好，请快速看一下。", ms: "Saya sudah padankan. Sila semak sekejap." }} />}
           <div className="mapping-file" aria-label={t("Active session")}>
             <span className="mapping-file__icon" aria-hidden="true">{fileType}</span>
             <div className="mapping-file__details">

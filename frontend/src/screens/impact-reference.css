@@ -318,3 +318,28 @@
 .impact details.ix-more[open]>summary::after,.impact details.ix-breakdown[open]>summary::after{transform:rotate(180deg)}
 .impact details.ix-more[open]>summary,.impact details.ix-breakdown[open]>summary{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
 @media (prefers-reduced-motion:reduce){.impact details.ix-more>summary::after,.impact details.ix-breakdown>summary::after{transition:none}}
+
+/* Kedai refresh: icon tiles on every dropdown, and pictures before the technical text. */
+.impact details.ix-more>summary,.impact details.ix-breakdown>summary{justify-content:flex-start}
+.impact details.ix-more>summary::after,.impact details.ix-breakdown>summary::after{margin-left:auto}
+.ix-tile{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:10px;background:#eef6f0;color:#2e615b}
+.ix-formula{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0;padding:14px 16px;border-radius:14px;background:#f7fbf8}
+.ix-formula>b{font:800 18px var(--display);color:#9ab0aa}
+.ix-formula__item{display:flex;flex-direction:column;align-items:center;gap:6px;font:600 12px var(--body);color:#4f646b;text-align:center}
+.ix-formula__tile{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px}
+.ix-formula__tile--units{background:#e3f1ea;color:#2a9c80}
+.ix-formula__tile--weight{background:#fff4e6;color:#c26a2e}
+.ix-formula__tile--factor{background:#eaf2fb;color:#5b8dc9}
+.ix-formula__tile--result{border-radius:50%;background:#3b7b74;color:#fff;font:800 10px/1.1 var(--display)}
+.ix-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+.ix-chips>li{padding:6px 12px;border:1.5px dashed #cfd8d4;border-radius:10px;background:#f8faf9;font:700 13px var(--display)}
+.ix-period{display:inline-flex;align-items:center;gap:6px;margin:14px 0 4px;padding:6px 12px;border-radius:999px;background:#eff6f2;color:#2e615b;font:800 12px var(--display)}
+.ix-note--quiet{font-size:12px}
+.ix-compare{display:flex;align-items:flex-end;justify-content:center;gap:40px;margin:14px 0;padding:16px;border-radius:14px;background:#f7fbf8}
+.ix-compare__col{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ix-compare__col b{font:800 15px var(--display);color:#2e615b}
+.ix-compare__col small{font:700 12px var(--body);color:#4f646b}
+.ix-compare__bar{display:block;width:70px;border-radius:8px 8px 0 0;background:#3b7b74}
+.ix-compare__col--excess b{color:#b5661a}
+.ix-compare__col--excess .ix-compare__bar{background:#e3953f}
+.ix-queue--chips>li{border:1.5px dashed #e3b65a;border-radius:10px;background:#fffcf5}

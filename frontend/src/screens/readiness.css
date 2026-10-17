@@ -371,3 +371,8 @@
   .readiness-screen .rd-observed { grid-column: 1 / -1; grid-row: auto; }
 }
 @media (max-width: 600px) { .readiness-screen .rd-file { display: grid; grid-template-columns: 40px minmax(0,1fr); width: 100%; } .readiness-screen .rd-file button { grid-column: 2; justify-self: start; text-align: left; } }
+
+/* Product cards: keep the status pill on one line so every card lines up. */
+.readiness-screen .rd-product header > div { flex: 1; }
+.readiness-screen .rd-product header > .rd-pill { flex: none; white-space: nowrap; }
+.readiness-screen .rd-product > .btn { margin-top: auto; align-self: flex-start; }

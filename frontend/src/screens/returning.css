@@ -118,3 +118,15 @@
   .returning-page .returning-row__actions a.btn { flex:1; justify-content:space-between; }
   .returning-list-footer { align-items:flex-start; }
 }
+
+/* Kedai refresh: Stocky in the title band, a friendlier upload tile and a wooden shelf under the list. */
+.returning-hero__inner > .hero-stocky { margin-left: auto; margin-right: -12px; }
+.returning-resume { border: 2px solid var(--teal); }
+.returning-upload-tile { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-bottom: 13px; border-radius: 12px; background: linear-gradient(160deg, #e3f4ec, #cfe9dd); box-shadow: inset 0 -3px 0 #badDcb; color: #2e615b; }
+.returning-upload-tile .returning-icon { width: 24px; height: 24px; }
+.returning-upload-tile__plus { position: absolute; right: -4px; top: -4px; width: 16px; height: 16px; border-radius: 50%; background: #3b7b74; color: #fff; font: 800 11px/16px var(--display); text-align: center; }
+.returning-files { position: relative; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.returning-files::after { content: ""; position: absolute; left: -1px; right: -1px; bottom: -15px; height: 12px; background: #d9b382; border-top: 3px solid #c99d63; border-radius: 0 0 6px 6px; }
+.returning-list-footer { margin-top: 26px; }
+.returning-empty__stocky { display: inline-flex; margin-bottom: 4px; }
+.returning-empty__stocky svg { width: 52px; height: auto; }

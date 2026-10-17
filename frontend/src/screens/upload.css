@@ -102,3 +102,9 @@
 .upload-screen .upload-zone p[role="status"] { font-size: 14px; }
 @keyframes upload-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .upload-screen .upload-step--current .upload-step__dot { animation: none; border-color: var(--teal-deep); } }
+.upload-screen .upload-hero__inner { position: relative; }
+
+/* Kedai refresh: the sample note becomes a small tip box; limits read as one quiet line. */
+.upload-screen .upload-zone .upload-sample-note { position: relative; max-width: 52ch; margin: 4px auto 0; padding: 9px 12px 9px 42px; border: 1px solid #d3e8df; border-radius: 12px; background: #eff6f2; color: #2f4850; text-align: left; font-size: 13px; line-height: 1.45; }
+.upload-screen .upload-zone .upload-sample-note::before { content: "i"; position: absolute; left: 12px; top: 9px; width: 20px; height: 20px; border-radius: 7px; background: #3b7b74; color: #fff; font: 800 12px/20px var(--display); text-align: center; }
+.upload-screen .upload-zone .upload-limits { display: inline-block; margin-top: 8px; padding: 4px 12px; border: 1px solid #cfe4de; border-radius: 999px; background: #fff; color: #2e615b; font-size: 12px; font-weight: 600; }

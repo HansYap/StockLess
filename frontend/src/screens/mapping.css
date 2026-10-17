@@ -132,3 +132,13 @@
   .mapping-screen .mapping-file__actions { flex-direction: row; gap: 16px; margin-left: 52px; }
   .mapping-screen .mapping-actions > .btn { width: 100%; }
 }
+
+/* One chevron, same size and spacing on every column dropdown, centred top to bottom. */
+.frame .mapping-screen .mapping-select select {
+  -webkit-appearance: none; appearance: none;
+  padding: 0 38px 0 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%2316313B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 16px 16px;
+  text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+}
+.frame .mapping-screen .mapping-row--unavailable .mapping-select select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%2366767D' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }

@@ -1330,7 +1330,9 @@ function StartBanner() {
           </p>
         </div>
         <img src={asset("retail-produce-2.jpg")} alt={copy("hp.img.produce")} width="900" height="600" loading="lazy" />
+        <span className="hp-band__stocky" aria-hidden="true"><Stocky pose="hello" size={56} /></span>
       </div>
+      <div className="hp-band__shelf" aria-hidden="true" />
     </section>
   );
 }
@@ -1408,6 +1410,7 @@ function FAQs() {
             {copy("hp.lm.t")}
           </span>
         </p>
+        <span className="hp-lm__stocky" aria-hidden="true"><Stocky pose="point" size={64} /></span>
         <div className="hp-faqs">
           <details className="hp-faq" open={faqOpen[0]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 0 ? !open : open)); }}>

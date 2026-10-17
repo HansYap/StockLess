@@ -1,4 +1,5 @@
 import "./readiness.css";
+import { HeroStocky } from "../components/HeroStocky.tsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReadinessOverview } from "./ReadinessOverview.tsx";
 import type { ReadinessIssueFilter } from "./ReadinessCharts.tsx";
@@ -47,7 +48,7 @@ function FindingGroup({ type, label, items, onViewEvidence }: { type: FindingTyp
   const [page, setPage] = useState(0);
   useEffect(() => setPage(0), [items]);
   const pages = Math.max(1, Math.ceil(items.length / 25)), currentPage = Math.min(page, pages - 1);
-  return <details id={"readiness-finding-" + type} className={"rd-finding-group rd-finding-group--" + type} open={type === "date"}>
+  return <details id={"readiness-finding-" + type} className={"rd-finding-group rd-finding-group--" + type}>
     <summary><span className="rd-group-icon"><ReadinessIcon name={GROUP_ICONS[type]} /></span><span><b>{t(label)}</b><small>{items.length} {t(type === "stock" ? "stock checks" : type === "tidy" ? "completed items" : "items")}</small></span><span className="rd-toggle"><ReadinessIcon name="chevron" /></span></summary>
     <ul>{items.slice(currentPage * 25, (currentPage + 1) * 25).map(item => <li className="rd-finding" key={item.id}>
       <div className="rd-finding__who"><b>{item.name === "Unknown product" ? t(item.name) : item.name}</b><small className="num">{item.code}</small>{item.sourceRows.length > 0 && <button type="button" className="rd-finding__rows" aria-label={t("View affected rows") + ": " + item.code + " · " + t(item.reason)} onClick={() => onViewEvidence(item.id)}>{t(new Set(item.sourceRows).size === 1 ? "1 affected row" : new Set(item.sourceRows).size.toLocaleString() + " affected rows")}<span aria-hidden="true"> →</span></button>}</div>
@@ -125,7 +126,7 @@ export function ReadinessScreen(props: ReadinessScreenProps) {
   };
   return <div className="readiness-screen">
     <section className={"rd-hero" + (compact ? " rd-hero--compact" : "")}><div className="rd-wrap">
-      <div className="rd-hero__inner" data-guide="readiness-status" data-guide-state={noUsableData ? "blocked" : "usable"}><div><p className="rd-eyebrow"><GrowthIcon stage="potted" size={16} className="growth-icon--inline" /> {t("Step 3 of 3")}</p><h1>{t(title)}</h1><p className="rd-lede" role={noUsableData ? "alert" : undefined}>{t(noUsableData ? "Analysis cannot continue because no product has usable sales records. Go back to matching to check your columns, or correct your file and upload it again." : "We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.")}</p></div>
+      <div className="rd-hero__inner" data-guide="readiness-status" data-guide-state={noUsableData ? "blocked" : "usable"}><div><p className="rd-eyebrow"><GrowthIcon stage="potted" size={16} className="growth-icon--inline" /> {t("Step 3 of 3")}</p><h1>{t(title)}</h1><p className="rd-lede" role={noUsableData ? "alert" : undefined}>{t(noUsableData ? "Analysis cannot continue because no product has usable sales records. Go back to matching to check your columns, or correct your file and upload it again." : "We checked every row. Problems are listed below with what to do. You can continue with usable rows and fix your file later.")}</p></div><HeroStocky pose="check" />
         <div className="rd-file"><span className="rd-file__icon">{/\.xlsx?$/i.test(props.dataset.sourceName) ? "XLS" : "CSV"}</span><div><b>{props.dataset.sourceName}</b>{props.dataset.worksheetName && <small>{t("Worksheet")}: {props.dataset.worksheetName}</small>}<small><span className={"rd-pill rd-pill--" + (props.dataset.sourceMode === "sample" ? "review" : "ready")}>{t(props.dataset.sourceMode === "sample" ? "Sample" : "Retailer file")}</span>{props.dataset.rows.length.toLocaleString()} {t("rows")} · {props.dataset.columns.length} {t("columns")}</small></div>{props.onClear && <button type="button" className="btn--link" onClick={props.onClear}>{t("Clear session")}</button>}</div>
       </div><div className="rd-actions"><button type="button" className="btn--link" onClick={props.onBack}>{t("← Back to matching")}</button><span className="rd-actions__spacer" /><span className="rd-actions__meta">{mustFix} {t("rows to fix in your file")}</span>{continueButton}</div>
     </div></section>

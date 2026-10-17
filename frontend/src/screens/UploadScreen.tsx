@@ -1,4 +1,5 @@
 import { t, useLanguage } from "../i18n/index.ts";
+import { HeroStocky } from "../components/HeroStocky.tsx";
 import { useOnboarding } from "../onboarding/Onboarding.tsx";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
@@ -324,6 +325,7 @@ export function UploadScreen({
         <div className="upload-wrap upload-hero__inner">
           <p className="upload-hero__eyebrow"><GrowthIcon stage="sprout" size={16} className="growth-icon--inline" /> {t("Step 1 of 3")}</p>
           <h1>{t(updating ? "Reupload your sales file" : "Upload your sales file")}</h1>
+          {!compactTitle && <HeroStocky variant="corner" pose="box" say={{ en: "Hi, I'm Stocky! Drop your file and I'll match the columns for you.", zh: "你好，我是 Stocky！放入文件，我来帮你配对栏位。", ms: "Hai, saya Stocky! Letak fail anda dan saya padankan lajurnya." }} />}
           <p className="upload-hero__lede">{t(updating ? "Upload one CSV or Excel sales file for your store. Your previous file stays in Upload History, up to 12 uploads." : "Use the CSV or Excel export from your POS, marketplace or spreadsheet. Column names don't need to match ours.")}</p>
         </div>
       </header>
