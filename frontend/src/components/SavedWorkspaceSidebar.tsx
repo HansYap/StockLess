@@ -2,6 +2,9 @@ import { useRef } from "react";
 import { getLocale, t, useLanguage } from "../i18n/index.ts";
 import { displayShopName } from "../engine.ts";
 import type { SavedDatasetSummary } from "../storage/saved-datasets.ts";
+import { GrowthIcon } from "./GrowthIcon.tsx";
+import { ImpactIcon } from "./ImpactIcon.tsx";
+import { Stocky } from "../onboarding/Stocky.tsx";
 import "./saved-workspace-sidebar.css";
 
 export interface SavedWorkspaceSidebarProps {
@@ -38,25 +41,24 @@ export function SavedWorkspaceSidebar({ dataset, saved = true, currentSection = 
     { id: "impact", label: "Impact dashboard", icon: "chart", action: onImpact },
   ] as const;
   const content = <>
-    <div><p className="saved-sidebar__label">{t("Your workspace")}</p>
+    <div className="saved-sidebar__card"><p className="saved-sidebar__label"><span className="saved-sidebar__stocky" aria-hidden="true"><Stocky pose="hello" size={30} /></span>{t("Your workspace")}</p>
       <nav className="saved-sidebar__nav" data-guide="sidebar-navigation" aria-label={t("Dataset sections")}>
         {sections.map(section => <button key={section.id} type="button" data-guide={section.id === "reupload" ? "sidebar-reupload" : undefined}
           className={`saved-sidebar__item${section.id === currentSection ? " saved-sidebar__item--active" : ""}`}
           aria-current={section.id === currentSection ? "page" : undefined} onClick={() => navigate(section.action)}>
-          <Icon name={section.icon} /><span>{t(section.label)}</span>
+          <span className="saved-sidebar__tile" aria-hidden="true">{section.id === "impact" ? <ImpactIcon name="globe" size={18} /> : <GrowthIcon stage={section.id === "reupload" ? "sprout" : "potted"} size={18} />}</span><span>{t(section.label)}</span>
         </button>)}
       </nav>
-    </div>
-    <div className="saved-sidebar__bottom">
       <section className="saved-sidebar__dataset" aria-label={t("Viewing upload")}>
         <p className="saved-sidebar__eyebrow">{t("Viewing upload")}</p>
         <p className="saved-sidebar__name">{dataset.datasetName}</p>
         {dataset.shopName && <p className="saved-sidebar__meta">{displayShopName(dataset.shopName)}</p>}
         <p className="saved-sidebar__meta">{dataset.rowCount.toLocaleString(getLocale())} {t("rows")} · {t(saved ? "Available on this device" : "This session only")}</p>
-        <a className="saved-sidebar__switch" data-guide="sidebar-history" href="#history">{t("Upload history")}<Icon name="arrow" /></a>
+        <a className="saved-sidebar__switch" data-guide="sidebar-history" href="#history"><span className="saved-sidebar__switch-label"><span className="saved-sidebar__tile saved-sidebar__tile--small" aria-hidden="true"><GrowthIcon stage="tree" size={14} /></span>{t("Upload history")}</span><Icon name="arrow" /></a>
       </section>
-      <p className="saved-sidebar__privacy"><Icon name="lock" /><span>{t("Your data stays with you.")}<br />{t("No account needed.")}</span></p>
+      <p className="saved-sidebar__privacy"><span className="saved-sidebar__lock" aria-hidden="true"><Icon name="lock" /></span><span>{t("Your data stays with you.")}<br />{t("No account needed.")}</span></p>
     </div>
+
   </>;
   return <>
     <aside className="saved-sidebar" aria-label={t("Workspace navigation")}>{content}</aside>
