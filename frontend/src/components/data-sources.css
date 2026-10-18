@@ -1,0 +1,69 @@
+/* Data sources & licences: kedai shelf, one card per kind of data, licences as price tags. */
+.ds { padding: 56px 0 40px; background: linear-gradient(180deg, #f2f8ef 0%, #f7faf8 280px); }
+.ds-head { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; align-items: end; }
+.ds-hello { display: flex; align-items: flex-end; gap: 10px; margin: 0 0 8px; line-height: 0; }
+.ds-hello svg { width: 60px; height: auto; flex: none; }
+.ds-hello span { margin-bottom: 24px; padding: 8px 12px; border: 1.5px solid #cfe4de; border-radius: 14px 14px 14px 4px; background: #fff; font: 700 13px/1.35 var(--display); color: var(--ink); }
+.ds h2 { margin: 4px 0 0; font: 800 clamp(26px, 3vw, 34px)/1.12 var(--display); color: var(--ink); }
+.ds h2 em { font-style: italic; color: #9a6a1e; }
+.ds-lede { margin: 8px 0 0; max-width: 62ch; font: 400 15px/1.55 var(--body); color: var(--muted); }
+.ds-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.ds-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ds-sum li { display: flex; flex-direction: column; align-items: center; padding: 10px 6px; border: 1px solid #e6d5b5; border-radius: 12px; background: #fff; text-align: center; }
+.ds-sum b { font: 800 26px/1.1 var(--display); color: #2e615b; }
+.ds-sum .ds-sum--gold b { color: #9a6a1e; }
+.ds-sum span { font: 700 12px/1.3 var(--body); color: var(--muted); }
+.ds-shelf { height: 10px; margin: 8px 0 18px; border-top: 3px solid #c99d63; border-radius: 0 0 6px 6px; background: #d9b382; }
+.ds-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.ds-group { padding: 14px; border: 1px solid var(--line); border-top: 5px solid #2e615b; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px #16313b0d; }
+.ds-group--carbon { border-top-color: #5b86b3; }
+.ds-group--food { border-top-color: #a9790b; }
+.ds-group--software { border-top-color: #8a9a97; }
+.ds-group h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font: 800 16px/1.3 var(--display); color: var(--ink); }
+.ds-group__ic { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; border-radius: 50%; background: #e3f1ea; }
+.ds-group--carbon .ds-group__ic { background: #eaf0f8; }
+.ds-group--food .ds-group__ic { background: #fff4e2; }
+.ds-group--software .ds-group__ic { background: #eef1f0; }
+.ds-group__title { flex: 1; }
+.ds-group__n { font: 800 20px var(--display); color: #2e615b; }
+.ds-group--carbon .ds-group__n { color: #5b86b3; }
+.ds-group--food .ds-group__n { color: #a9790b; }
+.ds-group--software .ds-group__n { color: #8a9a97; }
+.ds-group ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.ds-group li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: 10px; }
+.ds-group li:nth-child(odd) { background: #fafcfb; }
+.ds-item { display: flex; flex-direction: column; min-width: 0; }
+.ds-item a { color: var(--ink); text-decoration: none; }
+.ds-item a b { font: 700 14px/1.35 var(--display); }
+.ds-item a span { color: var(--teal-deep, #2e615b); font-weight: 700; }
+.ds-item a:hover b, .ds-item a:focus-visible b { text-decoration: underline; }
+.ds-item small { font: 400 12px/1.4 var(--body); color: var(--muted); }
+/* Licence price tag with a punched hole. */
+.ds-tag { position: relative; flex: none; display: inline-flex; align-items: center; padding: 4px 10px 4px 16px; border-radius: 4px 999px 999px 4px; background: #e3f1ea; color: #2e615b; font: 800 11px/1.3 var(--display); white-space: nowrap; text-decoration: none; }
+.ds-tag::before { content: ""; position: absolute; left: 5px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: #fff; }
+a.ds-tag:hover, a.ds-tag:focus-visible { text-decoration: underline; }
+.ds-tag--licence-ouverte-2-0 { background: #eaf0f8; color: #3e6e9c; }
+.ds-tag--odbl-1-0 { background: #f1ecfa; color: #5b4a8a; }
+.ds-tag--cc0-1-0, .ds-tag--public-domain { background: #eef6f0; }
+.ds-tag--sil-ofl-1-1, .ds-tag--apache-2-0 { background: #f2f4f3; color: #55666c; }
+.ds-tag--terms { background: #fff3d6; color: #7a5600; }
+.ds-figures { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; padding: 10px 14px; border: 1px solid #e6d5b5; border-radius: 12px; background: #fff8ea; font: 400 13px/1.5 var(--body); color: var(--ink); }
+.ds-figures .impact-icon { flex: none; }
+@media (max-width: 900px) {
+  .ds-head { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .ds-groups { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .ds { padding: 36px 0 28px; }
+  .ds-hello svg { width: 46px; }
+  .ds-hello span { margin-bottom: 18px; font-size: 12px; }
+  .ds-group { padding: 10px; }
+  .ds-group h3 { font-size: 14px; }
+  .ds-group__ic { width: 34px; height: 34px; }
+  .ds-group li { padding: 7px 8px; }
+  .ds-item a b { font-size: 12px; }
+  .ds-item small { font-size: 10px; }
+  .ds-tag { padding: 3px 8px 3px 14px; font-size: 10px; }
+  .ds-sum b { font-size: 20px; }
+  .ds-figures { font-size: 11px; }
+}
