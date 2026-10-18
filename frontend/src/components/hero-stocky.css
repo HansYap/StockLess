@@ -7,3 +7,11 @@
 .hero-stocky--corner .hero-stocky__bubble { margin-bottom: 30px; }
 .hero-stocky--float { float: right; margin: 0 0 8px 16px; }
 @media (max-width: 1100px) { .hero-stocky { display: none; } }
+/* Phones and tablets: Stocky stays, small, with its speech bubble beside it (as in the mobile designs). */
+@media (max-width: 1100px) {
+  .hero-stocky, .hero-stocky--corner, .hero-stocky--flex { display: flex; position: static; order: -1; align-items: center; gap: 8px; margin: 0 0 10px; }
+  .hero-stocky svg { order: -1; width: 46px; }
+  .hero-stocky__bubble { max-width: none; margin: 0; font-size: 12px; }
+  .hero-stocky--float { float: right; margin: 0 0 6px 10px; }
+  .hero-stocky--float svg { width: 48px; }
+}
