@@ -1287,3 +1287,12 @@ html body select:not(.language-switcher select):not([multiple]){
   background-repeat:no-repeat!important;background-position:right 12px center!important;background-size:16px 16px!important;
 }
 html body select:not(.language-switcher select):disabled{opacity:.6}
+/* iPhone Safari paints button text blue by default; buttons take the page text colour unless a rule says otherwise. */
+:where(button) { color: inherit; }
+/* Phones: everything a little smaller so long pages read like an app (text, cards and spacing scale together). */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (max-width: 640px) {
+  #root { zoom: .88; }
+  /* Full-height screens still fill the phone after the zoom. */
+  #root .opening-screen { min-height: calc(100dvh / .88); }
+}
