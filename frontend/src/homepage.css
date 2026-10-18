@@ -632,3 +632,9 @@ html body .sl-home .btn--primary:hover{background:#2E615B}
 .sl-home .hp-lm__stocky{position:static;display:flex;flex-direction:row-reverse;justify-content:flex-end;align-items:flex-end;gap:8px;margin:14px 0 6px}
 .sl-home .hp-lm__bubble{margin-bottom:22px;border-radius:14px 14px 14px 4px;white-space:normal}
 @media(max-width:960px){.sl-home .hp-lm__stocky{display:flex}.sl-home .hp-lm__stocky svg{width:48px}}
+/* Phones: the three food-waste figures swipe sideways instead of stacking. */
+@media(max-width:700px){
+  .sl-home .hp-stats{display:flex;grid-template-columns:none;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin-right:-16px;padding:4px 16px 10px 2px;scrollbar-width:none}
+  .sl-home .hp-stats::-webkit-scrollbar{display:none}
+  .sl-home .hp-stat{flex:0 0 72%;scroll-snap-align:start}
+}
