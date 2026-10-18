@@ -376,3 +376,16 @@
 .readiness-screen .rd-product header > div { flex: 1; }
 .readiness-screen .rd-product header > .rd-pill { flex: none; white-space: nowrap; }
 .readiness-screen .rd-product > .btn { margin-top: auto; align-self: flex-start; }
+/* Summary cards share the Purchase plan / Impact style: colour strip on top, drawn icon, big coloured number. */
+html body .readiness-screen .rd-stat { border-top-width: 5px; border-top-style: solid; box-shadow: 0 10px 30px #16313b0d; }
+html body .readiness-screen .rd-stat--ready { border-top-color: #2e615b; }
+html body .readiness-screen .rd-stat--review { border-top-color: #a9790b; background: #fffcf6; border-color: #f1ddb0; }
+html body .readiness-screen .rd-stat--missing { border-top-color: #8a9a97; }
+html body .readiness-screen .rd-stat .rd-stat__icon { width: 48px; height: 48px; border-radius: 0; background: none; }
+html body .readiness-screen .rd-stat .rd-stat__icon svg { width: 44px; height: 44px; }
+html body .readiness-screen .rd-stat--ready .rd-stat__number { color: #2e615b; }
+html body .readiness-screen .rd-stat--review .rd-stat__number { color: #7a5600; }
+html body .readiness-screen .rd-stat--missing .rd-stat__number { color: #55666c; }
+html body .readiness-screen .rd-stat--review[aria-pressed="true"] { border-top-color: #a9790b; }
+html body .readiness-screen .rd-stat--missing[aria-pressed="true"] { border-color: #8a9a97; box-shadow: 0 0 0 3px #eef0ec; }
+@media (max-width: 640px) { html body .readiness-screen .rd-stat .rd-stat__icon, html body .readiness-screen .rd-stat .rd-stat__icon svg { width: 34px; height: 34px; } }
