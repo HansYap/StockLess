@@ -1296,3 +1296,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   /* Full-height screens still fill the phone after the zoom. */
   #root .opening-screen { min-height: calc(100dvh / .88); }
 }
+/* Phones: the round (i) tooltip buttons stay small circles (the 44px touch rule made them big ovals). */
+@media (max-width: 768px) {
+  html body .frame :is(.ix-tip__btn,.hint__btn,.pp-info),html body :is(.ix-tip__btn,.hint__btn) { width: 18px; height: 18px; min-width: 18px; min-height: 18px; padding: 0; font-size: 11px; line-height: 1; flex: none; }
+  html body .frame :is(.ix-tip__btn,.hint__btn,.pp-info)::after { content: ""; position: absolute; inset: -10px; }
+  html body .frame :is(.ix-tip__btn,.hint__btn,.pp-info) { position: relative; }
+}
