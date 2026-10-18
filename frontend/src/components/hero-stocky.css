@@ -15,3 +15,16 @@
   .hero-stocky--float { float: right; margin: 0 0 6px 10px; }
   .hero-stocky--float svg { width: 48px; }
 }
+/* Phones: compact page headers — small Stocky on the left, step, title and line of text beside it. */
+@media (max-width: 760px) {
+  .hero-stocky .hero-stocky__bubble { display: none; }
+  .hero-stocky { margin: 0; align-self: flex-start; }
+  .hero-stocky svg { width: 52px; }
+  html body .upload-screen .upload-hero:not(.upload-hero--compact) .upload-hero__inner { display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 12px; align-items: start; }
+  html body .upload-screen .upload-hero__inner > * { grid-column: 2; }
+  html body .upload-screen .upload-hero__inner > .hero-stocky { grid-column: 1; grid-row: 1 / span 3; }
+  html body .mapping-screen .mapping-hero__inner { flex-direction: row; flex-wrap: wrap; align-items: flex-start; column-gap: 12px; row-gap: 14px; }
+  html body .mapping-screen .mapping-hero__copy { flex: 1 1 0; min-width: 0; }
+  html body .mapping-screen .mapping-hero__inner > :not(.hero-stocky):not(.mapping-hero__copy) { flex: 1 1 100%; }
+  html body .readiness-screen .rd-hero__inner { flex-direction: row; align-items: flex-start; gap: 12px; }
+}
