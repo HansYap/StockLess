@@ -386,3 +386,5 @@ html body .purchase-plan--new .pp-kpi.pp-kpi--need_data { border-top-color: #8a9
 .purchase-plan--new .pp-pill--check_order { color: #7a5600; background: #fff3d6; }
 .purchase-plan--new .pp-pill--balanced { color: #2e615b; background: #e3f1ea; }
 .purchase-plan--new .pp-pill--need_data { color: #55666c; background: #eef0ec; }
+/* Phones: Stocky stays beside the plan title, small. */
+@media (max-width: 1150px) { .purchase-plan--new .pp-hero:not(.is-compact) .pp-stocky { display: flex; margin-left: 0; order: -1; align-items: center; } .purchase-plan--new .pp-stocky svg { width: 46px; order: -1; } .purchase-plan--new .pp-stocky__bubble { margin-bottom: 0; max-width: none; font-size: 12px; } }
