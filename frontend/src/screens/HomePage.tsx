@@ -1220,50 +1220,40 @@ function Benefits() {
           </h2>
           <ul className="hp-list">
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--1" aria-hidden="true">
+                <ImpactIcon name="trend" size={24} />
               </span>
               <span>
                 {copy("hp.g1")}
               </span>
             </li>
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--2" aria-hidden="true">
+                <ImpactIcon name="data" size={24} />
               </span>
               <span>
                 {copy("hp.g2")}
               </span>
             </li>
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--3" aria-hidden="true">
+                <ImpactIcon name="calendar" size={24} />
               </span>
               <span>
                 {copy("hp.g3")}
               </span>
             </li>
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--4" aria-hidden="true">
+                <ImpactIcon name="target" size={24} />
               </span>
               <span>
                 {copy("hp.g4")}
               </span>
             </li>
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--5" aria-hidden="true">
+                <ImpactIcon name="scales" size={24} />
               </span>
               <span>
                 {copy("hp.g5")}
@@ -1295,12 +1285,15 @@ function Benefits() {
           </p>
           <div className="hp-chips">
             <span>
+              <ImpactIcon name="check" size={16} className="hp-chip-ic" />
               {copy("hp.chk3")}
             </span>
             <span>
+              <ImpactIcon name="people" size={16} className="hp-chip-ic" />
               {copy("hp.chk2")}
             </span>
             <span>
+              <ImpactIcon name="search" size={16} className="hp-chip-ic" />
               {copy("hp.pv.c3")}
             </span>
           </div>
@@ -1391,9 +1384,9 @@ function Sustainability() {
           </span>
         </p>
         <ol className="hp-flow">
-          <li className="hp-flow__step hp-flow__step--sell"><span className="hp-flow__ic" aria-hidden="true">🛒</span><span>{copy("hp.flow.1")}</span></li>
-          <li className="hp-flow__step hp-flow__step--shelf"><span className="hp-flow__ic" aria-hidden="true">📦</span><span>{copy("hp.flow.2")}</span></li>
-          <li className="hp-flow__step hp-flow__step--waste"><span className="hp-flow__ic" aria-hidden="true">🌏</span><span>{copy("hp.flow.3")}</span></li>
+          <li className="hp-flow__step hp-flow__step--sell"><span className="hp-flow__ic" aria-hidden="true"><ImpactIcon name="cart" size={28} /></span><span>{copy("hp.flow.1")}</span></li>
+          <li className="hp-flow__step hp-flow__step--shelf"><span className="hp-flow__ic" aria-hidden="true"><ImpactIcon name="box" size={28} /></span><span>{copy("hp.flow.2")}</span></li>
+          <li className="hp-flow__step hp-flow__step--waste"><span className="hp-flow__ic" aria-hidden="true"><ImpactIcon name="globe" size={28} /></span><span>{copy("hp.flow.3")}</span></li>
         </ol>
         <p className="hp-p">
           <span>

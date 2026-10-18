@@ -369,3 +369,17 @@
 .ix-tip__para{display:block}.ix-tip__para+.ix-tip__para{margin-top:6px}
 .ix-period{display:inline-flex}
 @media(max-width:760px){.ix-explain{grid-template-columns:1fr}.ix-tip__bubble{left:auto;right:-8px;transform:none}.ix-tip__bubble::after{left:auto;right:12px}}
+/* Products left out of CO2e: one small card per reason — drawn icon, short label, count, names; the wording sits in (i). */
+.ix-excluded{border-style:solid;border-color:var(--line);background:#fbfdfc}
+.ix-excluded h4{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ix-excluded__hint{font:400 12px var(--body);color:var(--muted)}
+.ix-excluded>ul{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.ix-excluded__card{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.ix-excluded__top{display:flex;align-items:center;gap:8px}
+.ix-excluded__top b{font-family:var(--display);font-size:14px;color:var(--ink)}
+.ix-excluded__top .ix-count{margin-left:auto}
+.ix-excluded__ic{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:9px;background:#eef6f0}
+.ix-excluded .ix-excluded__names{display:flex;margin-top:8px}
+.ix-excluded .ix-excluded__names>li{font-size:12px;padding:4px 9px}
+.ix-excluded__more{background:#eef6f0!important;color:var(--teal-deep)!important;font-weight:700}
+@media(max-width:760px){.ix-excluded>ul{grid-template-columns:minmax(0,1fr)}}
