@@ -389,3 +389,4 @@ html body .readiness-screen .rd-stat--missing .rd-stat__number { color: #55666c;
 html body .readiness-screen .rd-stat--review[aria-pressed="true"] { border-top-color: #a9790b; }
 html body .readiness-screen .rd-stat--missing[aria-pressed="true"] { border-color: #8a9a97; box-shadow: 0 0 0 3px #eef0ec; }
 @media (max-width: 640px) { html body .readiness-screen .rd-stat .rd-stat__icon, html body .readiness-screen .rd-stat .rd-stat__icon svg { width: 34px; height: 34px; } }
+html body .readiness-screen .rd-stat { color: var(--ink); }
