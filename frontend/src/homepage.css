@@ -628,3 +628,7 @@ html body .sl-home .btn--primary:hover{background:#2E615B}
   .sl-home .hp-step::before{display:block;top:-24px;height:22px}
   .sl-home .hp-step.is-on{transform:translateY(-4px)}
 }
+/* FAQ Stocky sits in the flow under the intro, so its bubble never covers the heading. */
+.sl-home .hp-lm__stocky{position:static;display:flex;flex-direction:row-reverse;justify-content:flex-end;align-items:flex-end;gap:8px;margin:14px 0 6px}
+.sl-home .hp-lm__bubble{margin-bottom:22px;border-radius:14px 14px 14px 4px;white-space:normal}
+@media(max-width:960px){.sl-home .hp-lm__stocky{display:flex}.sl-home .hp-lm__stocky svg{width:48px}}
