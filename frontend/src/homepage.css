@@ -607,3 +607,24 @@ html body .sl-home .btn--primary:hover{background:#2E615B}
 .sl-home .hp-flow__step{flex:1 1 0;min-width:0;padding:10px 12px;font-size:12px;gap:8px}
 .sl-home .hp-flow__ic{font-size:18px}
 @media(max-width:700px){.sl-home .hp-flow{flex-wrap:wrap}.sl-home .hp-flow__step{flex:1 1 100%}}
+/* Drawn icons instead of ticks and emoji on the lower homepage (matches the workspace icon set). */
+.sl-home .hp-list .hp-tick.hp-tick--drawn{width:40px;height:40px;border-radius:12px;background:#E3F1EA;box-shadow:none}
+.sl-home .hp-list .hp-tick--2{background:#EAF2FB}
+.sl-home .hp-list .hp-tick--3{background:#FFF3D6}
+.sl-home .hp-list .hp-tick--4{background:#F1ECFA}
+.sl-home .hp-list .hp-tick--5{background:#FDEBDD}
+.sl-home .hp-tick--drawn .impact-icon{display:block}
+.sl-home .hp-priv .hp-chips span{display:inline-flex;align-items:center;gap:6px}
+.sl-home .hp-chip-ic{flex:none}
+.sl-home .hp-flow__ic{display:inline-flex;align-items:center;justify-content:center;line-height:0}
+.sl-home .hp-flow__ic .impact-icon{display:block}
+/* Phones: no purchase-plan preview in the hero; the five steps swipe sideways on the kedai shelf. */
+@media(max-width:700px){
+  .sl-home .hp-card-wrap{display:none}
+  .sl-home .hp-steps{display:flex;grid-template-columns:none;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:26px 16px 18px 2px;margin-right:-16px;scrollbar-width:none}
+  .sl-home .hp-steps::-webkit-scrollbar{display:none}
+  .sl-home .hp-steps::before{display:block;top:4px;right:auto;width:calc(5 * 232px)}
+  .sl-home .hp-step{flex:0 0 220px;scroll-snap-align:start}
+  .sl-home .hp-step::before{display:block;top:-24px;height:22px}
+  .sl-home .hp-step.is-on{transform:translateY(-4px)}
+}
