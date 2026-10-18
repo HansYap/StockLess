@@ -20,3 +20,15 @@
   .opening-screen__plant--1 { opacity: 1; }
   .opening-screen__bar { display: none; }
 }
+/* Growth path under the note: sprout — leaves — potted — tree — earth; the current stage gets a soft pill. */
+.opening-screen__path { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; padding: 8px 12px; border: 1px solid #dcede3; border-radius: 14px; background: #f7fbf9; }
+.opening-screen__step { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; opacity: .45; animation: opening-step 6s infinite; }
+.opening-screen__step + .opening-screen__step { margin-left: 18px; }
+.opening-screen__step + .opening-screen__step::before { content: ""; position: absolute; left: -16px; top: 50%; width: 12px; height: 2px; border-radius: 1px; background: #cfe4de; }
+.opening-screen__step img { display: block; width: 18px; height: 18px; }
+.opening-screen__step--2 { animation-delay: 1.2s; }
+.opening-screen__step--3 { animation-delay: 2.4s; }
+.opening-screen__step--4 { animation-delay: 3.6s; }
+.opening-screen__step--5 { animation-delay: 4.8s; }
+@keyframes opening-step { 0%, 20% { opacity: 1; background: #e3f1ea; } 22%, 100% { opacity: .45; background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .opening-screen__step { animation: none; opacity: 1; } }

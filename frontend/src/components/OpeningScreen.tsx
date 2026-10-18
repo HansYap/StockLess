@@ -24,6 +24,11 @@ export function OpeningScreen({ title = "Opening your workspace…" }: { title?:
       <p className="opening-screen__title">{t(title)}</p>
       <span className="opening-screen__bar" aria-hidden="true"><span /></span>
       <p className="opening-screen__note">{t("Your data stays on this device.")}</p>
+      {/* The whole growth path, with the stage that is showing now lit up. */}
+      <span className="opening-screen__path" aria-hidden="true">
+        {OPENING_STAGES.map((stage, index) => <span key={stage} className={`opening-screen__step opening-screen__step--${index + 1}`}><GrowthIcon stage={stage} size={18} /></span>)}
+        <span className="opening-screen__step opening-screen__step--5"><img src="/impact/sx-earth.svg" alt="" width={18} height={18} /></span>
+      </span>
     </main>
   );
 }
