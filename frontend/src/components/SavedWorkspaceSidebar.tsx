@@ -62,7 +62,8 @@ export function SavedWorkspaceSidebar({ dataset, saved = true, currentSection = 
   </>;
   return <>
     <aside className="saved-sidebar" aria-label={t("Workspace navigation")}>{content}</aside>
-    <div className="saved-sidebar-mobile"><button ref={menu} data-guide="sidebar-menu" type="button" className="saved-sidebar__menu" aria-label={t("Open navigation")} aria-haspopup="dialog" onClick={() => drawer.current?.showModal()}><Icon name="menu" /></button><span>{t(sections.find(section => section.id === currentSection)!.label)}</span></div>
+    {/* Phones: a small "Your workspace" tab on the left edge opens the same menu as a side drawer. */}
+    <div className="saved-sidebar-mobile"><button ref={menu} data-guide="sidebar-menu" type="button" className="saved-sidebar__menu saved-sidebar__handle" aria-label={t("Open navigation")} aria-haspopup="dialog" onClick={() => drawer.current?.showModal()}><span className="saved-sidebar__handle-tile" aria-hidden="true"><GrowthIcon stage="potted" size={14} /></span><span className="saved-sidebar__handle-text" aria-hidden="true">{t("Your workspace")} ›</span></button></div>
     <dialog ref={drawer} className="saved-sidebar-drawer" aria-label={t("Workspace navigation")} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close(); } }}>
       <button type="button" className="saved-sidebar__close" aria-label={t("Close navigation")} onClick={close}><Icon name="close" /></button>
       {content}

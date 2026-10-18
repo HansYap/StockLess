@@ -85,3 +85,11 @@
 .saved-sidebar__privacy { align-items:center; margin-top:8px; padding:10px; border-radius:10px; background:#e3f4ec; color:#3b7b74; font:600 12px/1.45 var(--body); }
 .saved-sidebar__lock { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; flex:none; border-radius:50%; background:#3b7b74; color:#fff; }
 .saved-sidebar__lock .saved-sidebar__icon { width:12px; height:12px; margin:0; }
+/* Phones: the workspace menu hides at the side; a slim tab on the left edge opens it. */
+@media(max-width:760px) {
+  .saved-sidebar-mobile { position:fixed; left:0; top:38vh; z-index:30; display:block; width:auto; padding:0; border:0; background:none; }
+  .saved-sidebar__menu.saved-sidebar__handle { flex-direction:column; gap:8px; width:24px; min-height:0; padding:10px 0; border:0; border-radius:0 12px 12px 0; background:#3b7b74; color:#fff; box-shadow:0 6px 16px -6px rgba(22,49,59,.5); }
+  .saved-sidebar__handle-tile { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:5px; background:#fff; }
+  .saved-sidebar__handle-text { writing-mode:vertical-rl; transform:rotate(180deg); font:800 11px var(--display); letter-spacing:.3px; white-space:nowrap; }
+  .saved-sidebar-drawer { inset:0 auto 0 0; height:100dvh; border-radius:0 24px 24px 0; box-shadow:12px 0 30px -12px rgba(22,49,59,.5); }
+}
