@@ -3,6 +3,7 @@ import { Logo } from "../components/Logo.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
 import { ImpactIcon } from "../components/ImpactIcon.tsx";
 import { BrandIcon } from "../components/BrandIcon.tsx";
+import { DataSources } from "../components/DataSources.tsx";
 import { HeroBasket } from "../components/HeroBasket.tsx";
 import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
 import { localizedWorkspaceHref, setLanguage, t, useLanguage, type Language } from "../i18n/index.ts";
@@ -65,7 +66,7 @@ export function HomePage({ startHref = "#workspace" }: HomePageProps) {
       <HomeHeader />
       <main id="top">
         <Hero /><WasteContext /><Workflow /><Comparison /><PurchaseExample />
-        <Benefits /><StartBanner /><Sustainability /><FAQs />
+        <Benefits /><StartBanner /><Sustainability /><FAQs /><DataSources />
       </main>
       <HomeFooter />
     </div>
@@ -1489,7 +1490,7 @@ function FAQs() {
 }
 
 function HomeFooter() {
-  const { copy } = useHomeView();
+  const { copy, language } = useHomeView();
   return (
     <footer className="hp-foot">
       <div className="wrap hp-foot__in">
@@ -1509,6 +1510,10 @@ function HomeFooter() {
           <i aria-hidden="true">·</i>
           <a className="hp-foot__sdg" href="#sdg" title={copy("hp.foot")} aria-label={copy("hp.foot")}>
             {"SDG 12.3"}
+          </a>
+          <i aria-hidden="true">·</i>
+          <a className="hp-foot__sdg" href="#sources">
+            {language === "zh" ? "数据来源与许可" : language === "ms" ? "Sumber data & lesen" : "Data sources & licences"}
           </a>
         </p>
         <a className="hp-link" href="#top">
