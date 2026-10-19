@@ -134,8 +134,9 @@ export type CarbonImpactResult = ImpactBase & (
       readonly conversionSource: string; readonly kgCO2e: number; readonly kgCO2eRange: CarbonRange;
       readonly factor: Extract<CarbonFactorResult, { state: "available" }>; readonly calculation: string;
       readonly limitation: string }
-  | { readonly state: "unavailable" | "no_record" | "not_entered"; readonly code: string; readonly reason: string;
-      readonly correctiveAction: string; readonly factor?: CarbonFactorResult; readonly kgAtRisk?: number }
+  | { readonly state: "unavailable" | "no_record" | "not_entered" | "zero_excess"; readonly code: string; readonly reason: string;
+      readonly correctiveAction: string; readonly factor?: CarbonFactorResult; readonly kgAtRisk?: number;
+      readonly blockers?: readonly { readonly code: string; readonly reason: string; readonly correctiveAction: string }[] }
 );
 
 /** The same conversion applies to three separate measures; actual records are never inferred from a scenario. */
@@ -149,6 +150,8 @@ export function estimateCarbonImpact(input: CarbonImpactInput, policy: CarbonPol
     reason: input.kind === "recorded_waste" ? "No waste record." : "No quantity entered.", correctiveAction: input.kind === "recorded_waste" ? "Record actual discarded or expired stock for this period." : "Enter a quantity for this analysis." });
   const signed = input.kind === "scenario_difference";
   for (const value of [input.quantity, input.measuredMassKg]) if (value !== undefined && (!Number.isFinite(value) || (!signed && value < 0))) return unavailable("INVALID_QUANTITY", "Quantity must be finite and non-negative; only a scenario difference may be signed.", "Correct the quantity.");
+  if (input.kind === "potential_excess" && input.quantity === 0) return Object.freeze({ ...base, state: "zero_excess", code: "ZERO_EXCESS",
+    reason: "No potential excess was found for this product.", correctiveAction: "No CO2e conversion is needed for zero potential excess." });
   if (!input.isFood) return unavailable("NOT_FOOD", "This product is marked as non-food.", "No food CO2e estimate applies to this product.");
   let massKg: number | undefined, massBasis: "measured" | "converted" | "estimated" = "converted", conversionSource = input.conversionSource ?? "";
   if (input.measuredMassKg !== undefined) { massKg = input.measuredMassKg; massBasis = "measured"; conversionSource = "Recorded waste mass in kilograms"; }
@@ -158,7 +161,11 @@ export function estimateCarbonImpact(input: CarbonImpactInput, policy: CarbonPol
     if (!conversionSource) return unavailable("MISSING_CONVERSION_SOURCE", "The unit-to-kg conversion has no source.", "Confirm a file weight, parsed pack size or sourced density conversion.");
     massKg = input.quantity! * input.massKgPerUnit; massBasis = input.massEstimated ? "estimated" : "converted";
   }
-  if (!input.category || !(input.categoryConfirmed || input.categorySource === 'ai' && input.categoryProvenance)) return unavailable("CATEGORY_NOT_CONFIRMED", "No supported automatic or confirmed food category is available.", "This product is left out of CO2e; other stock and financial results remain available.", massKg !== undefined ? { kgAtRisk: Math.abs(massKg) } : {});
+  if (!input.category || !(input.categoryConfirmed || input.categorySource === 'ai' && input.categoryProvenance)) return Object.freeze({ ...unavailable("CATEGORY_NOT_CONFIRMED", "No supported automatic or confirmed food category is available.", "Confirm a supported food category.", massKg !== undefined ? { kgAtRisk: Math.abs(massKg) } : {}),
+    ...(input.kind === "potential_excess" && massKg === undefined ? { blockers: Object.freeze([
+      { code: "CATEGORY_NOT_CONFIRMED", reason: "No supported automatic or confirmed food category is available.", correctiveAction: "Confirm a supported food category." },
+      { code: "NO_WEIGHT", reason: "No usable mass conversion is available for the quantity unit.", correctiveAction: "Add or confirm a unit weight." },
+    ]) } : {}) });
   if (massKg === undefined) return unavailable("NO_WEIGHT", "No usable mass conversion is available for the quantity unit.", "This product is left out of CO2e. A measured weight can be added as an optional correction.");
   if (!Number.isFinite(massKg) || Math.abs(massKg) > Number.MAX_SAFE_INTEGER) return unavailable("NUMERIC_RANGE", "The converted mass is outside the supported numeric range.", "Check the quantity and unit weight.");
   if (signed && !input.baseline?.trim()) return unavailable("MISSING_BASELINE", "A scenario difference needs a named comparison baseline.", "Choose and name the two compared scenarios.");
@@ -190,6 +197,16 @@ export interface CarbonImpactSummary {
   readonly included: readonly Extract<CarbonImpactResult, { state: "estimated" }>[];
   readonly excluded: readonly Exclude<CarbonImpactResult, { state: "estimated" }>[];
   readonly confirmationQueue: readonly Exclude<CarbonImpactResult, { state: "estimated" }>[];
+  readonly potentialCoverage?: {
+    readonly state: "complete" | "partial" | "unavailable" | "zero_excess";
+    readonly unassessedCount: number;
+    readonly zeroExcessCount: number;
+    /** Positive excess still eligible for food CO2e; explicitly marked non-food is counted separately. */
+    readonly positiveExcessCount: number;
+    readonly estimatedPositiveCount: number;
+    readonly notFoodCount: number;
+    readonly blockedPositive: readonly Exclude<CarbonImpactResult, { state: "estimated" }>[];
+  };
   readonly reason?: string;
 }
 
@@ -198,23 +215,42 @@ export function summarizeCarbonImpact(results: readonly CarbonImpactResult[]): C
   const kinds = new Set(results.map(result => result.kind));
   if (kinds.size > 1) throw new Error("Summarize recorded waste, potential excess and scenario differences separately.");
   const included = results.filter((result): result is Extract<CarbonImpactResult, { state: "estimated" }> => result.state === "estimated");
-  const excluded = results.filter((result): result is Exclude<CarbonImpactResult, { state: "estimated" }> => result.state !== "estimated");
+  const excluded = results.filter((result): result is Exclude<CarbonImpactResult, { state: "estimated" }> => result.state !== "estimated" && result.state !== "zero_excess");
+  const potentialResults = results[0]?.kind === "potential_excess" ? results : [];
+  const unassessedCount = potentialResults.filter(result => result.state === "not_entered").length;
+  const zeroExcessCount = potentialResults.filter(result => result.state === "zero_excess").length;
+  const notFoodCount = potentialResults.filter(result => result.state === "unavailable" && result.code === "NOT_FOOD").length;
+  const positive = potentialResults.filter(result => (result.quantity ?? 0) > 0 && !(result.state === "unavailable" && result.code === "NOT_FOOD"));
+  const estimatedPositiveCount = positive.filter(result => result.state === "estimated").length;
+  const blockedPositive = positive.filter((result): result is Exclude<CarbonImpactResult, { state: "estimated" }> => result.state !== "estimated");
+  const coverageState = potentialResults.length > 0 && zeroExcessCount === potentialResults.length ? "zero_excess"
+    : estimatedPositiveCount === 0 ? "unavailable"
+      : blockedPositive.length === 0 && unassessedCount === 0 ? "complete" : "partial";
   const allProducts = new Set(results.map(result => result.productKey)), contributing = new Set(included.map(result => result.productKey));
+  const excludedProducts = new Set(excluded.map(result => result.productKey));
   const massKgSourcesAgree = included.filter(result => result.factor.label === "sources_agree").reduce((sum, result) => sum + Math.abs(result.massKg), 0);
   const massKgEstimate = included.filter(result => result.factor.label === "estimate").reduce((sum, result) => sum + Math.abs(result.massKg), 0);
   const absoluteMass = massKgSourcesAgree + massKgEstimate;
   const totals = included.length ? {
     kgCO2e: included.reduce((sum, result) => sum + result.kgCO2e, 0), massKg: included.reduce((sum, result) => sum + result.massKg, 0),
     kgCO2eRange: Object.freeze({ low: included.reduce((sum, result) => sum + result.kgCO2eRange.low, 0), high: included.reduce((sum, result) => sum + result.kgCO2eRange.high, 0) }),
-  } : {};
+  } : coverageState === "zero_excess" ? { kgCO2e: 0, massKg: 0, kgCO2eRange: Object.freeze({ low: 0, high: 0 }) } : {};
   if (totals.kgCO2e !== undefined && (!Number.isFinite(totals.kgCO2e) || Math.abs(totals.kgCO2e) > Number.MAX_SAFE_INTEGER)) throw new Error("CO2e summary exceeds the supported numeric range.");
-  return Object.freeze({ kind: results[0]?.kind, state: included.length ? "estimated" : results.length > 0 && results.every(result => result.state === "no_record") ? "no_records" : "unavailable",
-    totalProductCount: allProducts.size, includedProductCount: contributing.size, excludedProductCount: allProducts.size - contributing.size,
+  return Object.freeze({ kind: results[0]?.kind, state: included.length || coverageState === "zero_excess" ? "estimated" : results.length > 0 && results.every(result => result.state === "no_record") ? "no_records" : "unavailable",
+    totalProductCount: allProducts.size, includedProductCount: contributing.size, excludedProductCount: excludedProducts.size,
     ...totals, massKgSourcesAgree, massKgEstimate,
     ...(absoluteMass ? { massShareSourcesAgree: massKgSourcesAgree / absoluteMass, massShareEstimate: massKgEstimate / absoluteMass } : {}),
     included: Object.freeze(included), excluded: Object.freeze(excluded),
+    ...(potentialResults.length ? { potentialCoverage: Object.freeze({ state: coverageState, unassessedCount, zeroExcessCount,
+      positiveExcessCount: positive.length, estimatedPositiveCount, notFoodCount, blockedPositive: Object.freeze(blockedPositive) }) } : {}),
     confirmationQueue: Object.freeze(excluded.filter(result => result.code === "CATEGORY_NOT_CONFIRMED").sort((a, b) => (b.kgAtRisk ?? -1) - (a.kgAtRisk ?? -1) || a.productKey.localeCompare(b.productKey))),
-    ...(included.length ? {} : { reason: results.length > 0 && results.every(result => result.state === "no_record") ? "No waste records for the selected period." : "No products have a supported category, quantity and weight conversion with an available emission factor." }),
+    ...(included.length || coverageState === "zero_excess" ? {} : { reason: results.length > 0 && results.every(result => result.state === "no_record")
+      ? "No waste records for the selected period."
+      : potentialResults.length ? positive.length > 0
+        ? "Potential excess exists, but no positive-excess product has complete CO2e evidence."
+        : unassessedCount > 0 ? "Potential excess cannot yet be determined for the unchecked products."
+          : "No food product with potential excess is available for CO2e estimation."
+        : "No products have a supported category, quantity and weight conversion with an available emission factor." }),
   });
 }
 

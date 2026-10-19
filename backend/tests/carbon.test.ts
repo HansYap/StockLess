@@ -117,6 +117,32 @@ test("no recorded waste and explicitly recorded zero have distinct summary state
   const summary = summarizeCarbonImpact([zero]); assert.equal(summary.state, "estimated"); assert.equal(summary.kgCO2e, 0); assert.equal(summary.includedProductCount, 1);
 });
 
+test("potential excess coverage separates unassessed, zero, positive and blocked products", () => {
+  const zero = estimateCarbonImpact(food({ productKey: "zero", kind: "potential_excess", quantity: 0, category: undefined, massKgPerUnit: undefined, isFood: false }));
+  const unassessed = estimateCarbonImpact(food({ productKey: "unassessed", kind: "potential_excess", quantity: undefined }));
+  const estimated = estimateCarbonImpact(food({ productKey: "estimated", kind: "potential_excess", quantity: 10 }));
+  const blocked = estimateCarbonImpact(food({ productKey: "blocked", kind: "potential_excess", quantity: 15, category: undefined, massKgPerUnit: undefined }));
+  assert.equal(zero.state, "zero_excess");
+  assert.equal(blocked.state, "unavailable");
+  if (blocked.state === "unavailable") assert.deepEqual(blocked.blockers?.map(item => item.code), ["CATEGORY_NOT_CONFIRMED", "NO_WEIGHT"]);
+  const coverage = summarizeCarbonImpact([zero, unassessed, estimated, blocked]);
+  assert.equal(coverage.state, "estimated");
+  assert.equal(coverage.includedProductCount, 1);
+  assert.equal(coverage.potentialCoverage?.state, "partial");
+  assert.equal(coverage.potentialCoverage?.unassessedCount, 1);
+  assert.equal(coverage.potentialCoverage?.zeroExcessCount, 1);
+  assert.equal(coverage.potentialCoverage?.positiveExcessCount, 2);
+  assert.equal(coverage.potentialCoverage?.estimatedPositiveCount, 1);
+  assert.deepEqual(coverage.potentialCoverage?.blockedPositive.map(item => item.productKey), ["blocked"]);
+  const allZero = summarizeCarbonImpact([zero]);
+  assert.equal(allZero.potentialCoverage?.state, "zero_excess");
+  assert.equal(allZero.state, "estimated");
+  assert.equal(allZero.kgCO2e, 0);
+  assert.equal(allZero.includedProductCount, 0);
+  assert.equal(allZero.excludedProductCount, 0);
+  assert.equal(summarizeCarbonImpact([zero, unassessed, blocked]).potentialCoverage?.state, "unavailable");
+});
+
 test("signed scenario CO2e remains separate from actual records and requires a named baseline", () => {
   const difference = estimateCarbonImpact(food({ kind: "scenario_difference", quantity: -10, baseline: "Supplier B minus current planned order" }));
   assert.equal(difference.state, "estimated");

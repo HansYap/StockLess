@@ -17,7 +17,14 @@ export function buildEnvironmentalImpact(snapshot: ReadinessSnapshot, impact: Im
       massEstimated:mass.state === 'available' && mass.method !== 'manual' && (mass.method !== 'pack_parser' || mass.approximate) };
     return { base,mass };
   };
-  const potentialResults = impact.products.map(p => estimateCarbonImpact({ ...evidence(p.productKey).base, productName:p.name, kind:'potential_excess', quantity:p.excessUnits, quantityUnit:'sales units' }));
+  const potentialResults = impact.products.map(p => {
+    const result = estimateCarbonImpact({ ...evidence(p.productKey).base, productName:p.name, kind:'potential_excess', quantity:p.excessUnits, quantityUnit:'sales units' });
+    if (result.state !== 'not_entered') return result;
+    const noOrder = p.plannedQuantity === undefined;
+    return Object.freeze({ ...result, code: noOrder ? 'NO_PLANNED_ORDER' : 'PURCHASE_CHECK_UNAVAILABLE',
+      reason: p.exclusionReason ?? (noOrder ? 'No planned order entered.' : 'The purchase check could not determine potential excess.'),
+      correctiveAction: noOrder ? 'Enter a planned order to check potential excess.' : 'Review the stock and demand inputs needed for the purchase check.' });
+  });
   const scenarioResults = impact.products.map(p => {
     const nextExcess = p.available === undefined || p.plannedQuantity === undefined || p.scenarioQuantity === undefined || p.demandHigh === undefined ? undefined
       : Math.max(0,p.available - p.plannedQuantity + p.scenarioQuantity - p.demandHigh);

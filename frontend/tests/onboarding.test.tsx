@@ -4,6 +4,7 @@ import { GuideButton, OnboardingProvider, useGuidePage, useOnboarding } from "..
 import { ONBOARDING_KEY, guides, guideLabels, readGuidePreferences, visibleGuideTarget, type GuidePage } from "../src/onboarding/guides.ts";
 import { AppShell } from "../src/components/AppShell.tsx";
 import { messages } from "../src/i18n/messages.ts";
+import { t } from "../src/i18n/index.ts";
 import { listSavedDatasets } from "../src/storage/saved-datasets.ts";
 import { StrictMode } from "react";
 
@@ -122,7 +123,7 @@ it.each(["upload", "mapping", "readiness", "purchase", "impact", "history"] as c
     if (this.hasAttribute("data-guide")) expect(document.querySelector(".onboarding-guide-menu[open]")).toBeNull();
     return new DOMRect(100, 150, 200, 44);
   });
-  fireEvent.click(screen.getByRole("button", { name: `Guide this page · ${guideLabels[page]}` }));
+  fireEvent.click(screen.getByRole("button", { name: `Guide this page · ${t(guideLabels[page])}` }));
   await screen.findByRole("heading", { name: guides[page][0].title });
   expect(beforeSetup).not.toHaveBeenCalled();
   expect(document.querySelectorAll(".onboarding-coach")).toHaveLength(1);

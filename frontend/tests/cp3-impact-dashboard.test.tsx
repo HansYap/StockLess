@@ -80,7 +80,7 @@ it("manual cost and weight still take priority, while replacement evidence disca
   expect(environmentalValue("Potential excess: estimated CO₂e")).toMatch(/kg CO₂e/);
   const replacement=await evidence({cost:"",name:"Unknown item"});
   rerender(<ImpactDashboard {...replacement} snapshot={applyPlanningContexts(replacement.snapshot,contexts)} contexts={contexts} onBack={()=>{}} />);
-  expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
+  expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("CO₂e total unavailable");
   expect(within(financialCard("Your planned spend")).getByText("Unavailable")).toBeTruthy();
 });
 
@@ -96,7 +96,7 @@ it("keeps saved outcomes out of snapshot estimates without deleting those record
   expect(screen.queryByRole("heading", { name: "Compare recorded history across two periods" })).toBeNull();
   expect(screen.queryByRole("heading", { name: "Improve the data behind these estimates" })).toBeNull();
   expect(screen.queryByText("Recorded waste: estimated CO₂e")).toBeNull();
-  expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("Unavailable");
+  expect(environmentalValue("Potential excess: estimated CO₂e")).toBe("CO₂e total unavailable");
   expect(environmentalValue("If you follow our suggestion")).toBe("Unavailable");
   expect(environmentPanel().querySelectorAll('.ix-card')).toHaveLength(2);
   expect(JSON.stringify(saved)).toBe(before);
@@ -112,7 +112,7 @@ it("missing cost does not block stock or automatic environmental estimates", asy
 
 it("an unsupported automatic category leaves stock and money available without a confirmation checklist",async()=>{
   const input=await evidence({name:'Unknown item'});render(<Harness {...input} />);
-  expect(environmentalValue('Potential excess: estimated CO₂e')).toBe('Unavailable');
+  expect(environmentalValue('Potential excess: estimated CO₂e')).toBe('CO₂e total unavailable');
   expect(within(environmentPanel()).queryByText(/Confirm categories/)).toBeNull();
   expect(screen.getByRole('button',{name:/Extra stock that may not sell/}).querySelector('b')?.textContent).toBe('60 units');
   expect(within(financialCard('Your planned spend')).getByText('MYR 250.00')).toBeTruthy();
