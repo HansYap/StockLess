@@ -117,8 +117,16 @@ export function MappingScreen(props: MappingScreenProps) {
       <span className="mapping-icon"><WorkflowIcon name={icon} /></span>
       <div className="mapping-label"><b>{t(FIELD_REGISTRY[field].label)}</b><small>{t(description)}</small></div>
       {selectControl(field, required)}
-      <div className="mapping-preview">{formatPreview(columnFor(field)?.previewValues ?? [])}</div>
+      <div className="mapping-preview">{previewFor(field)}</div>
     </li>;
+  }
+  /** Sample values for one field; weights that are all zero are flagged, as they cannot be used for CO2e. */
+  function previewFor(field: CanonicalField) {
+    const values = columnFor(field)?.previewValues ?? [];
+    const filled = values.filter(value => value.trim() !== "");
+    if (field === "unit_weight_kg" && filled.length > 0 && filled.every(value => Number(value) === 0))
+      return <span className="mapping-zero"><span className="mapping-zero__tag">{t("All 0")}</span>{t("No weights filled in. CO₂e will need these.")}</span>;
+    return formatPreview(values);
   }
   function productPreview() {
     if (mode === "stable") return formatPreview(columnFor("product_code")?.previewValues ?? []);
@@ -203,7 +211,7 @@ export function MappingScreen(props: MappingScreenProps) {
                   <p>{t("Keep these details for product names, pack sizes and identity checks.")}</p>
                   {supplementaryFields.map(field => <div className="mapping-product__detail" key={field}>
                     <label htmlFor={"mapping-" + field}>{t(FIELD_REGISTRY[field].label)}</label>
-                    {selectControl(field)}<span className="mapping-preview">{formatPreview(columnFor(field)?.previewValues ?? [])}</span>
+                    {selectControl(field)}<span className="mapping-preview">{previewFor(field)}</span>
                   </div>)}
                 </details>
               </li>
@@ -230,7 +238,7 @@ export function MappingScreen(props: MappingScreenProps) {
             <p>{t("These extra suggestions are kept for later steps. You can change or clear them.")}</p>
             {otherMatchedFields.map(field => <div className="mapping-product__detail" key={field}>
               <label htmlFor={"mapping-" + field}>{t(FIELD_REGISTRY[field].label)}</label>
-              {selectControl(field)}<span className="mapping-preview">{formatPreview(columnFor(field)?.previewValues ?? [])}</span>
+              {selectControl(field)}<span className="mapping-preview">{previewFor(field)}</span>
             </div>)}
           </details>}
           <div className="mapping-saved-controls">{props.children}</div>
