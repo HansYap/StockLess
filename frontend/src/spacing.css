@@ -1,0 +1,24 @@
+/* One spacing scale for every workspace page, so each step feels like the same app.
+   Loaded last; only spacing lives here. */
+:root { --space-page-top: 32px; --space-page-bottom: 56px; --space-columns: 24px; --space-stack: 20px; --space-cards: 16px; }
+@media (max-width: 760px) { :root { --space-page-top: 20px; --space-page-bottom: 40px; --space-columns: 16px; --space-stack: 16px; --space-cards: 12px; } }
+
+/* Page top and bottom. */
+.upload-screen .upload-main,
+.mapping-screen .mapping-main,
+.readiness-screen .rd-main,
+.purchase-plan--new .pp-main { padding-top: var(--space-page-top); padding-bottom: var(--space-page-bottom); }
+
+/* Gap between the main column and the side column. */
+.upload-screen .upload-grid,
+.mapping-screen .mapping-grid,
+.readiness-screen .rd-layout,
+.purchase-plan--new .pp-layout { gap: var(--space-columns); }
+
+/* Gap between cards in a grid of cards. */
+.readiness-screen .rd-product-grid { gap: var(--space-cards); }
+.purchase-plan--new .pp-demand-main { gap: var(--space-cards); }
+
+/* Gap between stacked sections on the Impact dashboard. */
+.impact .impact-sec,
+.impact-download { margin-top: var(--space-stack); }
