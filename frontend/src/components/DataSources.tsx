@@ -4,7 +4,7 @@ import { ImpactIcon, type ImpactIconName } from "./ImpactIcon.tsx";
 import "./data-sources.css";
 
 type Copy = readonly [en: string, zh: string, ms: string];
-interface Source { readonly name: string; readonly by: string; readonly url: string; readonly licence: string; readonly note?: Copy }
+interface Source { readonly name: string; readonly by: string; readonly url: string; readonly licence: string }
 interface Group { readonly id: "carbon" | "food" | "retail" | "software"; readonly icon: ImpactIconName; readonly title: Copy; readonly items: readonly Source[] }
 
 const CC_BY = "CC BY 4.0";
@@ -39,22 +39,24 @@ const GROUPS: readonly Group[] = [
     { name: "Online Retail II", by: "Chen (2012), UCI Machine Learning Repository", url: "https://archive.ics.uci.edu/dataset/502/online+retail+ii", licence: CC_BY },
     { name: "FreshRetailNet-50K", by: "Dingdong-Inc via Hugging Face", url: "https://huggingface.co/datasets/Dingdong-Inc/FreshRetailNet-50K", licence: CC_BY },
     { name: "Ta Feng grocery transactions", by: "Kaggle upload by chiranjivdas09", url: "https://www.kaggle.com/datasets/chiranjivdas09/ta-feng-grocery-dataset", licence: "CC0 1.0" },
-    { name: "The Complete Journey", by: "dunnhumby via Kaggle", url: "https://dunnhumby.com/sourcefiles", licence: "dunnhumby terms", note: ["kept internal", "仅内部使用", "disimpan dalaman"] },
   ] },
   { id: "software", icon: "puzzle", title: ["Fonts and software in the site", "网站使用的字体与软件", "Fon dan perisian dalam laman"], items: [
     { name: "Noto Sans SC", by: "Google", url: "https://fonts.google.com/noto/specimen/Noto+Sans+SC", licence: "SIL OFL 1.1" },
     { name: "Transformers.js", by: "Hugging Face", url: "https://github.com/huggingface/transformers.js", licence: "Apache 2.0" },
   ] },
 ];
-const LEGEND = [CC_BY, "Licence Ouverte 2.0", "ODbL 1.0", "CC0 1.0", "Public domain"] as const;
-const licenceClass = (licence: string) => "ds-tag ds-tag--" + (licence.startsWith("dunnhumby") ? "terms" : licence.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-$/, ""));
+/** Groups kept in the register but not shown on the site yet. */
+const HIDDEN: ReadonlySet<Group["id"]> = new Set(["carbon", "food"]);
+const SHOWN = GROUPS.filter(group => !HIDDEN.has(group.id));
+const LEGEND_ORDER = [CC_BY, "Licence Ouverte 2.0", "ODbL 1.0", "CC0 1.0", "Public domain"];
+const LEGEND = LEGEND_ORDER.filter(licence => SHOWN.some(group => group.items.some(item => item.licence === licence)));
+const licenceClass = (licence: string) => "ds-tag ds-tag--" + licence.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-$/, "");
 
 /** Homepage section: every dataset and library with its licence and a link, credited as CC BY asks. */
 export function DataSources() {
   const language = useLanguage();
   const say = ([en, zh, ms]: Copy) => language === "zh" ? zh : language === "ms" ? ms : en;
-  const all = GROUPS.flatMap(group => group.items);
-  const open = all.filter(item => !item.licence.startsWith("dunnhumby")).length;
+  const all = SHOWN.flatMap(group => group.items);
   return <section className="ds" id="sources" aria-labelledby="ds-title">
     <div className="wrap">
       <div className="ds-head">
@@ -62,24 +64,24 @@ export function DataSources() {
           <p className="ds-hello" aria-hidden="true"><Stocky pose="point" size={60} /><span>{say(["Every number has a label, like stock on a shelf.", "每个数字都有标签，就像货架上的商品。", "Setiap angka ada label, macam stok di rak."])}</span></p>
           <p className="hp-k3"><span>{say(["Data sources & licences", "数据来源与许可", "Sumber data & lesen"])}</span></p>
           <h2 id="ds-title">{say(["Where our numbers ", "我们的数字", "Dari mana angka kami "])}<em>{say(["come from", "从哪里来", "datang"])}</em></h2>
-          <p className="ds-lede">{say(["StockLess uses open data. Each source is listed with its licence and a link; CC BY sources are credited here as their licence asks.", "StockLess 使用开放数据。每个来源都列出许可和链接；CC BY 来源按其许可要求在此署名。", "StockLess menggunakan data terbuka. Setiap sumber disenaraikan bersama lesen dan pautan; sumber CC BY dikreditkan di sini seperti yang dikehendaki lesennya."])}</p>
+          <p className="ds-lede">{say(["Open data we use, each with its licence and a link.", "我们使用的开放数据，附许可与链接。", "Data terbuka yang kami guna, dengan lesen dan pautan."])}</p>
           <ul className="ds-legend" aria-label={say(["Licences", "许可", "Lesen"])}>{LEGEND.map(licence => <li key={licence} className={licenceClass(licence)}>{licence}</li>)}</ul>
         </div>
         <ul className="ds-sum">
           <li><b>{all.length}</b><span>{say(["sources", "个来源", "sumber"])}</span></li>
-          <li><b>{open}</b><span>{say(["open licences", "个开放许可", "lesen terbuka"])}</span></li>
-          <li className="ds-sum--gold"><b>{GROUPS.length}</b><span>{say(["kinds of data", "类数据", "jenis data"])}</span></li>
+          <li><b>{all.length}</b><span>{say(["open licences", "个开放许可", "lesen terbuka"])}</span></li>
+          <li className="ds-sum--gold"><b>{SHOWN.length}</b><span>{say(["kinds of data", "类数据", "jenis data"])}</span></li>
         </ul>
       </div>
       <div className="ds-shelf" aria-hidden="true" />
       <div className="ds-groups">
-        {GROUPS.map(group => <section key={group.id} className={`ds-group ds-group--${group.id}`} aria-labelledby={`ds-${group.id}`}>
+        {SHOWN.map(group => <section key={group.id} className={`ds-group ds-group--${group.id}`} aria-labelledby={`ds-${group.id}`}>
           <h3 id={`ds-${group.id}`}><span className="ds-group__ic" aria-hidden="true"><ImpactIcon name={group.icon} size={24} /></span><span className="ds-group__title">{say(group.title)}</span><span className="ds-group__n">{group.items.length}</span></h3>
           <ul>{group.items.map(item => <li key={item.name}>
             <span className="ds-item"><a href={item.url} target="_blank" rel="noopener noreferrer"><b>{item.name}</b> <span aria-hidden="true">↗</span></a><small>{item.by}</small></span>
             {LICENCE_URL[item.licence]
               ? <a className={licenceClass(item.licence)} href={LICENCE_URL[item.licence]} target="_blank" rel="noopener noreferrer">{item.licence}</a>
-              : <span className={licenceClass(item.licence)}>{item.licence}{item.note ? ` · ${say(item.note)}` : ""}</span>}
+              : <span className={licenceClass(item.licence)}>{item.licence}</span>}
           </li>)}</ul>
         </section>)}
       </div>
