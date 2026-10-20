@@ -383,3 +383,8 @@
 .ix-excluded .ix-excluded__names>li{font-size:12px;padding:4px 9px}
 .ix-excluded__more{background:#eef6f0!important;color:var(--teal-deep)!important;font-weight:700}
 @media(max-width:760px){.ix-excluded>ul{grid-template-columns:minmax(0,1fr)}}
+
+/* CO₂e card when too few products have a food type or weight: ask for data, never a misleading "≈ 0". */
+.ix-card.ix-card--need{border:1.5px dashed #b9cbe0;background:#f7fafd;box-shadow:none}
+.ix-card.ix-card--need b{font-size:22px;color:#3e6e9c}
+.ix-card__need{font:400 13px/1.45 var(--body);color:var(--muted)}
