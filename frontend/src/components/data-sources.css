@@ -46,7 +46,6 @@ a.ds-tag:hover, a.ds-tag:focus-visible { text-decoration: underline; }
 .ds-tag--odbl-1-0 { background: #f1ecfa; color: #5b4a8a; }
 .ds-tag--cc0-1-0, .ds-tag--public-domain { background: #eef6f0; }
 .ds-tag--sil-ofl-1-1, .ds-tag--apache-2-0 { background: #f2f4f3; color: #55666c; }
-.ds-tag--terms { background: #fff3d6; color: #7a5600; }
 .ds-figures { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; padding: 10px 14px; border: 1px solid #e6d5b5; border-radius: 12px; background: #fff8ea; font: 400 13px/1.5 var(--body); color: var(--ink); }
 .ds-figures .impact-icon { flex: none; }
 @media (max-width: 900px) {
