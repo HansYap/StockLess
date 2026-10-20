@@ -132,11 +132,30 @@ html body .sx-kpis.sx-kpis--summary li:nth-child(3){border-top-color:#5B86B3}
   /* About this plan: one slim row with tiny labels; Back to my plan as a link. */
   aside.impact__about{width:auto;padding:8px 4px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:none}
   aside.impact__about h2{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-  aside.impact__about dl{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr) auto auto;gap:6px 0;margin:0}
+  aside.impact__about dl{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,1.3fr);gap:6px 0;margin:0}
   aside.impact__about dl>div.is-wide{grid-column:auto}
   aside.impact__about dl>div{min-width:0;padding:0 6px;border:0;border-left:1px solid var(--line-soft,#eef2f0);border-radius:0;background:none}
   aside.impact__about dl>div:first-child{border-left:0}
-  aside.impact__about dl>div>dt{position:static;width:auto;height:auto;overflow:visible;clip:auto;margin:0;font:600 9px/1.3 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  aside.impact__about dl>div>dt{position:static;width:auto;height:auto;overflow:visible;clip:auto;margin:0;font:600 9px/1.3 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   aside.impact__about dl>div>dd{margin:0;font:700 11px/1.35 var(--display);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* The two dates may wrap onto two short lines instead of squeezing the other columns. */
+  aside.impact__about dl>div:nth-last-child(-n+2)>dd{white-space:normal;overflow:visible}
   .sx-band .sx-back{min-height:0;padding:4px 0;border:0;background:none;box-shadow:none;color:var(--teal-deep);font-size:13px}
+}
+
+/* Phones: the three headline numbers stack as slim rows (icon · label and note · number). */
+@media (max-width:640px){
+  html body .sx-kpis.sx-kpis--summary{grid-template-columns:1fr;gap:8px}
+  html body .sx-kpis.sx-kpis--summary li{border-top-width:1px;border-top-color:var(--line);border-left:4px solid var(--line)}
+  html body .sx-kpis.sx-kpis--summary li:nth-child(1){border-top-color:var(--line);border-left-color:#B5661A}
+  html body .sx-kpis.sx-kpis--summary li:nth-child(2){border-top-color:#F1DDB0;border-left-color:#A9790B}
+  html body .sx-kpis.sx-kpis--summary li:nth-child(3){border-top-color:var(--line);border-left-color:#5B86B3}
+  html body .sx-kpis.sx-kpis--summary .sx-kpi-button{flex-direction:row;align-items:center;gap:10px;padding:12px}
+  html body .sx-kpis.sx-kpis--summary .sx-kpi__ic{width:32px;height:32px}
+  html body .sx-kpis.sx-kpis--summary .sx-kpi-button>span:last-child{flex:1;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px;align-items:center}
+  html body .sx-kpis.sx-kpis--summary .sx-kpi-label{grid-column:1;grid-row:1;font-size:13px;line-height:1.3}
+  html body .sx-kpis.sx-kpis--summary .sx-kpi-button em{grid-column:1;grid-row:2;font-size:11px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  html body .sx-kpis.sx-kpis--summary .sx-kpi-button b{grid-column:2;grid-row:1/span 2;order:0;font-size:19px;line-height:1.15;text-align:right;white-space:nowrap}
+  html body .sx-kpis.sx-kpis--summary li:nth-child(3) .sx-kpi-button b{max-width:130px;font-size:14px;white-space:normal}
+  html body .sx-kpis.sx-kpis--summary .sx-kpi-link{display:none}
 }
