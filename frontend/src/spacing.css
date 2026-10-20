@@ -25,26 +25,26 @@
 
 /* Phones: sticky step headers shrink to one slim row (title + main button). */
 @media (max-width: 760px) {
-  .mapping-screen .mapping-hero.mapping-hero--compact .mapping-hero__box,
-  .readiness-screen .rd-hero.rd-hero--compact .rd-wrap,
-  .purchase-plan--new .pp-hero.is-compact .pp-hero-box { display: flex; flex-direction: row; align-items: center; gap: 12px; padding-top: 8px; padding-bottom: 8px; }
-  .mapping-screen .mapping-hero.mapping-hero--compact .mapping-hero__inner,
-  .readiness-screen .rd-hero.rd-hero--compact .rd-hero__inner,
-  .purchase-plan--new .pp-hero.is-compact .pp-hero-main { flex: 1; min-width: 0; padding: 0; }
-  .mapping-screen .mapping-hero.mapping-hero--compact h1,
-  .readiness-screen .rd-hero.rd-hero--compact h1,
-  .purchase-plan--new .pp-hero.is-compact h1 { margin: 0; font-size: 18px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mapping-screen .mapping-hero.mapping-hero--compact .hero-stocky,
-  .readiness-screen .rd-hero.rd-hero--compact .hero-stocky,
-  .purchase-plan--new .pp-hero.is-compact .pp-stocky,
-  .readiness-screen .rd-hero.rd-hero--compact :is(.btn--link, .rd-actions__spacer, .rd-actions__meta),
-  .purchase-plan--new .pp-hero.is-compact :is(.pp-back, .pp-action-spacer, .btn--ghost) { display: none; }
-  .mapping-screen .mapping-hero.mapping-hero--compact .mapping-actions,
-  .readiness-screen .rd-hero.rd-hero--compact .rd-actions,
-  .purchase-plan--new .pp-hero.is-compact .pp-hero-actions { flex: none; width: auto; padding: 0; margin: 0; }
-  .mapping-screen .mapping-hero.mapping-hero--compact .btn--primary,
-  .readiness-screen .rd-hero.rd-hero--compact .btn--primary,
-  .purchase-plan--new .pp-hero.is-compact .btn--primary { width: auto; min-height: 40px; padding: 0 14px; font-size: 13px; white-space: nowrap; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .mapping-hero__box,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .rd-wrap,
+  .frame .purchase-plan--new .pp-hero.is-compact .pp-hero-box { display: flex; flex-direction: row; align-items: center; gap: 12px; padding-top: 8px; padding-bottom: 8px; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .mapping-hero__inner,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .rd-hero__inner,
+  .frame .purchase-plan--new .pp-hero.is-compact .pp-hero-main { flex: 1; min-width: 0; padding: 0; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact h1,
+  .frame .readiness-screen .rd-hero.rd-hero--compact h1,
+  .frame .purchase-plan--new .pp-hero.is-compact h1 { margin: 0; font-size: 18px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .hero-stocky,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .hero-stocky,
+  .frame .purchase-plan--new .pp-hero.is-compact .pp-stocky,
+  .frame .readiness-screen .rd-hero.rd-hero--compact :is(.btn--link, .rd-actions__spacer, .rd-actions__meta),
+  .frame .purchase-plan--new .pp-hero.is-compact :is(.pp-back, .pp-action-spacer, .btn--ghost) { display: none; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .mapping-actions,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .rd-actions,
+  .frame .purchase-plan--new .pp-hero.is-compact .pp-hero-actions { flex: none; width: auto; padding: 0; margin: 0; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .btn--primary,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .btn--primary,
+  .frame .purchase-plan--new .pp-hero.is-compact .btn--primary { width: auto; min-height: 40px; padding: 0 14px; font-size: 13px; white-space: nowrap; }
 
   /* Leave room for the "Your workspace" tab on the left edge. */
   .frame.frame--saved-workspace .saved-workspace__content { padding-left: 14px; }
