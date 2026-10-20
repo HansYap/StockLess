@@ -16,8 +16,8 @@ function weeksFor(product: ProductSummary, date: string) {
 function WeeklySales({ product, date }: { product: ProductSummary; date: string }) {
   const weeks = weeksFor(product, date), maximum = Math.max(1, ...weeks.map(week => Math.abs(week.evidence?.netQuantity ?? 0)));
   return <div className="rd-weekly"><small>{t("Weekly sales")}</small><span className="spark rd-bars" role="img" aria-label={weeks.map(week => week.start + ": " + (week.evidence?.state && week.evidence.state !== "missing" ? week.evidence.netQuantity : t("Missing — not zero sales"))).join("; ")}>
-    {weeks.map(({ start, evidence }) => <span className="rd-bar" key={start} title={start + ": " + (evidence?.netQuantity ?? t("Missing — not zero sales"))}>
-      <span>{evidence?.netQuantity ?? "—"}</span><i className={!evidence || evidence.state === "missing" ? "spark__bar--missing" : (evidence.netQuantity ?? 0) < 0 ? "rd-bar--negative" : ""} style={{ height: !evidence || evidence.state === "missing" ? 6 : Math.max(3, Math.abs(evidence.netQuantity ?? 0) / maximum * 28) }} /><small>{start.slice(5)}</small>
+    {weeks.map(({ start, evidence }, index) => <span className="rd-bar" key={start} title={start + ": " + (evidence?.netQuantity ?? t("Missing — not zero sales"))}>
+      <span>{evidence?.netQuantity ?? "—"}</span><i className={!evidence || evidence.state === "missing" ? "spark__bar--missing" : (evidence.netQuantity ?? 0) < 0 ? "rd-bar--negative" : ""} style={{ height: !evidence || evidence.state === "missing" ? 6 : Math.max(3, Math.abs(evidence.netQuantity ?? 0) / maximum * 28) }} /><small>{index === 0 || index === weeks.length - 1 ? start.slice(5) : ""}</small>
     </span>)}
   </span></div>;
 }
