@@ -6,6 +6,11 @@ import { i3CompletionMessages } from "./i3-completion.ts";
 import { uploadMessages } from "./upload.ts";
 /** English interface copy → Simplified Chinese, Bahasa Melayu. */
 export const messages: Record<string, readonly [string, string]> = {
+  "All 0": ["全部为 0", "Semua 0"],
+  "item": ["项", "perkara"],
+  "Next 4 wks": ["未来 4 周", "4 minggu depan"],
+  "Showing {0} of {1}": ["显示 {0} / {1}", "Menunjukkan {0} daripada {1}"],
+  "No weights filled in. CO₂e will need these.": ["未填写重量。计算 CO₂e 需要这些数据。", "Tiada berat diisi. CO₂e memerlukannya."],
   "Enter a quantity from 0 to 999,999": ["请输入 0 至 999,999 之间的数量", "Masukkan kuantiti dari 0 hingga 999,999"],
   "Saved work failed to load in this browser. You can try again, upload a file or use the sample.": ["此浏览器无法加载已保存的工作。您可以重试、上传文件或使用示例。", "Kerja disimpan gagal dimuatkan dalam pelayar ini. Anda boleh cuba lagi, muat naik fail atau gunakan sampel."],
   "Results: checked data and demand estimates so you can review earlier work.": ["结果：检查过的数据和需求估算，供您查看先前的工作。", "Hasil: data disemak dan anggaran permintaan untuk menyemak kerja terdahulu."],
