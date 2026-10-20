@@ -139,13 +139,18 @@
 .purchase-plan--new .pp-order-step button { flex: none; width: 38px; height: 44px; border: 1px solid var(--border-strong); border-radius: 12px; background: white; font-size: 22px; cursor: pointer; }
 .purchase-plan--new .pp-order-step > span { font-size: 14px; color: var(--muted); }
 .purchase-plan--new .pp-quantity-range { width: 100%; accent-color: var(--teal); cursor: pointer; }
-.purchase-plan--new .pp-incoming { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: #4f6168; }
+.purchase-plan--new .pp-incoming { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; font-size: 14px; color: #4f6168; }
+.purchase-plan--new .pp-incoming label { flex: 1; min-width: 0; }
+.purchase-plan--new .pp-incoming input { flex: none; }
+.purchase-plan--new .pp-incoming > span { flex: none; }
 .purchase-plan--new .pp-incoming input { width: 72px; height: 36px; border: 1px solid var(--border-strong); border-radius: 10px; padding: 0 8px; font: 400 15px var(--data); color: var(--ink); }
 .purchase-plan--new .pp-input-error { font-size: 12px; line-height: 1.4; color: var(--red); }
-.purchase-plan--new .pp-input-sources { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+/* Where each number came from, and how to undo it, in one tidy row. */
+.purchase-plan--new .pp-input-sources { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-top: 10px; border-top: 1px solid var(--line-soft, #eef2f0); font-size: 12px; }
+.purchase-plan--new .pp-input-sources:empty { display: none; }
 .purchase-plan--new .pp-input-sources > span,
 .purchase-plan--new .pp-order-source > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.purchase-plan--new .pp-order-source { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.purchase-plan--new .pp-order-source { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .purchase-plan--new .source-tag { display: inline-flex; align-self: flex-start; padding: 2px 6px; border-radius: 5px; font-size: 11px; font-weight: 600; color: var(--muted); background: #f4f7f6; }
 .purchase-plan--new .source--input { color: var(--amber); background: var(--amber-tint); }
 .purchase-plan--new .source--worked { color: var(--teal-deep); background: #e8f3f0; }
@@ -349,3 +354,43 @@
 .purchase-plan--new .pp-kpi .pp-icon--drawn { width: 48px; height: 48px; border-radius: 0; background: none; }
 .purchase-plan--new .pp-kpi .pp-icon--drawn svg { display: block; }
 .purchase-plan--new .pp-kpi--check_order { border-color: #F1DDB0; background: #FFFCF6; }
+
+/* Kedai refresh: Stocky points to the marked products; the excess card shows just the number. */
+.purchase-plan--new .pp-stocky { flex: none; display: flex; align-items: flex-end; gap: 6px; margin-left: auto; }
+.purchase-plan--new .pp-stocky svg { width: 64px; height: auto; }
+.purchase-plan--new .pp-stocky__bubble { position: relative; max-width: 150px; margin-bottom: 28px; padding: 8px 11px; border: 1.5px solid #cfe4de; border-radius: 14px; background: #fff; font: 700 12px/1.35 var(--display); color: var(--ink); box-shadow: 0 8px 18px -12px rgba(22,49,59,.35); }
+.purchase-plan--new .pp-excess { border-left: 5px solid #e3953f; }
+.purchase-plan--new .pp-excess b { color: #b5661a; }
+.purchase-plan--new .pp-hero.is-compact .pp-stocky { display: none; }
+@media (max-width: 1150px) { .purchase-plan--new .pp-stocky { display: none; } }
+
+/* Kedai refresh: icon tiles and badges for spending and expiry. */
+.purchase-plan--new .pp-tile { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; flex: none; border-radius: 12px; }
+.purchase-plan--new .pp-tile--coins { background: #fff3d6; color: #a9790b; }
+.purchase-plan--new .pp-tile--calendar { background: #fdebdd; color: #c26a2e; }
+.purchase-plan--new .pp-spending { display: grid; grid-template-columns: 46px minmax(0, 1fr); column-gap: 14px; row-gap: 4px; align-items: center; border-color: #f0e2b8; background: linear-gradient(90deg, #fffbef 0%, #fff 70%); }
+.purchase-plan--new .pp-spending > .pp-tile { grid-row: span 2; }
+.purchase-plan--new .pp-spending > :not(.pp-tile) { grid-column: 2; }
+.purchase-plan--new .pp-spending-total { align-items: center; }
+.purchase-plan--new .pp-spending-total b { padding: 6px 12px; border-radius: 10px; background: #e3f1ea; color: #2e615b; }
+.purchase-plan--new .pp-expiry-details-head { flex-wrap: nowrap; justify-content: flex-start; }
+.purchase-plan--new .pp-expiry-details-head > div { flex: 1; min-width: 0; }
+.purchase-plan--new .pp-expiry-details-head > .pp-tile + div > p { align-self: flex-start; margin: 0; padding: 3px 10px; border-radius: 999px; background: #fff3d6; color: #7a5600; font-weight: 700; font-size: 12px; }
+
+/* Kedai refresh: one colour per status, on the summary cards and the list pills. */
+html body .purchase-plan--new .pp-kpi { border-top-width: 5px; border-top-style: solid; }
+html body .purchase-plan--new .pp-kpi.pp-kpi--order_needed { border-top-color: #8a4b1f; }
+html body .purchase-plan--new .pp-kpi.pp-kpi--check_order { border-top-color: #a9790b; }
+html body .purchase-plan--new .pp-kpi.pp-kpi--balanced { border-top-color: #2e615b; }
+html body .purchase-plan--new .pp-kpi.pp-kpi--need_data { border-top-color: #8a9a97; }
+.purchase-plan--new .pp-kpi--order_needed .pp-kpi-number { color: #8a4b1f; }
+.purchase-plan--new .pp-kpi--check_order .pp-kpi-number { color: #7a5600; }
+.purchase-plan--new .pp-kpi--balanced .pp-kpi-number { color: #2e615b; }
+.purchase-plan--new .pp-kpi--need_data .pp-kpi-number { color: #55666c; }
+.purchase-plan--new .pp-pill--order_needed { color: #8a4b1f; background: #fdebdd; }
+.purchase-plan--new .pp-pill--check_order { color: #7a5600; background: #fff3d6; }
+.purchase-plan--new .pp-pill--balanced { color: #2e615b; background: #e3f1ea; }
+.purchase-plan--new .pp-pill--need_data { color: #55666c; background: #eef0ec; }
+/* Phones: Stocky stays beside the plan title, small. */
+@media (max-width: 1150px) { .purchase-plan--new .pp-hero:not(.is-compact) .pp-stocky { display: flex; margin-left: 0; order: -1; align-items: center; } .purchase-plan--new .pp-stocky svg { width: 46px; order: -1; } .purchase-plan--new .pp-stocky__bubble { margin-bottom: 0; max-width: none; font-size: 12px; } }
+@media (max-width: 760px) { .purchase-plan--new .pp-stocky__bubble { display: none; } .purchase-plan--new .pp-hero:not(.is-compact) .pp-stocky { align-self: flex-start; } }

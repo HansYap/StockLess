@@ -66,3 +66,30 @@
   .frame.frame--saved-workspace .topbar .brand__logo { height:32px; }
 }
 @media(max-width:600px) { .frame.frame--saved-workspace .rd-product-grid { grid-template-columns:minmax(0,1fr); } }
+
+/* Kedai refresh: one white card with Stocky, drawn icon tiles and the current upload. */
+.saved-sidebar,.saved-sidebar-drawer { background:#f5f9f8; gap:16px; padding:22px 16px 20px; }
+.saved-sidebar__card { display:flex; flex-direction:column; gap:6px; padding:16px 12px; background:#fff; border:1px solid #dcede3; border-radius:18px; }
+.saved-sidebar__label { display:flex; align-items:center; gap:8px; margin:0 6px 8px; font:800 14px var(--display); letter-spacing:0; text-transform:none; color:var(--ink); }
+.saved-sidebar__stocky { display:inline-flex; width:30px; height:30px; flex:none; }
+.saved-sidebar__stocky svg { width:30px; height:30px; }
+.saved-sidebar__item { min-height:46px; padding:10px 12px; gap:10px; color:var(--ink); }
+.saved-sidebar__item--active,.saved-sidebar__item--active:hover { background:#3b7b74; }
+.saved-sidebar__item--active::after { display:none; }
+.saved-sidebar__tile { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; flex:none; border-radius:8px; background:#eef6f0; }
+.saved-sidebar__item--active .saved-sidebar__tile { background:#fff; }
+.saved-sidebar__tile--small { width:22px; height:22px; border-radius:7px; }
+.saved-sidebar__dataset { margin-top:6px; padding:12px; border-color:#dcede3; background:#f9fcfa; }
+.saved-sidebar__switch { color:#3b7b74; font:800 13px var(--display); }
+.saved-sidebar__switch-label { display:inline-flex; align-items:center; gap:8px; }
+.saved-sidebar__privacy { align-items:center; margin-top:8px; padding:10px; border-radius:10px; background:#e3f4ec; color:#3b7b74; font:600 12px/1.45 var(--body); }
+.saved-sidebar__lock { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; flex:none; border-radius:50%; background:#3b7b74; color:#fff; }
+.saved-sidebar__lock .saved-sidebar__icon { width:12px; height:12px; margin:0; }
+/* Phones: the workspace menu hides at the side; a slim tab on the left edge opens it. */
+@media(max-width:760px) {
+  .saved-sidebar-mobile { position:fixed; left:0; top:38vh; z-index:30; display:block; width:auto; padding:0; border:0; background:none; }
+  .saved-sidebar__menu.saved-sidebar__handle { flex-direction:column; gap:8px; width:24px; min-height:0; padding:10px 0; border:0; border-radius:0 12px 12px 0; background:#3b7b74; color:#fff; box-shadow:0 6px 16px -6px rgba(22,49,59,.5); }
+  .saved-sidebar__handle-tile { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px; border-radius:5px; background:#fff; }
+  .saved-sidebar__handle-text { writing-mode:vertical-rl; transform:rotate(180deg); font:800 11px var(--display); letter-spacing:.3px; white-space:nowrap; }
+  .saved-sidebar-drawer { inset:0 auto 0 0; height:100dvh; border-radius:0 24px 24px 0; box-shadow:12px 0 30px -12px rgba(22,49,59,.5); }
+}

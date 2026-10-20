@@ -151,7 +151,13 @@ export function ImpactStory({ head, aside, afterStory, lines, totalProducts, bus
       </div>
     </div>
     {lines.length > 0 && <div className="sx-sum">
-      <p className="sx-sum__eq"><span>{copy("Stock under your plan", "计划下的总库存", "Stok mengikut pelan anda")} <b>{number(planned)}</b></span><i aria-hidden="true">−</i><span>{copy("within expected sales", "预计销量范围内", "dalam jangkaan jualan")} <b className="is-teal">{number(expected)}</b></span><i aria-hidden="true">=</i><span><b className="is-amber">{number(excess)}</b> {copy("potential excess", "潜在多余库存", "lebihan berpotensi")}</span></p>
+      <p className="sx-sum__eq">
+        <span className="sx-sum__tile"><ImpactIcon name="box" size={24} /><b>{number(planned)}</b><small>{copy("in your plan", "计划中的库存", "dalam pelan anda")}</small></span>
+        <i aria-hidden="true">−</i>
+        <span className="sx-sum__tile sx-sum__tile--sell"><ImpactIcon name="cart" size={24} /><b className="is-teal">{number(expected)}</b><small>{copy("likely to sell", "可能卖出", "mungkin terjual")}</small></span>
+        <i aria-hidden="true">=</i>
+        <span className="sx-sum__tile sx-sum__tile--extra"><ImpactIcon name="warning" size={24} /><b className="is-amber">{number(excess)}</b><small>{copy("may not sell", "可能卖不完", "mungkin tidak terjual")}</small></span>
+      </p>
       <div className="sx-sum__bar" role="img" aria-label={copy(`${number(expected)} units within expected sales, ${number(excess)} units of potential excess stock`, `预计销量范围内 ${number(expected)} 件，潜在多余库存 ${number(excess)} 件`, `${number(expected)} unit dalam jangkaan jualan, ${number(excess)} unit stok berlebihan berpotensi`)}><span style={{ flexGrow: Math.max(0, expected) }} /><span style={{ flexGrow: Math.max(0, excess) }} /></div>
       <small>{copy("All assessed products · next 4 weeks · quantities in units. Total stock includes current stock, incoming stock and planned orders.", "所有已评估商品 · 未来 4 周 · 数量单位为件。总库存包括现有库存、在途库存和计划订单。", "Semua produk dinilai · 4 minggu akan datang · kuantiti dalam unit. Jumlah stok termasuk stok semasa, stok akan tiba dan pesanan dirancang.")}</small>
     </div>}

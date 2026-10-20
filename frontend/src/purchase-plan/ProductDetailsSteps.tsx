@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from "react";
+import { ImpactIcon } from "../components/ImpactIcon.tsx";
 import { useLanguage } from "../i18n/index.ts";
 import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
 import { type ProductPlanningContext, type ProductPurchasePlan } from "../engine.ts";
@@ -188,7 +189,7 @@ export const ProductDetailsSteps = forwardRef<ProductStepsHandle, Props>(functio
   if (!open && scope === "expiry") {
     const expiry = steps.find(item => item.key === "expiry");
     return <section className="pp-expiry-details" data-guide="purchase-expiry" ref={root} aria-label={sectionTitle}>
-      <div className="pp-expiry-details-head"><div><h3>{sectionTitle}</h3><p>{expiry?.value ?? c("Expiry date not confirmed", "尚未确认到期日", "Tarikh luput belum disahkan")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={() => go("expiry")}>{c("Review expiry", "查看到期信息", "Semak luput")}</button></div>
+      <div className="pp-expiry-details-head">{scope === "expiry" && <span className="pp-tile pp-tile--calendar" aria-hidden="true"><ImpactIcon name="calendar" size={24} /></span>}<div><h3>{sectionTitle}</h3><p>{expiry?.value ?? c("Expiry date not confirmed", "尚未确认到期日", "Tarikh luput belum disahkan")}</p></div><button type="button" className="btn btn--ghost btn--small" onClick={() => go("expiry")}>{c("Review expiry", "查看到期信息", "Semak luput")}</button></div>
       <p className="pp-small-note">{c("Used for expiry warnings in your purchase plan. Checked dates from your file are included automatically.", "用于采购计划中的到期提醒。文件中已核对的日期会自动计入。", "Digunakan untuk amaran luput dalam pelan belian anda. Tarikh disemak daripada fail dikira secara automatik.")}</p>
     </section>;
   }

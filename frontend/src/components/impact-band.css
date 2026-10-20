@@ -74,3 +74,69 @@ main.impact:has(.sx-band){width:min(1100px,calc(100% - 80px));max-width:none;mar
 .sx-kpi-button b{overflow-wrap:anywhere}
 .sx-kpi-link{margin-top:4px;font:700 13px/1.5 var(--body);color:var(--teal-deep)}
 @media(max-width:760px){.sx-kpis.sx-kpis--summary{grid-template-columns:1fr}.sx-kpi-button{padding:16px}}
+/* Summary cards share the Purchase plan card style: colour strip on top, round icon, big coloured number first. */
+html body .sx-kpis.sx-kpis--summary li{border-top-width:5px;border-top-style:solid;border-radius:16px;box-shadow:0 10px 30px #16313b0d}
+html body .sx-kpis.sx-kpis--summary li:nth-child(1){border-top-color:#B5661A}
+html body .sx-kpis.sx-kpis--summary li:nth-child(2){border-top-color:#A9790B;background:#FFFCF6;border-color:#F1DDB0}
+html body .sx-kpis.sx-kpis--summary li:nth-child(3){border-top-color:#5B86B3}
+.sx-kpis--summary .sx-kpi__ic{width:52px;height:52px;border-radius:50%}
+.sx-kpis--summary .sx-kpi__ic--blue{background:#EAF0F8}
+.sx-kpis--summary .sx-kpi-button{align-items:center}
+.sx-kpis--summary .sx-kpi-button>span:last-child{gap:4px}
+.sx-kpis--summary .sx-kpi-button b{order:-1;font-size:30px;line-height:1.05}
+.sx-kpis--summary li:nth-child(1) .sx-kpi-button b{color:#B5661A}
+.sx-kpis--summary li:nth-child(2) .sx-kpi-button b{color:#7A5600}
+.sx-kpis--summary li:nth-child(3) .sx-kpi-button b{color:#3E6E9C;font-size:24px}
+.sx-kpis--summary .sx-kpi-label{font-size:15px}
+.sx-kpis--summary .sx-kpi-button:hover{background:transparent}
+/* Phones: the three cards stay on one row, compact. */
+@media(max-width:760px){
+  html body .sx-kpis.sx-kpis--summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .sx-kpis--summary .sx-kpi-button{flex-direction:column;align-items:flex-start;gap:4px;padding:9px 8px}
+  .sx-kpis--summary .sx-kpi__ic{width:30px;height:30px}
+  .sx-kpis--summary .sx-kpi__ic .impact-icon{width:20px;height:20px}
+  .sx-kpis--summary .sx-kpi-button b{font-size:17px;white-space:nowrap}
+  .sx-kpis--summary li:nth-child(3) .sx-kpi-button b{font-size:14px;white-space:normal}
+  .sx-kpis--summary .sx-kpi-label{font-size:10px;line-height:1.25}
+  .sx-kpis--summary .sx-kpi-button em{font-size:10px;line-height:1.3}
+  .sx-kpis--summary .sx-kpi-link{font-size:10px;margin-top:2px}
+}
+/* Phones: the earth card sits above the shelf, small, so the extra stock flies up into its badge on one screen. */
+@media(max-width:760px){
+  .sx-hero{display:flex;flex-direction:column;gap:12px}
+  .sx-hero .sx-impactcard{order:-1;display:grid;grid-template-columns:112px minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:12px;row-gap:4px;align-items:center;padding:12px;text-align:left}
+  .sx-impactcard .sx-globe{grid-row:1 / span 3;width:112px;height:112px}
+  .sx-impactcard .sx-badge{right:-8px;bottom:0;width:54px;height:54px;border-width:3px}
+  .sx-impactcard .sx-badge__num{font-size:20px}
+  .sx-impactcard .sx-badge span:last-child{font-size:7px}
+  .sx-impactcard .sx-impact__title{margin:0;font-size:16px;text-align:left}
+  .sx-impactcard .sx-globe-note{margin:0;font-size:12px;line-height:1.35;text-align:left;max-width:none}
+  .sx-impactcard .sx-globe-go{justify-self:start;margin:4px 0 0;padding:6px 10px;font-size:12px;min-height:0}
+}
+/* Stock maths as three tiles: in your plan − likely to sell = may not sell. */
+.sx-sum .sx-sum__eq{align-items:stretch;flex-wrap:nowrap;gap:10px}
+.sx-sum__tile{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px;border-radius:14px;background:#f2f6f4;text-align:center}
+.sx-sum__tile--sell{background:#e3f1ea}
+.sx-sum__tile--extra{background:#fff3e3;border:1.5px solid #e3953f}
+.sx-sum__tile small{font:600 13px/1.25 var(--body);color:var(--muted)}
+.sx-sum .sx-sum__eq i{align-self:center;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex:none;border-radius:50%;background:#eef3f0;font-size:16px}
+.sx-sum>small{font-size:12px;text-align:center}
+@media(max-width:760px){
+  .sx-sum{padding:12px}
+  .sx-sum .sx-sum__eq{gap:4px}
+  .sx-sum__tile{padding:8px 4px}
+  .sx-sum__eq .sx-sum__tile b{font-size:20px}
+  .sx-sum__tile small{font-size:10px}
+  .sx-sum .sx-sum__eq i{width:20px;height:20px;font-size:13px}
+  .sx-sum>small{font-size:10px}
+  /* About this plan: one slim row with tiny labels; Back to my plan as a link. */
+  aside.impact__about{width:auto;padding:8px 4px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:none}
+  aside.impact__about h2{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  aside.impact__about dl{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr) auto auto;gap:6px 0;margin:0}
+  aside.impact__about dl>div.is-wide{grid-column:auto}
+  aside.impact__about dl>div{min-width:0;padding:0 6px;border:0;border-left:1px solid var(--line-soft,#eef2f0);border-radius:0;background:none}
+  aside.impact__about dl>div:first-child{border-left:0}
+  aside.impact__about dl>div>dt{position:static;width:auto;height:auto;overflow:visible;clip:auto;margin:0;font:600 9px/1.3 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+  aside.impact__about dl>div>dd{margin:0;font:700 11px/1.35 var(--display);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sx-band .sx-back{min-height:0;padding:4px 0;border:0;background:none;box-shadow:none;color:var(--teal-deep);font-size:13px}
+}

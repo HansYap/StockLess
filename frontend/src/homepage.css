@@ -529,3 +529,112 @@ html[lang^="zh"] .sl-home h1,html[lang^="zh"] .sl-home h2,html[lang^="zh"] .sl-h
 }
 /* Keep the three trust checks on one row on wider screens */
 @media (min-width:768px){.sl-home .hp-checks{flex-wrap:nowrap}.sl-home .hp-checks li{white-space:nowrap}}
+
+/* Kedai refresh: receipt checklist, green privacy card, shelf under the banner, Stocky in the FAQ. */
+.sl-home .hp-list{gap:0;padding:6px 20px 14px;border:1px solid #EADFC8;border-radius:14px 14px 0 0;background:#FFFDF8;box-shadow:0 14px 26px -22px rgba(22,49,59,.45);position:relative}
+.sl-home .hp-list::after{content:"";position:absolute;left:-1px;right:-1px;bottom:-12px;height:12px;background:linear-gradient(135deg,#FFFDF8 33%,transparent 33%) 0 0/16px 12px repeat-x,linear-gradient(225deg,#FFFDF8 33%,transparent 33%) 0 0/16px 12px repeat-x}
+.sl-home .hp-list li{border:0;border-bottom:1px dashed #EDE4D0;border-radius:0;padding:12px 2px;font-weight:600}
+.sl-home .hp-list .hp-tick{width:22px;height:22px;border-radius:50%;background:#3B7B74;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.sl-home .hp-priv{background:linear-gradient(160deg,#EFF7F2 0%,#E2F0E8 100%);border-color:#CFE4DE}
+.sl-home .hp-priv__ic{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:16px;background:#3B7B74;color:#fff;box-shadow:0 5px 0 #2E615B}
+.sl-home .hp-priv .hp-chips span{background:#fff;border:1px solid #CFE4DE;color:#2E615B}
+.sl-home .hp-band{position:relative;margin-bottom:0;border-radius:22px 22px 0 0}
+.sl-home .hp-band__shelf{height:16px;margin-bottom:56px;background:#D9B382;border-top:4px solid #C99D63;border-radius:0 0 8px 8px}
+.sl-home .hp-band__stocky{position:absolute;left:36px;bottom:0;line-height:0}
+.sl-home .hp-band__stocky svg{width:56px;height:auto}
+.sl-home .hp-sdg__card{box-shadow:0 8px 0 #9E7124}
+.sl-home .hp-sdg .hp-link{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #3B7B74;border-radius:999px;color:#3B7B74}
+.sl-home .hp-lm__stocky{position:absolute;right:0;top:12px;line-height:0}
+.sl-home .hp-lm__stocky svg{width:64px;height:auto}
+.sl-home .hp-faq__ic{width:44px;height:44px;align-items:center;justify-content:center;border-radius:12px;background:#E3F1EA}
+@media(max-width:960px){.sl-home .hp-band__stocky,.sl-home .hp-lm__stocky{display:none}}
+.sl-home .hp-flow{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 18px;padding:0;list-style:none}
+.sl-home .hp-flow__step{display:flex;align-items:center;gap:10px;min-width:150px;padding:12px 14px;border-radius:14px;font:800 13px/1.25 var(--display);color:var(--ink)}
+.sl-home .hp-flow__step:not(:last-child)::after{content:"→";margin-left:auto;padding-left:8px;color:#9AB0AA;font-weight:800}
+.sl-home .hp-flow__step--sell{background:#E3F1EA}
+.sl-home .hp-flow__step--shelf{background:#FFF3D6}
+.sl-home .hp-flow__step--waste{background:#EAF2FB}
+.sl-home .hp-flow__ic{font-size:22px;line-height:1}
+.sl-home .hp-priv__stocky{display:flex;align-items:center;gap:10px;margin:20px 0 0;padding-top:16px;border-top:1px dashed #BFD9CF;font:700 13px var(--display);color:#2E615B}
+.sl-home .hp-priv__stocky-img{display:inline-flex;line-height:0}
+.sl-home .hp-priv__stocky-img svg{width:40px;height:auto}
+.sl-home .hp-lm__stocky{display:flex;align-items:flex-end;gap:8px}
+.sl-home .hp-lm__bubble{margin-bottom:30px;padding:9px 13px;border:1.5px solid #CFE4DE;border-radius:14px 14px 4px 14px;background:#fff;font:700 13px var(--display);color:var(--ink);white-space:nowrap}
+
+/* Kedai refresh · homepage top half (design A). */
+html body .sl-home .btn--primary{background:#3B7B74;background-image:none;border-color:transparent;box-shadow:0 3px 0 #2E615B,0 10px 22px -12px rgba(46,97,91,.7)}
+html body .sl-home .btn--primary:hover{background:#2E615B}
+.sl-home .hp-link{color:#3B7B74}
+.sl-home .hp-hero__leaf,.sl-home .hp-hero__basket{display:none}
+.sl-home .hp-hero{background:linear-gradient(180deg,#F2F8EF 0%,#ECF4EA 25%,#E5F0E3 50%,#DDECDC 78%,#D8E8D7 100%)}
+/* Stocky says hello above the headline */
+.sl-home .hp-hello{display:flex;align-items:center;gap:12px;margin-bottom:22px;letter-spacing:0;text-transform:none}
+.sl-home .hp-hello__stocky{display:inline-flex;line-height:0;flex:none}
+.sl-home .hp-hello__stocky svg{width:64px;height:auto}
+.sl-home .hp-hello__bubble{position:relative;display:flex;flex-direction:column;gap:2px;padding:10px 14px;border:1.5px solid #CFE4DE;border-radius:14px;background:#fff;box-shadow:0 8px 20px -14px rgba(22,49,59,.45)}
+.sl-home .hp-hello__bubble::before{content:"";position:absolute;left:-7px;top:50%;width:11px;height:11px;margin-top:-6px;background:#fff;border-left:1.5px solid #CFE4DE;border-bottom:1.5px solid #CFE4DE;transform:rotate(45deg)}
+.sl-home .hp-hello__bubble b{font:800 15px var(--display);color:var(--ink)}
+.sl-home .hp-hello__bubble small{font:600 13px var(--body);color:#5E7177}
+/* Pills under the buttons */
+.sl-home .hp-checks{gap:10px;padding-top:0;border-top:0}
+.sl-home .hp-checks li{padding:6px 14px 6px 6px;border:1.5px solid #3B7B74;border-radius:999px;background:#fff;color:#3B7B74;font:700 13px var(--display)}
+.sl-home .hp-checks .hp-tick{width:22px;height:22px;border-radius:50%;background:#3B7B74}
+/* Wooden shelf under the hero card */
+.sl-home .hp-card-wrap{position:relative;margin-bottom:28px}
+.sl-home .hp-card-wrap::after{content:"";position:absolute;left:-8px;right:-8px;bottom:-14px;height:10px;border-radius:3px;background:#D9B382;border-bottom:4px solid #C99D63;box-shadow:24px 22px 0 -2px transparent}
+.sl-home .hp-card-wrap::before{content:"";position:absolute;left:28px;right:28px;bottom:-30px;height:16px;background:linear-gradient(90deg,#B08048 0 8px,transparent 8px calc(100% - 8px),#B08048 calc(100% - 8px));pointer-events:none}
+/* Price-tag stat cards and a taped photo */
+.sl-home .hp-stat{position:relative;border:1.5px solid #E6D5B5;border-radius:12px;box-shadow:0 10px 22px -18px rgba(22,49,59,.45)}
+.sl-home .hp-stat::before{content:"";position:absolute;left:50%;top:8px;width:9px;height:9px;margin-left:-5px;border-radius:50%;background:#F5F9F8;border:1.5px solid #E6D5B5}
+.sl-home .hp-big__media{position:relative}
+.sl-home .hp-big__media>img{border:8px solid #fff;border-radius:6px;box-shadow:0 16px 32px -20px rgba(22,49,59,.55)}
+.sl-home .hp-big__media::before,.sl-home .hp-big__media::after{content:"";position:absolute;top:-10px;width:88px;height:22px;background:rgba(242,214,160,.85);z-index:2}
+.sl-home .hp-big__media::before{left:28px;transform:rotate(-2deg)}
+.sl-home .hp-big__media::after{right:28px;transform:rotate(2deg)}
+/* Five steps hang from a wooden rail */
+.sl-home .hp-steps{grid-template-columns:repeat(5,minmax(0,1fr));position:relative;padding-top:18px}
+.sl-home .hp-steps::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;border-radius:3px;background:#C99D63}
+.sl-home .hp-step::before{content:"";position:absolute;left:50%;top:-18px;width:2px;height:18px;background:#C99D63}
+.sl-home .hp-step--impact{background:#FFF8EA;border-color:#E6D5B5}
+.sl-home .hp-guide{left:min(calc(var(--hp-guide-step, 0) * (100% + 16px) / 5 + 8px), calc(100% - 300px))}
+/* StockLess column sits on a shelf */
+.sl-home .hp-col--sl{margin-bottom:14px;border-radius:20px 20px 0 0}
+.sl-home .hp-col--sl::after{content:"";position:absolute;left:-2px;right:-2px;bottom:-14px;height:12px;background:#D9B382;border-top:3px solid #C99D63;border-radius:0 0 6px 6px}
+@media(max-width:1100px){.sl-home .hp-steps{grid-template-columns:repeat(3,minmax(0,1fr))}.sl-home .hp-steps::before,.sl-home .hp-step::before{display:none}}
+@media(max-width:700px){.sl-home .hp-steps{grid-template-columns:minmax(0,1fr)}}
+.sl-home .hp-col--sl,.sl-home .hp-card-wrap.hp-float{animation:none}
+.sl-home .hp-flow{flex-wrap:nowrap;gap:8px}
+.sl-home .hp-flow__step{flex:1 1 0;min-width:0;padding:10px 12px;font-size:12px;gap:8px}
+.sl-home .hp-flow__ic{font-size:18px}
+@media(max-width:700px){.sl-home .hp-flow{flex-wrap:wrap}.sl-home .hp-flow__step{flex:1 1 100%}}
+/* Drawn icons instead of ticks and emoji on the lower homepage (matches the workspace icon set). */
+.sl-home .hp-list .hp-tick.hp-tick--drawn{width:40px;height:40px;border-radius:12px;background:#E3F1EA;box-shadow:none}
+.sl-home .hp-list .hp-tick--2{background:#EAF2FB}
+.sl-home .hp-list .hp-tick--3{background:#FFF3D6}
+.sl-home .hp-list .hp-tick--4{background:#F1ECFA}
+.sl-home .hp-list .hp-tick--5{background:#FDEBDD}
+.sl-home .hp-tick--drawn .impact-icon{display:block}
+.sl-home .hp-priv .hp-chips span{display:inline-flex;align-items:center;gap:6px}
+.sl-home .hp-chip-ic{flex:none}
+.sl-home .hp-flow__ic{display:inline-flex;align-items:center;justify-content:center;line-height:0}
+.sl-home .hp-flow__ic .impact-icon{display:block}
+/* Phones: no purchase-plan preview in the hero; the five steps swipe sideways on the kedai shelf. */
+@media(max-width:700px){
+  .sl-home .hp-card-wrap{display:none}
+  .sl-home .hp-steps{display:flex;grid-template-columns:none;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:26px 16px 18px 2px;margin-right:-16px;scrollbar-width:none}
+  .sl-home .hp-steps::-webkit-scrollbar{display:none}
+  .sl-home .hp-steps::before{display:block;top:4px;right:auto;width:calc(5 * 232px)}
+  .sl-home .hp-step{flex:0 0 220px;scroll-snap-align:start}
+  .sl-home .hp-step::before{display:block;top:-24px;height:22px}
+  .sl-home .hp-step.is-on{transform:translateY(-4px)}
+}
+/* FAQ Stocky sits in the flow under the intro, so its bubble never covers the heading. */
+.sl-home .hp-lm__stocky{position:static;display:flex;flex-direction:row-reverse;justify-content:flex-end;align-items:flex-end;gap:8px;margin:14px 0 6px}
+.sl-home .hp-lm__bubble{margin-bottom:22px;border-radius:14px 14px 14px 4px;white-space:normal}
+@media(max-width:960px){.sl-home .hp-lm__stocky{display:flex}.sl-home .hp-lm__stocky svg{width:48px}}
+/* Phones: the three food-waste figures swipe sideways instead of stacking. */
+@media(max-width:700px){
+  .sl-home .hp-stats{display:flex;grid-template-columns:none;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin-right:-16px;padding:4px 16px 10px 2px;scrollbar-width:none}
+  .sl-home .hp-stats::-webkit-scrollbar{display:none}
+  .sl-home .hp-stat{flex:0 0 72%;scroll-snap-align:start}
+}

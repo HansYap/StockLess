@@ -77,6 +77,10 @@
 .readiness-screen .rd-bar i.spark__bar--missing { border: 1px dashed var(--muted); background: var(--line-soft); }
 .readiness-screen .rd-bar i.rd-bar--negative { background: var(--amber); }
 .readiness-screen .rd-bar small { margin-top: 4px; font-size: 8px; white-space: nowrap; }
+/* Only the first and last week are labelled, so the dates never overlap. */
+.readiness-screen .rd-bar small { min-height: 1.2em; }
+.readiness-screen .rd-bar:first-child small { align-self: flex-start; }
+.readiness-screen .rd-bar:last-child small { align-self: flex-end; }
 .readiness-screen .rd-product__note { font-size: 12px; line-height: 1.5; margin: 0; color: var(--teal-deep); }
 .readiness-screen .rd-product__note--missing { color: var(--red); }
 .readiness-screen .rd-product__note--review { color: var(--amber); }
@@ -371,3 +375,22 @@
   .readiness-screen .rd-observed { grid-column: 1 / -1; grid-row: auto; }
 }
 @media (max-width: 600px) { .readiness-screen .rd-file { display: grid; grid-template-columns: 40px minmax(0,1fr); width: 100%; } .readiness-screen .rd-file button { grid-column: 2; justify-self: start; text-align: left; } }
+
+/* Product cards: keep the status pill on one line so every card lines up. */
+.readiness-screen .rd-product header > div { flex: 1; }
+.readiness-screen .rd-product header > .rd-pill { flex: none; white-space: nowrap; }
+.readiness-screen .rd-product > .btn { margin-top: auto; align-self: flex-start; }
+/* Summary cards share the Purchase plan / Impact style: colour strip on top, drawn icon, big coloured number. */
+html body .readiness-screen .rd-stat { border-top-width: 5px; border-top-style: solid; box-shadow: 0 10px 30px #16313b0d; }
+html body .readiness-screen .rd-stat--ready { border-top-color: #2e615b; }
+html body .readiness-screen .rd-stat--review { border-top-color: #a9790b; background: #fffcf6; border-color: #f1ddb0; }
+html body .readiness-screen .rd-stat--missing { border-top-color: #8a9a97; }
+html body .readiness-screen .rd-stat .rd-stat__icon { width: 48px; height: 48px; border-radius: 0; background: none; }
+html body .readiness-screen .rd-stat .rd-stat__icon svg { width: 44px; height: 44px; }
+html body .readiness-screen .rd-stat--ready .rd-stat__number { color: #2e615b; }
+html body .readiness-screen .rd-stat--review .rd-stat__number { color: #7a5600; }
+html body .readiness-screen .rd-stat--missing .rd-stat__number { color: #55666c; }
+html body .readiness-screen .rd-stat--review[aria-pressed="true"] { border-top-color: #a9790b; }
+html body .readiness-screen .rd-stat--missing[aria-pressed="true"] { border-color: #8a9a97; box-shadow: 0 0 0 3px #eef0ec; }
+@media (max-width: 640px) { html body .readiness-screen .rd-stat .rd-stat__icon, html body .readiness-screen .rd-stat .rd-stat__icon svg { width: 34px; height: 34px; } }
+html body .readiness-screen .rd-stat { color: var(--ink); }

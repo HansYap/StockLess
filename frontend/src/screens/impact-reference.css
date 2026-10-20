@@ -318,3 +318,73 @@
 .impact details.ix-more[open]>summary::after,.impact details.ix-breakdown[open]>summary::after{transform:rotate(180deg)}
 .impact details.ix-more[open]>summary,.impact details.ix-breakdown[open]>summary{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line-soft)}
 @media (prefers-reduced-motion:reduce){.impact details.ix-more>summary::after,.impact details.ix-breakdown>summary::after{transition:none}}
+
+/* Kedai refresh: icon tiles on every dropdown, and pictures before the technical text. */
+.impact details.ix-more>summary,.impact details.ix-breakdown>summary{justify-content:flex-start}
+.impact details.ix-more>summary::after,.impact details.ix-breakdown>summary::after{margin-left:auto}
+.ix-tile{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:10px;background:#eef6f0;color:#2e615b}
+.ix-formula{max-width:620px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:14px 0;padding:14px 16px;border-radius:14px;background:#f7fbf8}
+.ix-formula>b{font:800 18px var(--display);color:#9ab0aa}
+.ix-formula__item{display:flex;flex-direction:column;align-items:center;gap:6px;font:600 12px var(--body);color:#4f646b;text-align:center}
+.ix-formula__tile{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px}
+.ix-formula__tile--units{background:#e3f1ea;color:#2a9c80}
+.ix-formula__tile--weight{background:#fff4e6;color:#c26a2e}
+.ix-formula__tile--factor{background:#eaf2fb;color:#5b8dc9}
+.ix-formula__tile--result{border-radius:50%;background:#3b7b74;color:#fff;font:800 10px/1.1 var(--display)}
+.ix-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+.ix-chips>li{padding:6px 12px;border:1.5px dashed #cfd8d4;border-radius:10px;background:#f8faf9;font:700 13px var(--display)}
+.ix-period{display:inline-flex;align-items:center;gap:6px;margin:14px 0 4px;padding:6px 12px;border-radius:999px;background:#eff6f2;color:#2e615b;font:800 12px var(--display)}
+.ix-note--quiet{font-size:12px}
+.ix-compare{display:flex;align-items:flex-end;justify-content:center;gap:40px;margin:14px 0;padding:16px;border-radius:14px;background:#f7fbf8}
+.ix-compare__col{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ix-compare__col b{font:800 15px var(--display);color:#2e615b}
+.ix-compare__col small{font:700 12px var(--body);color:#4f646b}
+.ix-compare__bar{display:block;width:70px;border-radius:8px 8px 0 0;background:#3b7b74}
+.ix-compare__col--excess b{color:#b5661a}
+.ix-compare__col--excess .ix-compare__bar{background:#e3953f}
+.ix-queue--chips>li{border:1.5px dashed #e3b65a;border-radius:10px;background:#fffcf5}
+.ix-progress{display:inline-flex;align-items:center;gap:8px;margin-left:12px;padding:4px 10px;border-radius:999px;background:#fff3d6;color:#7a5600;font:800 12px var(--display);white-space:nowrap}
+.ix-progress__bar{display:inline-block;width:64px;height:7px;border-radius:999px;background:#f1e6c8;overflow:hidden}
+.ix-progress__bar>i{display:block;height:100%;background:#3b7b74;border-radius:999px}
+/* Pictures instead of dropdowns; explanations live in (i) tooltips. */
+.ix-explain{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:12px 0 14px}
+.ix-explain__card{min-width:0;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.ix-explain__card--wide{grid-column:1/-1;margin:14px 0}
+.ix-explain__card h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font:800 15px var(--display);color:var(--ink)}
+.ix-explain__card .ix-formula{margin:0;max-width:none}
+.ix-explain__card .ix-compare{margin:0}
+.ix-explain__card--sdg{display:flex;align-items:center;gap:16px}
+.ix-explain__card--sdg h3{margin-bottom:6px}
+.ix-sdg{display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;flex:none;border-radius:16px;background:#BF8B30;color:#fff}
+.ix-sdg b{font:800 26px/1 var(--display)}
+.ix-sdg small{font:800 9px var(--display);letter-spacing:.06em}
+.ix-sdg__compare{margin:0;font:700 13px var(--body);color:#4f646b}
+.ix-count{padding:2px 9px;border-radius:999px;background:#eef0ec;color:#55666c;font:800 12px var(--display)}
+.ix-card__chip{display:inline-block;margin-top:4px;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.7);font-weight:700}
+.ix-tip{position:relative;display:inline-flex;vertical-align:middle;margin-left:6px}
+.ix-tip__btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:1.5px solid #3b7b74;border-radius:50%;background:#fff;color:#3b7b74;font:800 11px/1 var(--display);cursor:help}
+.ix-tip__bubble{position:absolute;left:50%;bottom:calc(100% + 8px);z-index:30;width:max-content;max-width:300px;padding:10px 12px;border-radius:10px;background:#16313b;color:#fff;font:400 12px/1.5 var(--body);text-align:left;text-transform:none;letter-spacing:0;box-shadow:0 10px 24px rgba(22,49,59,.25);transform:translateX(-50%);opacity:0;visibility:hidden;transition:opacity .15s;pointer-events:none}
+.ix-tip__bubble::after{content:"";position:absolute;left:50%;top:100%;margin-left:-6px;border:6px solid transparent;border-top-color:#16313b}
+.ix-tip:hover .ix-tip__bubble,.ix-tip:focus-within .ix-tip__bubble{opacity:1;visibility:visible}
+.ix-tip__para{display:block}.ix-tip__para+.ix-tip__para{margin-top:6px}
+.ix-period{display:inline-flex}
+@media(max-width:760px){.ix-explain{grid-template-columns:1fr}.ix-tip__bubble{left:auto;right:-8px;transform:none}.ix-tip__bubble::after{left:auto;right:12px}}
+/* Products left out of CO2e: one small card per reason — drawn icon, short label, count, names; the wording sits in (i). */
+.ix-excluded{border-style:solid;border-color:var(--line);background:#fbfdfc}
+.ix-excluded h4{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ix-excluded__hint{font:400 12px var(--body);color:var(--muted)}
+.ix-excluded>ul{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.ix-excluded__card{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.ix-excluded__top{display:flex;align-items:center;gap:8px}
+.ix-excluded__top b{font-family:var(--display);font-size:14px;color:var(--ink)}
+.ix-excluded__top .ix-count{margin-left:auto}
+.ix-excluded__ic{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:9px;background:#eef6f0}
+.ix-excluded .ix-excluded__names{display:flex;margin-top:8px}
+.ix-excluded .ix-excluded__names>li{font-size:12px;padding:4px 9px}
+.ix-excluded__more{background:#eef6f0!important;color:var(--teal-deep)!important;font-weight:700}
+@media(max-width:760px){.ix-excluded>ul{grid-template-columns:minmax(0,1fr)}}
+
+/* CO₂e card when too few products have a food type or weight: ask for data, never a misleading "≈ 0". */
+.ix-card.ix-card--need{border:1.5px dashed #b9cbe0;background:#f7fafd;box-shadow:none}
+.ix-card.ix-card--need b{font-size:22px;color:#3e6e9c}
+.ix-card__need{font:400 13px/1.45 var(--body);color:var(--muted)}

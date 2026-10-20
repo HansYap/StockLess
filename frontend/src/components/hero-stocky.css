@@ -1,0 +1,30 @@
+.hero-stocky { display: flex; align-items: flex-end; gap: 6px; flex: none; pointer-events: none; }
+.hero-stocky svg { width: 60px; height: auto; display: block; }
+.hero-stocky__bubble { position: relative; max-width: 170px; margin-bottom: 26px; padding: 8px 11px; border: 1.5px solid #cfe4de; border-radius: 14px; background: #fff; font: 700 12px/1.35 var(--display, "Manrope", sans-serif); color: var(--ink, #16313b); box-shadow: 0 8px 18px -12px rgba(22, 49, 59, .35); }
+.hero-stocky--flex { margin-left: auto; }
+.hero-stocky--corner { position: absolute; right: 0; bottom: 10px; }
+.hero-stocky--corner svg { order: -1; }
+.hero-stocky--corner .hero-stocky__bubble { margin-bottom: 30px; }
+.hero-stocky--float { float: right; margin: 0 0 8px 16px; }
+@media (max-width: 1100px) { .hero-stocky { display: none; } }
+/* Phones and tablets: Stocky stays, small, with its speech bubble beside it (as in the mobile designs). */
+@media (max-width: 1100px) {
+  .hero-stocky, .hero-stocky--corner, .hero-stocky--flex { display: flex; position: static; order: -1; align-items: center; gap: 8px; margin: 0 0 10px; }
+  .hero-stocky svg { order: -1; width: 46px; }
+  .hero-stocky__bubble { max-width: none; margin: 0; font-size: 12px; }
+  .hero-stocky--float { float: right; margin: 0 0 6px 10px; }
+  .hero-stocky--float svg { width: 48px; }
+}
+/* Phones: compact page headers — small Stocky on the left, step, title and line of text beside it. */
+@media (max-width: 760px) {
+  .hero-stocky .hero-stocky__bubble { display: none; }
+  .hero-stocky { margin: 0; align-self: flex-start; }
+  .hero-stocky svg { width: 52px; }
+  html body .upload-screen .upload-hero:not(.upload-hero--compact) .upload-hero__inner { display: grid; grid-template-columns: 52px minmax(0, 1fr); column-gap: 12px; align-items: start; }
+  html body .upload-screen .upload-hero__inner > * { grid-column: 2; }
+  html body .upload-screen .upload-hero__inner > .hero-stocky { grid-column: 1; grid-row: 1 / span 3; }
+  html body .mapping-screen .mapping-hero__inner { flex-direction: row; flex-wrap: wrap; align-items: flex-start; column-gap: 12px; row-gap: 14px; }
+  html body .mapping-screen .mapping-hero__copy { flex: 1 1 0; min-width: 0; }
+  html body .mapping-screen .mapping-hero__inner > :not(.hero-stocky):not(.mapping-hero__copy) { flex: 1 1 100%; }
+  html body .readiness-screen .rd-hero__inner { flex-direction: row; align-items: flex-start; gap: 12px; }
+}

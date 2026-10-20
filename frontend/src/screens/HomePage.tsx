@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { Logo } from "../components/Logo.tsx";
 import { GrowthIcon } from "../components/GrowthIcon.tsx";
+import { ImpactIcon } from "../components/ImpactIcon.tsx";
 import { BrandIcon } from "../components/BrandIcon.tsx";
+import { DataSources } from "../components/DataSources.tsx";
 import { HeroBasket } from "../components/HeroBasket.tsx";
 import { Stocky, type StockyPose } from "../onboarding/Stocky.tsx";
 import { localizedWorkspaceHref, setLanguage, t, useLanguage, type Language } from "../i18n/index.ts";
@@ -64,7 +66,7 @@ export function HomePage({ startHref = "#workspace" }: HomePageProps) {
       <HomeHeader />
       <main id="top">
         <Hero /><WasteContext /><Workflow /><Comparison /><PurchaseExample />
-        <Benefits /><StartBanner /><Sustainability /><FAQs />
+        <Benefits /><StartBanner /><Sustainability /><FAQs /><DataSources />
       </main>
       <HomeFooter />
     </div>
@@ -222,13 +224,13 @@ function Hero() {
       <HeroBasket className="hp-hero__basket" />
       <div className="wrap hp-hero__in">
         <div className="hp-hero__text">
-          <p className="hp-eyebrow">
-            <span aria-hidden="true">
-              <GrowthIcon stage="sprout" size={16} className="hp-inline-icon" />
+          <p className="hp-eyebrow hp-hello">
+            <span className="hp-hello__stocky" aria-hidden="true">
+              <Stocky pose="hello" size={64} />
             </span>
-            {" "}
-            <span>
-              {copy("hp.eyebrow")}
+            <span className="hp-hello__bubble">
+              <b>{copy("hp.hello.h")}</b>
+              <small>{copy("hp.hello.t")}</small>
             </span>
           </p>
           <h1 id="home-title">
@@ -482,7 +484,7 @@ function WasteContext() {
   );
 }
 
-const GUIDE_POSES: readonly StockyPose[] = ["point", "check", "magnify", "great"];
+const GUIDE_POSES: readonly StockyPose[] = ["point", "check", "magnify", "great", "coins"];
 
 function Workflow() {
   const { copy } = useHomeView();
@@ -493,7 +495,7 @@ function Workflow() {
   const returnToTop = (event: MouseEvent<HTMLAnchorElement>) => followSmoothAnchor(event, "top", reducedMotion);
   useEffect(() => {
     if (reducedMotion || heldStep !== null) return;
-    const timer = window.setInterval(() => setStep(value => (value + 1) % 4), 2400);
+    const timer = window.setInterval(() => setStep(value => (value + 1) % 5), 2400);
     return () => window.clearInterval(timer);
   }, [reducedMotion, heldStep]);
   return (
@@ -522,7 +524,7 @@ function Workflow() {
           </div>
         </div>
         <div className="hp-steps__line" aria-hidden="true">
-          <span id="hs-line" style={{ width: `${(activeStep + 1) * 25}%` }} />
+          <span id="hs-line" style={{ width: `${(activeStep + 1) * 20}%` }} />
         </div>
         <div className="hp-steps">
           <a className={activeStep === 0 ? "hp-step is-on" : "hp-step"} href="#top" onClick={returnToTop} onMouseEnter={() => setHeldStep(0)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(0)} onBlur={() => setHeldStep(null)}>
@@ -579,6 +581,20 @@ function Workflow() {
             </b>
             <p>
               {copy("hp.s4t")}
+            </p>
+          </a>
+          <a className={activeStep === 4 ? "hp-step hp-step--impact is-on" : "hp-step hp-step--impact"} href="#top" onClick={returnToTop} onMouseEnter={() => setHeldStep(4)} onMouseLeave={() => setHeldStep(null)} onFocus={() => setHeldStep(4)} onBlur={() => setHeldStep(null)}>
+            <span className="hp-step__n">
+              {"5"}
+            </span>
+            <span className="hp-step__plant" aria-hidden="true">
+              <ImpactIcon name="globe" size={28} />
+            </span>
+            <b>
+              {copy("hp.s5")}
+            </b>
+            <p>
+              {copy("hp.s5t")}
             </p>
           </a>
         </div>
@@ -1205,50 +1221,40 @@ function Benefits() {
           </h2>
           <ul className="hp-list">
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--1" aria-hidden="true">
+                <ImpactIcon name="trend" size={24} />
               </span>
               <span>
                 {copy("hp.g1")}
               </span>
             </li>
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--2" aria-hidden="true">
+                <ImpactIcon name="data" size={24} />
               </span>
               <span>
                 {copy("hp.g2")}
               </span>
             </li>
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--3" aria-hidden="true">
+                <ImpactIcon name="calendar" size={24} />
               </span>
               <span>
                 {copy("hp.g3")}
               </span>
             </li>
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--4" aria-hidden="true">
+                <ImpactIcon name="target" size={24} />
               </span>
               <span>
                 {copy("hp.g4")}
               </span>
             </li>
             <li>
-              <span className="hp-tick" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="m5 12 4 4L19 6" />
-                </svg>
+              <span className="hp-tick hp-tick--drawn hp-tick--5" aria-hidden="true">
+                <ImpactIcon name="scales" size={24} />
               </span>
               <span>
                 {copy("hp.g5")}
@@ -1280,15 +1286,19 @@ function Benefits() {
           </p>
           <div className="hp-chips">
             <span>
+              <ImpactIcon name="check" size={16} className="hp-chip-ic" />
               {copy("hp.chk3")}
             </span>
             <span>
+              <ImpactIcon name="people" size={16} className="hp-chip-ic" />
               {copy("hp.chk2")}
             </span>
             <span>
+              <ImpactIcon name="search" size={16} className="hp-chip-ic" />
               {copy("hp.pv.c3")}
             </span>
           </div>
+          <p className="hp-priv__stocky"><span className="hp-priv__stocky-img" aria-hidden="true"><Stocky pose="hello" size={40} /></span><span>{copy("hp.pv.stocky")}</span></p>
         </div>
       </div>
     </section>
@@ -1330,7 +1340,9 @@ function StartBanner() {
           </p>
         </div>
         <img src={asset("retail-produce-2.jpg")} alt={copy("hp.img.produce")} width="900" height="600" loading="lazy" />
+        <span className="hp-band__stocky" aria-hidden="true"><Stocky pose="hello" size={56} /></span>
       </div>
+      <div className="hp-band__shelf" aria-hidden="true" />
     </section>
   );
 }
@@ -1372,6 +1384,11 @@ function Sustainability() {
             {copy("hp.sdg.t1")}
           </span>
         </p>
+        <ol className="hp-flow">
+          <li className="hp-flow__step hp-flow__step--sell"><span className="hp-flow__ic" aria-hidden="true"><ImpactIcon name="cart" size={28} /></span><span>{copy("hp.flow.1")}</span></li>
+          <li className="hp-flow__step hp-flow__step--shelf"><span className="hp-flow__ic" aria-hidden="true"><ImpactIcon name="box" size={28} /></span><span>{copy("hp.flow.2")}</span></li>
+          <li className="hp-flow__step hp-flow__step--waste"><span className="hp-flow__ic" aria-hidden="true"><ImpactIcon name="globe" size={28} /></span><span>{copy("hp.flow.3")}</span></li>
+        </ol>
         <p className="hp-p">
           <span>
             {copy("hp.sdg.t2")}
@@ -1408,6 +1425,7 @@ function FAQs() {
             {copy("hp.lm.t")}
           </span>
         </p>
+        <span className="hp-lm__stocky" aria-hidden="true"><span className="hp-lm__bubble">{copy("hp.lm.stocky")}</span><Stocky pose="point" size={64} /></span>
         <div className="hp-faqs">
           <details className="hp-faq" open={faqOpen[0]}>
             <summary onClick={event => { event.preventDefault(); setFaqOpen(values => values.map((open, index) => index === 0 ? !open : open)); }}>
@@ -1472,7 +1490,7 @@ function FAQs() {
 }
 
 function HomeFooter() {
-  const { copy } = useHomeView();
+  const { copy, language } = useHomeView();
   return (
     <footer className="hp-foot">
       <div className="wrap hp-foot__in">
@@ -1492,6 +1510,10 @@ function HomeFooter() {
           <i aria-hidden="true">·</i>
           <a className="hp-foot__sdg" href="#sdg" title={copy("hp.foot")} aria-label={copy("hp.foot")}>
             {"SDG 12.3"}
+          </a>
+          <i aria-hidden="true">·</i>
+          <a className="hp-foot__sdg" href="#sources">
+            {language === "zh" ? "数据来源与许可" : language === "ms" ? "Sumber data & lesen" : "Data sources & licences"}
           </a>
         </p>
         <a className="hp-link" href="#top">

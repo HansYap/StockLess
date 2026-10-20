@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { HeroStocky } from "../components/HeroStocky.tsx";
+import { Stocky } from "../onboarding/Stocky.tsx";
 import { LanguageSwitcher } from "../components/LanguageSwitcher.tsx";
 import { Logo } from "../components/Logo.tsx";
 import { WorkspaceDecor } from "../components/WorkspaceDecor.tsx";
@@ -103,7 +105,7 @@ export function ReturningPage() {
     <main>
       <section className="returning-hero" aria-labelledby="returning-title"><div className="returning-width returning-hero__inner">
         <div><p className="returning-eyebrow">{copy("welcome")}</p><h1 id="returning-title">{copy("heading")}</h1><p className="returning-lead">{copy("lead")}</p></div>
-        <div className="returning-art" aria-hidden="true"><div className="returning-paper" /><div className="returning-paper returning-paper--front"><ReturningIcon name="file" /><i /><i /></div><div className="returning-art__leaf" /></div>
+        <HeroStocky pose="hello" /><div className="returning-art" aria-hidden="true"><div className="returning-paper" /><div className="returning-paper returning-paper--front"><ReturningIcon name="file" /><i /><i /></div><div className="returning-art__leaf" /></div>
       </div></section>
       <div className="returning-width returning-main">
         {error && <p className="returning-error" role="alert">{copy(error)} <button className="btn btn--ghost btn--small" type="button" disabled={busy} onClick={() => void refresh()}>{copy("retry")}</button></p>}
@@ -115,7 +117,7 @@ export function ReturningPage() {
               <div className="returning-resume__bottom"><span className="returning-last-step">{displayShopName(recent.shopName)} · {copy("lastSaved")} <strong>{date(recent)}</strong></span><a className="btn btn--primary" href={href(recent)}>{copy("continue")}<ReturningIcon name="arrow" /></a></div>
             </> : <div className="returning-resume__empty"><h2>{copy("ready")}</h2><p>{copy("savedAppear")}</p></div>}
           </section>
-          <section className="returning-new-file"><ReturningIcon name="upload" /><h3>{copy("newFile")}</h3><p>{copy("newFileLead")}</p><a className="btn btn--ghost" href={recent ? `#update/${encodeURIComponent(recent.id)}` : "#workspace"}><ReturningIcon name="plus" />{copy("upload")}</a></section>
+          <section className="returning-new-file"><span className="returning-upload-tile" aria-hidden="true"><ReturningIcon name="upload" /><span className="returning-upload-tile__plus">+</span></span><h3>{copy("newFile")}</h3><p>{copy("newFileLead")}</p><a className="btn btn--ghost" href={recent ? `#update/${encodeURIComponent(recent.id)}` : "#workspace"}><ReturningIcon name="plus" />{copy("upload")}</a></section>
         </div>
         <div className="returning-section-title"><h2 ref={uploadsHeadingRef} tabIndex={-1} id="returning-datasets-title">{copy("datasets")}<span className="returning-count">{datasets.length.toLocaleString(getLocale())} / 12</span></h2><span className="returning-privacy"><ReturningIcon name="lock" />{copy("privacy")}</span></div>
         <section className="returning-card returning-files" data-guide="history-list" aria-labelledby="returning-datasets-title" aria-busy={loading}>
@@ -128,7 +130,7 @@ export function ReturningPage() {
             <div className="returning-row__details"><h3><a href={href(item)}>{item.datasetName}</a></h3><p className="returning-file-meta">{meta(item)}</p><p className="returning-source">{displayShopName(item.shopName)} · {item.sourceName}</p></div>
             <div className="returning-row__status"><span className="returning-pill returning-pill--neutral">{copy(item.id === recent?.id ? "resume" : "savedDataset")}</span></div>
             <div className="returning-row__actions"><a className="btn btn--ghost" aria-label={`${copy("open")} ${item.datasetName}`} href={href(item)}>{copy("open")}<ReturningIcon name="arrow" /></a><button className="btn btn--ghost returning-delete" type="button" disabled={busy} aria-label={`${copy("delete")} ${item.datasetName}`} onClick={() => setPending(item)}><ReturningIcon name="trash" /></button></div>
-          </article>)}</div> : <div className="returning-empty"><h3>{copy(search ? "noMatches" : "fresh")}</h3><p>{copy(search ? "tryName" : "emptyLead")}</p>{search ? <button type="button" className="btn btn--ghost" onClick={() => { setQuery(""); searchRef.current?.focus(); }}>{copy("clearSearch")}</button> : <a className="btn btn--primary" href="#workspace">{copy("upload")}</a>}</div>}
+          </article>)}</div> : <div className="returning-empty">{!search && <span className="returning-empty__stocky" aria-hidden="true"><Stocky pose="box" size={52} /></span>}<h3>{copy(search ? "noMatches" : "fresh")}</h3><p>{copy(search ? "tryName" : "emptyLead")}</p>{search ? <button type="button" className="btn btn--ghost" onClick={() => { setQuery(""); searchRef.current?.focus(); }}>{copy("clearSearch")}</button> : <a className="btn btn--primary" href="#workspace">{copy("upload")}</a>}</div>}
         </section>
         <div className="returning-list-footer" data-guide="history-manage"><span role="status">{copy("showing").replace("{shown}", shown.length.toLocaleString(getLocale())).replace("{total}", datasets.length.toLocaleString(getLocale()))}</span>{datasets.length > 0 && <button type="button" className="btn btn--ghost returning-clear" disabled={busy || loading} onClick={() => setPending("all")}>{copy("clearAll")}</button>}</div>
         <footer className="returning-bottom-note"><span><ReturningIcon name="leaf" />{copy("tagline")}</span><button ref={aboutButtonRef} type="button" className="btn btn--link returning-about-link" onClick={() => { aboutRef.current?.showModal(); aboutCloseRef.current?.focus(); }}>{t("About saved uploads")}</button></footer>

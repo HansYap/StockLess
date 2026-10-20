@@ -18,3 +18,8 @@ html[lang=zh-Hans] .sl-home h1,html[lang=zh-Hans] .sl-home h2,html[lang=zh-Hans]
 }
 .language-switcher select:focus,.language-switcher select:focus-visible{outline:none!important;box-shadow:none!important}
 .language-switcher:focus-within{outline:2px solid #167d74;outline-offset:3px}
+
+/* Show the focus ring only for keyboard users, never after a mouse click or while the list is open. */
+.language-switcher:focus-within{outline:none}
+.language-switcher:has(select:focus-visible){outline:2px solid #167d74;outline-offset:3px}
+.language-switcher .nice-select[aria-expanded="true"],.language-switcher select[aria-expanded="true"]{border-color:transparent!important;box-shadow:none!important;outline:none!important}

@@ -1,0 +1,51 @@
+/* One spacing scale for every workspace page, so each step feels like the same app.
+   Loaded last; only spacing lives here. */
+:root { --space-page-top: 32px; --space-page-bottom: 56px; --space-columns: 24px; --space-stack: 20px; --space-cards: 16px; }
+@media (max-width: 760px) { :root { --space-page-top: 20px; --space-page-bottom: 40px; --space-columns: 16px; --space-stack: 16px; --space-cards: 12px; } }
+
+/* Page top and bottom. */
+.upload-screen .upload-main,
+.mapping-screen .mapping-main,
+.readiness-screen .rd-main,
+.purchase-plan--new .pp-main { padding-top: var(--space-page-top); padding-bottom: var(--space-page-bottom); }
+
+/* Gap between the main column and the side column. */
+.upload-screen .upload-grid,
+.mapping-screen .mapping-grid,
+.readiness-screen .rd-layout,
+.purchase-plan--new .pp-layout { gap: var(--space-columns); }
+
+/* Gap between cards in a grid of cards. */
+.readiness-screen .rd-product-grid { gap: var(--space-cards); }
+.purchase-plan--new .pp-demand-main { gap: var(--space-cards); }
+
+/* Gap between stacked sections on the Impact dashboard. */
+.impact .impact-sec,
+.impact-download { margin-top: var(--space-stack); }
+
+/* Phones: sticky step headers shrink to one slim row (title + main button). */
+@media (max-width: 760px) {
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .mapping-hero__box,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .rd-wrap,
+  .frame .purchase-plan--new .pp-hero.is-compact .pp-hero-box { display: flex; flex-direction: row; align-items: center; gap: 12px; padding-top: 8px; padding-bottom: 8px; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .mapping-hero__inner,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .rd-hero__inner,
+  .frame .purchase-plan--new .pp-hero.is-compact .pp-hero-main { flex: 1; min-width: 0; padding: 0; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact h1,
+  .frame .readiness-screen .rd-hero.rd-hero--compact h1,
+  .frame .purchase-plan--new .pp-hero.is-compact h1 { margin: 0; font-size: 18px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .hero-stocky,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .hero-stocky,
+  .frame .purchase-plan--new .pp-hero.is-compact .pp-stocky,
+  .frame .readiness-screen .rd-hero.rd-hero--compact :is(.btn--link, .rd-actions__spacer, .rd-actions__meta),
+  .frame .purchase-plan--new .pp-hero.is-compact :is(.pp-back, .pp-action-spacer, .btn--ghost) { display: none; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .mapping-actions,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .rd-actions,
+  .frame .purchase-plan--new .pp-hero.is-compact .pp-hero-actions { flex: none; width: auto; padding: 0; margin: 0; }
+  .frame .mapping-screen .mapping-hero.mapping-hero--compact .btn--primary,
+  .frame .readiness-screen .rd-hero.rd-hero--compact .btn--primary,
+  .frame .purchase-plan--new .pp-hero.is-compact .btn--primary { width: auto; min-height: 40px; padding: 0 14px; font-size: 13px; white-space: nowrap; }
+
+  /* Leave room for the "Your workspace" tab on the left edge. */
+  .frame.frame--saved-workspace .saved-workspace__content { padding-left: 14px; }
+}

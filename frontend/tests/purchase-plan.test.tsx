@@ -56,7 +56,7 @@ describe("purchase planning", () => {
   });
   it("shows automatic drafts and both charts immediately, preserving an explicit zero", () => {
     render(<Harness />); open();
-    expect(screen.getAllByRole("columnheader").map(el=>el.textContent)).toEqual(["Product","Expected, 4 weeks","In stock","Your order","Check"]);
+    expect(screen.getAllByRole("columnheader").map(el=>el.textContent)).toEqual(["Product","Next 4 wks","In stock","Your order","Check"]);
     expect(screen.getByLabelText("Planned order").getAttribute("aria-valuetext")).toBe("12 units");
     expect(screen.getByRole("img",{name:/Recorded sales/})).toBeTruthy();
     expect(screen.getByRole("img",{name:/^Stock after order:/})).toBeTruthy();
