@@ -139,13 +139,18 @@
 .purchase-plan--new .pp-order-step button { flex: none; width: 38px; height: 44px; border: 1px solid var(--border-strong); border-radius: 12px; background: white; font-size: 22px; cursor: pointer; }
 .purchase-plan--new .pp-order-step > span { font-size: 14px; color: var(--muted); }
 .purchase-plan--new .pp-quantity-range { width: 100%; accent-color: var(--teal); cursor: pointer; }
-.purchase-plan--new .pp-incoming { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: #4f6168; }
+.purchase-plan--new .pp-incoming { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; font-size: 14px; color: #4f6168; }
+.purchase-plan--new .pp-incoming label { flex: 1; min-width: 0; }
+.purchase-plan--new .pp-incoming input { flex: none; }
+.purchase-plan--new .pp-incoming > span { flex: none; }
 .purchase-plan--new .pp-incoming input { width: 72px; height: 36px; border: 1px solid var(--border-strong); border-radius: 10px; padding: 0 8px; font: 400 15px var(--data); color: var(--ink); }
 .purchase-plan--new .pp-input-error { font-size: 12px; line-height: 1.4; color: var(--red); }
-.purchase-plan--new .pp-input-sources { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+/* Where each number came from, and how to undo it, in one tidy row. */
+.purchase-plan--new .pp-input-sources { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-top: 10px; border-top: 1px solid var(--line-soft, #eef2f0); font-size: 12px; }
+.purchase-plan--new .pp-input-sources:empty { display: none; }
 .purchase-plan--new .pp-input-sources > span,
 .purchase-plan--new .pp-order-source > span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.purchase-plan--new .pp-order-source { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.purchase-plan--new .pp-order-source { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .purchase-plan--new .source-tag { display: inline-flex; align-self: flex-start; padding: 2px 6px; border-radius: 5px; font-size: 11px; font-weight: 600; color: var(--muted); background: #f4f7f6; }
 .purchase-plan--new .source--input { color: var(--amber); background: var(--amber-tint); }
 .purchase-plan--new .source--worked { color: var(--teal-deep); background: #e8f3f0; }
