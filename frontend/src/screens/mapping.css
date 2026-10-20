@@ -81,6 +81,10 @@
 .mapping-screen .mapping-unused li { padding: 5px 10px; border-radius: 8px; background: var(--line-soft); font: 400 12px var(--body); color: var(--ink-2); overflow-wrap: anywhere; }
 .mapping-screen .mapping-unused p { margin: 8px 0 0; font: 400 12px/1.5 var(--body); color: var(--muted); }
 .mapping-screen .mapping-help { padding: 20px; background: var(--mapping-band); border-color: #d6e8df; }
+/* Keep the help panel in view beside the long column list. */
+@media (min-width: 1001px) { .mapping-screen .mapping-help { position: sticky; top: 104px; } }
+.mapping-screen .mapping-zero { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font: 400 13px/1.4 var(--body); color: #7a5600; }
+.mapping-screen .mapping-zero__tag { padding: 3px 9px; border-radius: 999px; background: #fff3d6; font: 700 12px/1.3 var(--display); }
 .mapping-screen .mapping-help h2 { margin: 0; font: 700 20px/1.5 var(--display); }
 .mapping-screen .mapping-help h3 { margin: 16px 0 0; font: 700 16px/1.5 var(--display); }
 .mapping-screen .mapping-help > p { margin: 4px 0 0; font: 400 14px/1.5 var(--body); color: var(--muted); }
