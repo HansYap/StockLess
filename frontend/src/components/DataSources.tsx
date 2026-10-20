@@ -46,7 +46,7 @@ const GROUPS: readonly Group[] = [
   ] },
 ];
 /** Groups kept in the register but not shown on the site yet. */
-const HIDDEN: ReadonlySet<Group["id"]> = new Set(["carbon", "food"]);
+const HIDDEN: ReadonlySet<Group["id"]> = new Set(["software"]);
 const SHOWN = GROUPS.filter(group => !HIDDEN.has(group.id));
 const LEGEND_ORDER = [CC_BY, "Licence Ouverte 2.0", "ODbL 1.0", "CC0 1.0", "Public domain"];
 const LEGEND = LEGEND_ORDER.filter(licence => SHOWN.some(group => group.items.some(item => item.licence === licence)));
