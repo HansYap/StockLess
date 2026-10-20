@@ -33,7 +33,7 @@ describe("impact dashboard", () => {
     expect(screen.getByRole("tab", { name: "Business" }).getAttribute("aria-selected")).toBe("true");
     expect((document.getElementById("business-breakdown") as HTMLDetailsElement).open).toBe(true);
     expect(screen.getByText("Excess-stock cost by product")).toBeTruthy();
-    fireEvent.click(overview.getByRole("button", { name: /Pollution from wasted food/ }));
+    fireEvent.click(overview.getByRole("button", { name: /Potential excess CO₂e estimate/ }));
     expect(screen.getByRole("tab", { name: "Environmental" }).getAttribute("aria-selected")).toBe("true");
     expect((document.getElementById("environment-breakdown") as HTMLDetailsElement).open).toBe(true);
     expect(screen.getByText("Why these estimates? Potential excess by product")).toBeTruthy();
@@ -140,9 +140,9 @@ describe("impact dashboard", () => {
     const props = { snapshot, forecast, drafts: { A: entered(100) }, onBack: () => {} };
     const { rerender } = render(<ImpactDashboard {...props} />);
     fireEvent.click(screen.getByRole("tab", { name: "Environmental" }));
-    expect(summary("Potential excess: estimated CO₂e").querySelector("b")?.textContent).toBe("Unavailable");
+    expect(summary("Potential excess: estimated CO₂e").querySelector("b")?.textContent).toBe("CO₂e total unavailable");
     rerender(<ImpactDashboard {...props} contexts={{ A: { evidenceKey: snapshot.evidenceKey, category: "flour", categoryConfirmed: true, isFood: true } }} />);
-    expect(summary("Potential excess: estimated CO₂e").querySelector("b")?.textContent).toMatch(/^≈ [\d,.]+ kg CO₂e$/);
+    expect(summary("Potential excess: estimated CO₂e").querySelector("b")?.textContent).toMatch(/^(Partial estimate )?≈ [\d,.]+ kg CO₂e$/);
     expect(screen.getAllByText("Sources agree").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/SU-EATABLE LIFE \(used in factor\):/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/AGRIBALYSE \(used in factor\):/).length).toBeGreaterThan(0);
