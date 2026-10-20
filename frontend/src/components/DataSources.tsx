@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useLanguage } from "../i18n/index.ts";
 import { Stocky } from "../onboarding/Stocky.tsx";
 import { ImpactIcon, type ImpactIconName } from "./ImpactIcon.tsx";
@@ -50,6 +50,8 @@ const GROUPS: readonly Group[] = [
 /** Groups kept in the register but not shown on the site yet. */
 const HIDDEN: ReadonlySet<Group["id"]> = new Set(["retail", "software"]);
 const SHOWN = GROUPS.filter(group => !HIDDEN.has(group.id));
+/** Sources behind the other figures on the homepage. */
+const FIGURES = ["UNEP Food Waste Index 2024", "SDG 12.3", "MSU Greenally (self-reported)", "SWCorp", "Vijayan et al. (2014)", "Crippa et al. (2021)"] as const;
 const licenceClass = (licence: string) => "ds-tag ds-tag--" + licence.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-$/, "");
 
 const BLUE = "#5b86b3", BLUE_MID = "#8fb3dc", BLUE_LIGHT = "#bfd6f2", AMBER = "#a9790b", AMBER_DEEP = "#8a6208", AMBER_LIGHT = "#f6d08a", LEAF = "#34b08f", INK = "#33474f";
@@ -96,7 +98,17 @@ export function DataSources() {
   const say = ([en, zh, ms]: Copy) => language === "zh" ? zh : language === "ms" ? ms : en;
   const [openId, setOpenId] = useState<Group["id"]>(SHOWN[0]?.id ?? "carbon");
   const [flipped, setFlipped] = useState<string | null>(null);
+  const [figuresOpen, setFiguresOpen] = useState(false);
   const open = SHOWN.find(group => group.id === openId) ?? SHOWN[0];
+  const tilesRef = useRef<HTMLUListElement>(null);
+  const [nudge, setNudge] = useState(false);
+  useEffect(() => {
+    const tiles = tilesRef.current;
+    if (!tiles || typeof IntersectionObserver === "undefined") return;
+    const seen = new IntersectionObserver(([entry]) => { if (entry?.isIntersecting) { setNudge(true); seen.disconnect(); } }, { threshold: 0.6 });
+    seen.observe(tiles);
+    return () => seen.disconnect();
+  }, []);
   return <section className="ds" id="sources" aria-labelledby="ds-title">
     <div className="wrap">
       <div className="ds-head">
@@ -113,9 +125,10 @@ export function DataSources() {
             <span className="ds-cat__blurb">{say(group.blurb)}</span>
             <span className="ds-cat__n">{group.items.length}</span>
           </span>
+          <span className="ds-cat__point" aria-hidden="true" />
         </button>)}
       </div>
-      {open && <ul id="ds-tiles" className={`ds-tiles ds-tiles--${open.id}`} aria-label={say(open.title)}>
+      {open && <ul ref={tilesRef} id="ds-tiles" className={`ds-tiles ds-tiles--${open.id}${nudge ? " is-nudge" : ""}`} style={{ "--ds-cols": Math.min(open.items.length, 5) } as CSSProperties} aria-label={say(open.title)}>
         {open.items.map(item => {
           const isFlipped = flipped === item.name;
           return <li key={item.name} className={`ds-tile${isFlipped ? " is-flipped" : ""}`}>
@@ -123,6 +136,7 @@ export function DataSources() {
               <button type="button" className="ds-tile__face ds-tile__front" aria-expanded={isFlipped} onClick={() => setFlipped(item.name)}>
                 <span className="ds-tile__ic">{item.icon ? <SourceIcon name={item.icon} /> : <ImpactIcon name={open.icon} size={40} />}</span>
                 <b>{item.short}</b>
+                <span className="ds-tile__hint" aria-hidden="true">↻</span>
                 <span className={licenceClass(item.licence)}>{item.licence}</span>
               </button>
               <div className="ds-tile__face ds-tile__back">
@@ -137,7 +151,12 @@ export function DataSources() {
           </li>;
         })}
       </ul>}
-      <p className="ds-figures"><ImpactIcon name="clipboard" size={20} /><span><b>{say(["Homepage figures:", "首页数据：", "Angka laman utama:"])}</b> UNEP Food Waste Index 2024 · SDG 12.3 · MSU Greenally (self-reported) · SWCorp · Vijayan et al. (2014) · Crippa et al. (2021)</span></p>
+      <div className="ds-figures">
+        <button type="button" className="ds-figures__toggle" aria-expanded={figuresOpen} aria-controls="ds-figures-list" onClick={() => setFiguresOpen(open => !open)}>
+          <ImpactIcon name="clipboard" size={18} />{say(["Other figures on this page", "本页其他数据", "Angka lain di laman ini"])} · {FIGURES.length} {say(["sources", "个来源", "sumber"])} <span aria-hidden="true">{figuresOpen ? "▴" : "▾"}</span>
+        </button>
+        {figuresOpen && <ul id="ds-figures-list" className="ds-figures__list">{FIGURES.map(figure => <li key={figure}>{figure}</li>)}</ul>}
+      </div>
     </div>
   </section>;
 }
