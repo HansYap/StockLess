@@ -120,7 +120,7 @@ export function AppShell({
 
       {workspaceSidebar ? <div className="saved-workspace">
         <SavedWorkspaceSidebar {...workspaceSidebar} />
-        <div className="saved-workspace__content"><WorkspaceDecor />{content}</div>
+        <div className="saved-workspace__content">{content}</div>
       </div> : content}
     </div>
   );
