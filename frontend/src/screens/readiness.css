@@ -77,6 +77,10 @@
 .readiness-screen .rd-bar i.spark__bar--missing { border: 1px dashed var(--muted); background: var(--line-soft); }
 .readiness-screen .rd-bar i.rd-bar--negative { background: var(--amber); }
 .readiness-screen .rd-bar small { margin-top: 4px; font-size: 8px; white-space: nowrap; }
+/* Only the first and last week are labelled, so the dates never overlap. */
+.readiness-screen .rd-bar small { min-height: 1.2em; }
+.readiness-screen .rd-bar:first-child small { align-self: flex-start; }
+.readiness-screen .rd-bar:last-child small { align-self: flex-end; }
 .readiness-screen .rd-product__note { font-size: 12px; line-height: 1.5; margin: 0; color: var(--teal-deep); }
 .readiness-screen .rd-product__note--missing { color: var(--red); }
 .readiness-screen .rd-product__note--review { color: var(--amber); }
