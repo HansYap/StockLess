@@ -1,124 +1,77 @@
-# 🌱 StockLess
+# StockLess
 
-### Smarter Inventory Decisions. Less Food Waste.
+**Stock Less, Waste Less.**
 
-**StockLess** is a decision-support web application for Malaysian micro and small food retailers. It uses historical sales data to help retailers understand demand, assess purchase risks, and plan smarter restocking decisions.
+StockLess helps Malaysian micro and small food retailers turn historical sales
+data into clearer restocking decisions. It highlights data problems, estimates
+four-week demand and checks planned orders for potential overstock or shortages.
 
-StockLess supports **UN SDG 12.3** by helping reduce avoidable food waste caused by overstocking.
+[Live application](https://stockless.pages.dev/) · [Mobile flyer](https://stockless.pages.dev/flyer/)
 
-[🌐 **Live Demo**](https://stockless.pages.dev/)
+## Features
 
-![StockLess Demo](./assets/stockless-demo.gif)
+- Import CSV and Excel sales files and map their columns.
+- Review missing values, duplicates and unusual sales records.
+- Explore sales history and estimated demand for each product.
+- Review suggested orders against available and incoming stock.
+- Apply supplier carton sizes, minimum orders and delivery lead times.
+- Estimate the stock, money and food-waste impact of purchasing decisions.
+- Export purchase plans and reports.
 
----
+Sales files are processed in the browser and remain on the user's device. No
+account is required. Suggestions support the retailer's judgment; the retailer
+makes the final purchasing decision.
 
-## ✨ Features
+## Development
 
-- **CSV Upload & Column Mapping** — Import and map different sales data formats.
-- **Data Quality Checks** — Check whether data is ready for analysis.
-- **Demand Analysis** — Explore historical sales patterns and demand.
-- **Demand Forecasting** — Estimate future inventory requirements.
-- **Purchase Risk Assessment** — Identify potential overstock and stockout risks.
-- **Supplier Scenario Planner** — Account for minimum order quantities, case sizes and lead times.
-- **Impact Dashboard** — Track business and sustainability impact, including overstock avoided.
+Requires Node.js 24 or later and npm. From the repository root:
 
-### 🔄 Workflow
-
-```text
-CSV Upload
-    ↓
-Data Readiness
-    ↓
-Demand Analysis
-    ↓
-Forecasting
-    ↓
-Purchase Risk
-    ↓
-Scenario Planning
-    ↓
-Impact Dashboard
-```
-
----
-
-## 🛠️ Tech Stack
-
-- **Frontend:** React 19, TypeScript, Vite
-- **Testing:** Vitest, React Testing Library
-- **Data Processing:** SheetJS
-- **PDF Generation:** PDF-Lib
-- **Browser ML:** Hugging Face Transformers
-- **Package Management:** npm Workspaces
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js 24+
-- npm
-
-### Installation
-
-```bash
-git clone https://github.com/HansYap/StockLess.git
-cd StockLess
+```sh
 npm install
-```
-
-### Run locally
-
-```bash
 npm run dev --workspace stockless-frontend
 ```
 
-### Test & build
+Open the local address printed by the development server. The flyer is available
+at `/flyer/index.html` in development.
 
-```bash
+## Validation
+
+```sh
 npm run typecheck
-npm run build
 npm test
+npm run build
 ```
 
----
+The production build is written to `frontend/dist`.
 
-## 📁 Project Structure
+## Project structure
 
 ```text
-StockLess/
-├── frontend/       # React application
-├── backend/        # Browser-compatible domain engine
-├── public-data/    # Public datasets
-├── assets/         # README demo media
-├── package.json
-└── HOMEPAGE.md
+backend/            Browser-compatible planning and analysis engine
+  fixtures/         Development and test datasets
+  src/              Domain logic and reference data
+  tests/            Engine tests
+frontend/
+  public/           Static assets, bundled models, samples and mobile flyer
+  scripts/          Development, build and test entry points
+  src/              React application
+  tests/            Interface and integration tests
+HOMEPAGE.md         Homepage, flyer and deployment maintenance notes
 ```
 
----
+The application uses React, TypeScript and Vite, with Vitest and React Testing
+Library for tests. Spreadsheet imports use SheetJS; report exports use ExcelJS
+and PDF-Lib; browser-based model inference uses Transformers.js.
 
-## 🎯 SDG 12.3
+## Deployment
 
-StockLess focuses on **UN Sustainable Development Goal 12: Responsible Consumption and Production**, specifically **Target 12.3**.
+The existing Cloudflare Pages project automatically builds and publishes changes
+pushed to `main`. The mobile flyer is included in the same deployment. Generated
+expo exports and local build output are excluded from version control.
 
-By helping retailers make more informed purchasing and restocking decisions, StockLess aims to reduce unnecessary overstock and avoidable food waste.
+## Sustainability
 
----
+StockLess supports UN SDG 12.3 by helping retailers identify unnecessary orders
+before excess stock becomes avoidable food waste.
 
-## 👥 Team
-
-### Nexus 12
-
-An industry-focused project combining **data analytics, forecasting, inventory planning, UX design and sustainability**.
-
----
-
-## 🔗 Links
-
-- [🌐 Live Demo](https://stockless.pages.dev/)
-- [💻 GitHub Repository](https://github.com/HansYap/StockLess)
-
----
-
-> 🌱 **Stock smarter. Waste less.**
+Built by **Nexus 12**.

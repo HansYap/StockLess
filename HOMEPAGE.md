@@ -25,6 +25,26 @@ The homepage purchase example is illustrative and does not change a retailer's p
 
 Manrope, Source Sans 3 and Inter are bundled locally. Styles use their registered variable-font family names so the browser loads the intended fonts.
 
+## Mobile flyer
+
+The lightweight static flyer is served at `https://stockless.pages.dev/flyer/`.
+Its HTML, styles, optional sharing helper and downloadable image are in
+`frontend/public/flyer/`. It uses the existing logo and Stocky artwork in
+`frontend/public/report/` and a locally bundled Manrope font.
+
+The main action uses `/#start`, the application's existing entry route. The
+flyer does not load the React application or forecasting models. To preview it
+with Vite, open `/flyer/index.html` explicitly; Cloudflare Pages serves the clean
+`/flyer/` address. `?export=1` renders a 1080 x 1920 portrait composition.
+Regenerate `stockless-flyer.png` after changing the flyer design.
+
+Cloudflare Pages automatically builds and publishes pushes to `main`. The normal
+frontend build includes the flyer; no separate Worker is required. QR codes use
+the permanent flyer URL, so visual updates do not require new printed codes.
+
+Generated expo files belong outside this repository. Keep font licences and the
+downloadable flyer image with the assets that need them.
+
 ## Validation
 
 ```sh

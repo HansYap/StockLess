@@ -1,11 +1,11 @@
 @font-face{font-family:Manrope;src:url('./manrope-latin.woff2') format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
-:root{font-family:Manrope,Arial,sans-serif;color:#203d35;background:#dce8df;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+:root{font-family:Manrope,Arial,sans-serif;color:#203d35;background:#e3f1ea;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
 *{box-sizing:border-box}
 body{margin:0;padding:28px 16px 22px}
 a{color:inherit}
 a:focus-visible,button:focus-visible{outline:3px solid #ba7d1d;outline-offset:5px}
-.flyer{width:405px;max-width:100%;min-height:720px;margin:0 auto;display:flex;flex-direction:column;padding:25px 27px 19px;position:relative;isolation:isolate;overflow:hidden;background:#f4f6ec;background-image:radial-gradient(ellipse at 100% 8%,#dfebd8 0,transparent 52%);box-shadow:0 12px 50px #1d4a3220;border:1px solid #ffffff80;border-radius:5px}
-.flyer:before{content:'';position:absolute;z-index:-1;left:-24%;right:-24%;height:200px;bottom:0;border-radius:50% 50% 0 0;background:#e4edde;transform:rotate(-8deg);transform-origin:right bottom}
+.flyer{width:405px;max-width:100%;min-height:720px;margin:0 auto;display:flex;flex-direction:column;padding:25px 27px 19px;position:relative;isolation:isolate;overflow:hidden;background:#f2f8ef;background-image:linear-gradient(160deg,#f2f8ef 0%,#ecf4ea 42%,#e3f1ea 100%);box-shadow:0 12px 50px #1d4a3220;border:1px solid #ffffff80;border-radius:5px}
+.flyer:before{content:'';position:absolute;z-index:-1;left:-24%;right:-24%;height:200px;bottom:0;border-radius:50% 50% 0 0;background:#d8e8d7;transform:rotate(-8deg);transform-origin:right bottom}
 .masthead{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .masthead a{display:block;flex:none;line-height:0}
 .logo{width:152px;height:38px;object-fit:contain}
@@ -56,12 +56,12 @@ h1 em{font-style:normal;color:#327b69}
 .sharing a:hover,.sharing button:hover{text-decoration:underline}
 .sharing svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 [hidden]{display:none!important}
-@media(max-width:440px){body{padding:0;background:#f4f6ec}.flyer{width:100%;min-height:100svh;border:0;border-radius:0;box-shadow:none}.sharing{margin-top:4px;margin-bottom:14px}}
+@media(max-width:440px){body{padding:0;background:#f2f8ef}.flyer{width:100%;min-height:100svh;border:0;border-radius:0;box-shadow:none}.sharing{margin-top:4px;margin-bottom:14px}}
 @media(max-width:370px){.flyer{padding:22px 23px 18px}.logo{width:140px;height:35px}.introduction{margin-top:24px}h1{font-size:40px}.eyebrow{font-size:7px;letter-spacing:.8px}.wide-only{display:none}.example{margin-bottom:18px}.benefits{margin-bottom:20px}.trust{font-size:7.4px}.flyer-footer{margin-top:20px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 @media print{@page{size:108mm 192mm;margin:0}body{padding:0;background:#fff}.flyer{width:108mm;max-width:none;min-height:192mm;border:0;border-radius:0;box-shadow:none;print-color-adjust:exact;-webkit-print-color-adjust:exact}.sharing{display:none}}
 html.export{width:1080px;height:1920px;overflow:hidden}
-.export body{width:1080px;height:1920px;padding:0;background:#f4f6ec;overflow:hidden}
+.export body{width:1080px;height:1920px;padding:0;background:#f2f8ef;overflow:hidden}
 .export .flyer{width:405px;max-width:none;height:720px;min-height:720px;margin:0;border:0;border-radius:0;box-shadow:none;transform:scale(2.6666666667);transform-origin:top left}
 .export .sharing{display:none}
 .export .introduction{margin-top:22px}

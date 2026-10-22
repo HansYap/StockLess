@@ -36,6 +36,7 @@ yarn-error.log*
 
 # Local documentation and generated test artifacts
 /docs/
+/output/
 /outputs/
 
 # Editors
