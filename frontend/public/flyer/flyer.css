@@ -1,0 +1,72 @@
+@font-face{font-family:Manrope;src:url('./manrope-latin.woff2') format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
+:root{font-family:Manrope,Arial,sans-serif;color:#203d35;background:#dce8df;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+body{margin:0;padding:28px 16px 22px}
+a{color:inherit}
+a:focus-visible,button:focus-visible{outline:3px solid #ba7d1d;outline-offset:5px}
+.flyer{width:405px;max-width:100%;min-height:720px;margin:0 auto;display:flex;flex-direction:column;padding:25px 27px 19px;position:relative;isolation:isolate;overflow:hidden;background:#f4f6ec;background-image:radial-gradient(ellipse at 100% 8%,#dfebd8 0,transparent 52%);box-shadow:0 12px 50px #1d4a3220;border:1px solid #ffffff80;border-radius:5px}
+.flyer:before{content:'';position:absolute;z-index:-1;left:-24%;right:-24%;height:200px;bottom:0;border-radius:50% 50% 0 0;background:#e4edde;transform:rotate(-8deg);transform-origin:right bottom}
+.masthead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.masthead a{display:block;flex:none;line-height:0}
+.logo{width:152px;height:38px;object-fit:contain}
+.made-for{font-size:10px;line-height:1.4;text-align:right;color:#5c7062}
+.made-for strong{font-weight:800;color:#3b6754}
+.introduction{margin-top:26px}
+.eyebrow{font-size:8px;line-height:1.5;font-weight:800;letter-spacing:1.05px;margin:0 0 11px;display:flex;align-items:center;gap:7px;color:#536e5d}
+.eyebrow span{width:6px;height:6px;border-radius:50%;background:#c1913c;flex:none}
+h1{font-size:43px;font-weight:800;letter-spacing:-2.2px;line-height:1.08;margin:0;color:#203d35}
+h1 em{font-style:normal;color:#327b69}
+.lede{font-size:14px;font-weight:500;line-height:1.55;color:#57695d;margin:12px 0 0}
+.example{margin:12px 0 20px;position:relative;padding-top:39px}
+.stocky-note{position:absolute;top:-9px;right:6px;display:flex;align-items:center;gap:1px;z-index:1}
+.stocky-note>span{font-size:10px;line-height:1.45;display:block;padding:9px 13px;border:1px solid #d4e3d1;border-radius:12px 12px 2px 12px;background:#fffdf5;transform:rotate(-3deg);box-shadow:0 3px 6px #203d3505}
+.stocky-note img{height:82px;width:80px;object-fit:contain}
+.receipt{position:relative;background:#fffdf8;border:1px solid #d8decf;border-radius:12px 12px 0 0;padding:15px 18px 13px;box-shadow:0 6px 20px #31412d0b}
+.receipt-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:8px;letter-spacing:1px;font-weight:800;color:#728073}
+.receipt h2{font-size:16px;letter-spacing:-.4px;margin:9px 0 11px;font-weight:800}
+.figures{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.figures>div{display:flex;flex-direction:column;gap:4px}
+.figures span{font-size:10px;color:#768071}
+.figures strong{font-size:20px;font-weight:800;letter-spacing:-.6px;line-height:1.15}
+.figures strong small{font-size:10px;font-weight:600;letter-spacing:0;color:#778271}
+.order{border-top:1px dashed #d9ddcd;margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.order>span:first-child{font-size:9px;color:#768071}
+.order strong{display:block;font-size:27px;letter-spacing:-.7px;line-height:1.15;color:#327b69}
+.order strong small{font-size:11px;font-weight:600;letter-spacing:0}
+.verdict{font-size:9px;font-weight:800;color:#327b69;background:#e8f2e6;padding:7px 9px;border-radius:7px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.verdict svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.shelf{height:7px;background:#dbb788;border-bottom:2px solid #c3975e;margin:0 -5px;border-radius:1px 1px 3px 3px}
+.example-caption{font-size:8px;line-height:1.5;color:#78836f;text-align:center;margin:8px 0 0}
+.benefits{list-style:none;margin:0 0 22px;padding:0;display:grid;grid-template-columns:1fr 1.22fr 1fr;gap:4px}
+.benefits li{display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;font-size:10px;font-weight:800;white-space:nowrap}
+.benefit-icon{display:flex;align-items:center;justify-content:center;width:33px;height:31px;background:#dfecdd;border-radius:10px;color:#3b7b65}
+.benefit-icon.gold{background:#f4e8cc;color:#9d7832}
+.benefit-icon.mint{background:#dcece2;color:#377964}
+.benefit-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.action{margin-top:auto}
+.primary-button{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:47px;padding:12px 19px;background:#327563;border:1px solid #327563;border-radius:10px;box-shadow:0 3px 0 #255c4d;color:#fffdf5;text-decoration:none;font-size:15px;font-weight:800;transition:background .15s}
+.primary-button:hover{background:#245f4f}
+.primary-button>span{font-size:22px;font-weight:500;line-height:1}
+.trust{font-size:8px;line-height:1.6;text-align:center;color:#62755f;margin:12px -8px 0;white-space:nowrap;font-weight:600}
+.trust>span{padding:0 4px;color:#9eac94}
+.flyer-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:23px;font-size:9px;font-weight:700;color:#688067;letter-spacing:.05px}
+.flyer-footer>span:last-child{display:flex;align-items:center;gap:6px}
+.flyer-footer i{font-style:normal;font-size:19px;line-height:1;color:#b9924c}
+.sharing{max-width:405px;margin:18px auto 0;display:flex;justify-content:center;align-items:center;gap:24px}
+.sharing a,.sharing button{font:700 12px Manrope,Arial,sans-serif;color:#3e6652;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:7px;border:0;background:none;cursor:pointer}
+.sharing a:hover,.sharing button:hover{text-decoration:underline}
+.sharing svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+[hidden]{display:none!important}
+@media(max-width:440px){body{padding:0;background:#f4f6ec}.flyer{width:100%;min-height:100svh;border:0;border-radius:0;box-shadow:none}.sharing{margin-top:4px;margin-bottom:14px}}
+@media(max-width:370px){.flyer{padding:22px 23px 18px}.logo{width:140px;height:35px}.introduction{margin-top:24px}h1{font-size:40px}.eyebrow{font-size:7px;letter-spacing:.8px}.wide-only{display:none}.example{margin-bottom:18px}.benefits{margin-bottom:20px}.trust{font-size:7.4px}.flyer-footer{margin-top:20px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{@page{size:108mm 192mm;margin:0}body{padding:0;background:#fff}.flyer{width:108mm;max-width:none;min-height:192mm;border:0;border-radius:0;box-shadow:none;print-color-adjust:exact;-webkit-print-color-adjust:exact}.sharing{display:none}}
+html.export{width:1080px;height:1920px;overflow:hidden}
+.export body{width:1080px;height:1920px;padding:0;background:#f4f6ec;overflow:hidden}
+.export .flyer{width:405px;max-width:none;height:720px;min-height:720px;margin:0;border:0;border-radius:0;box-shadow:none;transform:scale(2.6666666667);transform-origin:top left}
+.export .sharing{display:none}
+.export .introduction{margin-top:22px}
+.export .example{padding-top:31px;margin-bottom:16px}
+.export .example-caption{margin-top:6px}
+.export .benefits{margin-bottom:18px}
+.export .flyer-footer{margin-top:16px}
