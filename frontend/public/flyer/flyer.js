@@ -9,7 +9,7 @@ if (shareButton && typeof navigator.share === "function") {
   shareButton.addEventListener("click", async () => {
     try {
       await navigator.share({
-        title: "StockLess | Stock smarter. Waste less.",
+        title: "StockLess | Stock Less, Waste Less",
         text: "Smarter restocking for small food retailers.",
         url: "https://stockless.pages.dev/flyer/",
       });

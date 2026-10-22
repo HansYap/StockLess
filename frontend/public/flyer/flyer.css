@@ -51,7 +51,6 @@ h1 em{font-style:normal;color:#327b69}
 .trust>span{padding:0 4px;color:#9eac94}
 .flyer-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:23px;font-size:9px;font-weight:700;color:#688067;letter-spacing:.05px}
 .flyer-footer>span:last-child{display:flex;align-items:center;gap:6px}
-.flyer-footer i{font-style:normal;font-size:19px;line-height:1;color:#b9924c}
 .sharing{max-width:405px;margin:18px auto 0;display:flex;justify-content:center;align-items:center;gap:24px}
 .sharing a,.sharing button{font:700 12px Manrope,Arial,sans-serif;color:#3e6652;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:7px;border:0;background:none;cursor:pointer}
 .sharing a:hover,.sharing button:hover{text-decoration:underline}
